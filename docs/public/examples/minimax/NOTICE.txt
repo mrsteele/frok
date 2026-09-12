@@ -1,0 +1,6 @@
+Frok workflow example, adapted from tgo-app-dev/vpipe pipeline definitions.
+Upstream revision: 27af0cb6b6a4584da6a7dce02b5ceb188aaeca83
+https://github.com/tgo-app-dev/vpipe
+Frok adds application bindings, preparation metadata and workflow adjustments.
+Retain the accompanying VPIPE-LICENSE.txt when redistributing this example.
+AI model weights are not included and have separate license terms.

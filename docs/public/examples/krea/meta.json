@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "id": "vpipe:krea-2-turbo",
+  "name": "Krea 2 Turbo",
+  "runner": "vpipe",
+  "default": true,
+  "bindings": {
+    "prompt": [
+      {
+        "node": "text-prompt",
+        "field": "text"
+      }
+    ],
+    "seed": [
+      {
+        "node": "generate-image",
+        "field": "seed"
+      }
+    ],
+    "width": [
+      {
+        "node": "generate-image",
+        "field": "width"
+      }
+    ],
+    "height": [
+      {
+        "node": "generate-image",
+        "field": "height"
+      }
+    ],
+    "output": [
+      {
+        "node": "save-image",
+        "field": "path"
+      }
+    ]
+  },
+  "dependencies": [
+    {
+      "kind": "model",
+      "reference": "krea/Krea-2-Turbo",
+      "layout": "krea",
+      "generated": false,
+      "fetch": {
+        "model": "krea/Krea-2-Turbo"
+      }
+    }
+  ],
+  "description": "Krea 2 Turbo with its original weights. No additional LoRAs or projector adjustments."
+}

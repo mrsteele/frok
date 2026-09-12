@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "id": "local:realesrgan",
+  "name": "Real-ESRGAN",
+  "runner": "local",
+  "engine": "realesrgan",
+  "default": false
+}

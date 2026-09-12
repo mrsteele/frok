@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "id": "vpipe:minimax-h3-reference",
+  "name": "MiniMax H3 Reference Turbo",
+  "runner": "vpipe",
+  "default": true,
+  "bindings": {
+    "prompt": [
+      {
+        "node": "text-prompt",
+        "field": "text"
+      }
+    ],
+    "seed": [
+      {
+        "node": "generate-video",
+        "field": "seed"
+      }
+    ],
+    "width": [
+      {
+        "node": "generate-video",
+        "field": "width"
+      }
+    ],
+    "height": [
+      {
+        "node": "generate-video",
+        "field": "height"
+      }
+    ],
+    "frames": [
+      {
+        "node": "generate-video",
+        "field": "frames"
+      },
+      {
+        "node": "frok-references",
+        "field": "frames"
+      }
+    ],
+    "output": [
+      {
+        "node": "save-video",
+        "field": "output_url"
+      }
+    ],
+    "pixels": [
+      {
+        "node": "frok-references",
+        "field": "reference_image_max_pixels"
+      }
+    ]
+  },
+  "dependencies": [
+    {
+      "kind": "model",
+      "reference": "local/MiniMax-H3-Ref2VA-8bit",
+      "layout": "minimax",
+      "generated": true
+    },
+    {
+      "kind": "lora",
+      "reference": "lightx2v/Minimax-h3-Turbo-ref2va-4step-split",
+      "fetch": {
+        "model": "lightx2v/Minimax-h3-Turbo",
+        "variant": "lightx2v/Minimax-h3-Turbo-ref2va-4step-split"
+      }
+    }
+  ],
+  "references": {
+    "target": "frok-references",
+    "field": "references",
+    "max": 9
+  }
+}

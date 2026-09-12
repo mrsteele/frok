@@ -1,0 +1,80 @@
+{
+  "appId": "dev.frok.desktop",
+  "productName": "Frok",
+  "artifactName": "Frok-${version}-${os}-${arch}.${ext}",
+  "directories": {
+    "app": ".desktop/app",
+    "output": "release",
+    "buildResources": "desktop"
+  },
+  "files": [
+    "**/*",
+    "!node_modules/**/*"
+  ],
+  "extraResources": [
+    {
+      "from": ".desktop/licenses",
+      "to": "licenses"
+    },
+    {
+      "from": ".desktop/docs",
+      "to": "docs"
+    },
+    {
+      "from": ".desktop/backend",
+      "to": "backend"
+    },
+    {
+      "from": ".desktop/runtime",
+      "to": "runtime"
+    },
+    {
+      "from": ".desktop/pipeline-templates",
+      "to": "pipeline-templates"
+    },
+    {
+      "from": "LICENSE",
+      "to": "LICENSE"
+    },
+    {
+      "from": "THIRD_PARTY_NOTICES.md",
+      "to": "THIRD_PARTY_NOTICES.md"
+    },
+    {
+      "from": "COPYRIGHT",
+      "to": "COPYRIGHT"
+    }
+  ],
+  "npmRebuild": false,
+  "publish": null,
+  "mac": {
+    "target": [
+      "dmg",
+      "zip"
+    ],
+    "identity": null,
+    "hardenedRuntime": false,
+    "notarize": false,
+    "category": "public.app-category.graphics-design",
+    "icon": "desktop/icon.png"
+  },
+  "win": {
+    "target": [
+      "nsis"
+    ],
+    "icon": "desktop/icon.png"
+  },
+  "linux": {
+    "target": [
+      "AppImage"
+    ],
+    "category": "Graphics",
+    "icon": "desktop/icon.png"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "deleteAppDataOnUninstall": false
+  }
+}

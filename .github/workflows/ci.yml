@@ -1,0 +1,44 @@
+name: Source checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.15.0'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            docs/package-lock.json
+      - run: npm run check:source
+      - name: Install external media tools for synthetic integration tests
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: npm ci
+      - run: npm --prefix docs ci
+      - name: Audit application dependencies
+        run: npm audit --omit=dev --audit-level=high
+      - name: Audit documentation dependencies
+        run: npm --prefix docs audit --audit-level=high
+      - run: npm run typecheck
+      - name: Synthetic tests — no model inference or downloads
+        run: npm test
+      - run: npm --prefix docs run build

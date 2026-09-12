@@ -1,0 +1,20 @@
+{
+  "id": "prepare-krea-2-turbo",
+  "description": "Download Krea 2 Turbo, including its transformer, encoder, tokenizer and VAE. No fused adapters or projector adjustments.",
+  "stages": [
+    {
+      "id": "fetch-krea-2",
+      "type": "model-fetch",
+      "iports": [],
+      "config": {
+        "model_path": "krea/Krea-2-Turbo",
+        "hf_token": "",
+        "source": "",
+        "base_path": "./models",
+        "skip_existing_files": true,
+        "overwrite_existing": false
+      }
+    }
+  ],
+  "subpipelines": []
+}

@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "id": "comfyui:sdxl-turbo",
+  "name": "SDXL Turbo",
+  "runner": "comfyui",
+  "default": true,
+  "bindings": {
+    "prompt": [
+      {
+        "node": "2",
+        "field": "text"
+      }
+    ],
+    "seed": [
+      {
+        "node": "5",
+        "field": "seed"
+      }
+    ],
+    "width": [
+      {
+        "node": "4",
+        "field": "width"
+      }
+    ],
+    "height": [
+      {
+        "node": "4",
+        "field": "height"
+      }
+    ],
+    "output": [
+      {
+        "node": "7",
+        "field": "filename_prefix"
+      }
+    ]
+  },
+  "dependencies": [
+    {
+      "kind": "file",
+      "reference": "checkpoints/sd_xl_turbo_1.0_fp16.safetensors",
+      "url": "https://huggingface.co/stabilityai/sdxl-turbo/resolve/main/sd_xl_turbo_1.0_fp16.safetensors"
+    }
+  ]
+}

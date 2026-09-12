@@ -1,0 +1,56 @@
+{
+  "name": "frok",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "predev": "npm run build:docs:web",
+    "prebuild": "npm run build:docs:web",
+    "build:brand": "node scripts/brand-assets.mjs",
+    "build:docs:web": "node scripts/desktop-docs.mjs --web",
+    "dev": "node scripts/run.mjs dev",
+    "build": "next build",
+    "start": "node scripts/run.mjs start",
+    "worker": "tsx src/worker/index.ts",
+    "audit:library": "node --import tsx scripts/audit-library.ts",
+    "setup": "tsx scripts/setup.ts",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "node --import tsx --test --test-concurrency=4 tests/*.test.ts tests/*.test.mjs",
+    "dev:desktop": "node scripts/desktop-dev.mjs",
+    "build:docs:desktop": "node scripts/desktop-docs.mjs",
+    "build:desktop": "node scripts/desktop-build.mjs",
+    "package:dir": "node scripts/desktop-package.mjs --dir",
+    "package": "npm run build:desktop && node scripts/desktop-package.mjs",
+    "test:desktop": "node --test tests/desktop-*.test.mjs && tsx --test tests/desktop-auth.test.ts",
+    "smoke:desktop": "node scripts/desktop-smoke.mjs",
+    "smoke:docs": "electron scripts/desktop-docs-smoke.mjs",
+    "test:release": "npm run test:desktop && node --test tests/release-version.test.mjs tests/source-audit.test.mjs && tsx --test tests/library-api.test.ts tests/request-security.test.ts tests/client-session.test.ts tests/pipeline-catalog.test.ts",
+    "check:source": "node scripts/check-source.mjs"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "lucide-react": "^0.577.0",
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "sharp": "^0.35.4",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "electron": "44.3.0",
+    "electron-builder": "26.15.3",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "type": "module",
+  "main": "desktop/main.mjs",
+  "description": "A local desktop studio for image and video generation",
+  "author": "Matt Steele",
+  "license": "GPL-3.0-only"
+}

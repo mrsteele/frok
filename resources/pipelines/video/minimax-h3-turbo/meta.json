@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "id": "vpipe:minimax-h3-turbo",
+  "name": "MiniMax H3 Turbo",
+  "runner": "vpipe",
+  "default": true,
+  "bindings": {
+    "prompt": [
+      {
+        "node": "text-prompt",
+        "field": "text"
+      }
+    ],
+    "seed": [
+      {
+        "node": "generate-video",
+        "field": "seed"
+      }
+    ],
+    "width": [
+      {
+        "node": "generate-video",
+        "field": "width"
+      }
+    ],
+    "height": [
+      {
+        "node": "generate-video",
+        "field": "height"
+      }
+    ],
+    "frames": [
+      {
+        "node": "generate-video",
+        "field": "frames"
+      }
+    ],
+    "output": [
+      {
+        "node": "save-video",
+        "field": "output_url"
+      }
+    ]
+  },
+  "dependencies": [
+    {
+      "kind": "model",
+      "reference": "local/MiniMax-H3-FL2VA-8bit",
+      "layout": "minimax",
+      "generated": true
+    },
+    {
+      "kind": "lora",
+      "reference": "larryvrh/MiniMax-H3-Turbo-Lora-v4-600-ema",
+      "fetch": {
+        "model": "larryvrh/MiniMax-H3-Turbo-Lora",
+        "variant": "larryvrh/MiniMax-H3-Turbo-Lora-v4-600-ema"
+      }
+    }
+  ],
+  "source": {
+    "target": "generate-video",
+    "port": 5,
+    "model": "model-select"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "id": "local:seedvr2",
+  "name": "SeedVR2",
+  "runner": "local",
+  "engine": "seedvr2",
+  "default": true
+}

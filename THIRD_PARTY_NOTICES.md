@@ -1,0 +1,21 @@
+# Third-party notices
+
+The registered Vpipe workflows and preparation companions in `resources/pipelines/` are adapted from [tgo-app-dev/vpipe](https://github.com/tgo-app-dev/vpipe), initially retrieved at commit `27af0cb6b6a4584da6a7dce02b5ceb188aaeca83`. Vpipe is distributed under its upstream Apache 2.0 license; retain the accompanying `resources/pipelines/VPIPE-LICENSE` when redistributing these files. Only the registered factory bundles are included in desktop builds.
+
+ComfyUI API graphs in `resources/pipelines/` and the compatibility builder in `src/lib/comfyui.ts` follow documented native node schemas and official templates. ComfyUI itself is a separate installation and has its own license.
+
+The Z-Image-Turbo graph follows the [official ComfyUI template](https://github.com/Comfy-Org/workflow_templates/blob/main/templates/image_z_image_turbo.json). Its diffusion model, Qwen3 text encoder and VAE download from [Comfy-Org/z_image_turbo](https://huggingface.co/Comfy-Org/z_image_turbo/tree/08d04455279082882deaabc8d0d09fc914c071e1), pinned to that revision. [Z-Image-Turbo](https://huggingface.co/Tongyi-MAI/Z-Image-Turbo) is published under Apache-2.0; retain the upstream model and component notices when redistributing weights. No weights are included in Frok’s source tree.
+
+Ollama and Vpipe runtime binaries are optional downloads from their official GitHub releases. AI model weights are downloaded only during a requested setup action and retain their upstream licenses. Acceptance of gated model licenses happens with the model provider.
+
+[Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) and its [NCNN Vulkan runtime](https://github.com/xinntao/Real-ESRGAN-ncnn-vulkan) are optional project-local downloads from the official v0.2.5.0 release. The bundle supplies the `realesrgan-x4plus` weights and retains upstream notices and licenses (Real-ESRGAN and its NCNN implementation use BSD-3-Clause). Retain all bundled third-party notices when redistributing binaries or weights.
+
+FFmpeg and FFprobe are external tools installed by the user. Frok invokes their commands for video processing but does not include their executables or source in its backend payload. They retain their upstream licenses. Electron/Chromium's built-in media playback libraries are separate and retain Electron's bundled third-party notices.
+
+Frok's original source and documentation are GPL-3.0-only; see LICENSE and COPYRIGHT. Other npm dependencies carry their respective licenses. See `package-lock.json` and the packages' LICENSE files.
+
+Desktop resources include a `licenses/` folder with the notice files supplied by installed production npm packages, including packages compiled into the client interface. Its `dependencies.json` records package versions, license identifiers, source repositories and available native component versions. Some binary packages do not supply full notice/source bundles; use this inventory when reviewing a public installer, including Sharp's libvips components.
+
+Desktop builds add Electron (MIT, with bundled Chromium/third-party notices) and a portable Node.js runtime whose license is copied into the runtime resources. Electron Builder is development tooling. Desktop installers also include Sharp and its supporting libraries; retain their bundled license notices. No AI model weights are bundled. Tagged builds use the repository's GitHub Actions workflow to create draft releases. Automatic in-app update feeds are not configured.
+
+[SeedVR2](https://github.com/ByteDance-Seed/SeedVR) restoration is available through the optional [numz standalone CLI](https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler), pinned to commit `4490bd1f482e026674543386bb2a4d176da245b9` (v2.5.24). Its repository includes its Apache-2.0 license. The 3B Q4 weights are downloaded from `AInVFX/SeedVR2_comfyUI`, and the FP16 VAE from `numz/SeedVR2_comfyUI`; retain their model notices. [uv](https://github.com/astral-sh/uv) 0.12.10 downloads a project-local Python runtime and installs the standalone dependencies; uv and Python retain their own bundled licenses. These optional runtimes and weights are downloaded during setup and are not committed to this repository.

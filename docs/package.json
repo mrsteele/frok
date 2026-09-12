@@ -1,0 +1,25 @@
+{
+  "name": "frok-docs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "predev": "node ../scripts/brand-assets.mjs",
+    "dev": "vitepress dev --host 127.0.0.1",
+    "prebuild": "node ../scripts/brand-assets.mjs",
+    "build": "vitepress build",
+    "preview": "vitepress preview --host 127.0.0.1",
+    "examples": "node scripts/sync-examples.mjs"
+  },
+  "devDependencies": {
+    "vitepress": "1.6.4"
+  },
+  "overrides": {
+    "vite": "6.4.3"
+  },
+  "license": "GPL-3.0-only",
+  "author": "Matt Steele"
+}

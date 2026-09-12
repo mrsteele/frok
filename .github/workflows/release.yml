@@ -1,0 +1,115 @@
+name: Desktop release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.15.0'
+      - run: node scripts/check-source.mjs
+      - name: Verify semantic version and lockfile
+        id: version
+        run: node scripts/release-version.mjs
+
+  build:
+    needs: version
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            platform: mac-arm64
+          - os: macos-15-intel
+            platform: mac-x64
+          - os: windows-2025
+            platform: win-x64
+          - os: ubuntu-24.04
+            platform: linux-x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.15.0'
+          cache: npm
+      - run: npm ci
+      - run: npm --prefix docs ci
+      - name: Desktop and storage checks (no inference)
+        run: npm run test:release
+      - name: Build platform installer
+        run: npm run package
+        env:
+          FROK_SIGN_RELEASE: ${{ startsWith(matrix.platform, 'mac-') && vars.FROK_SIGN_MACOS == 'true' && '1' || '0' }}
+          CSC_LINK: ${{ startsWith(matrix.platform, 'mac-') && secrets.MAC_CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ startsWith(matrix.platform, 'mac-') && secrets.MAC_CSC_KEY_PASSWORD || '' }}
+          APPLE_ID: ${{ startsWith(matrix.platform, 'mac-') && secrets.APPLE_ID || '' }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ startsWith(matrix.platform, 'mac-') && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ startsWith(matrix.platform, 'mac-') && secrets.APPLE_TEAM_ID || '' }}
+      - name: Check packaged backend (no inference)
+        run: npm run smoke:desktop
+      - uses: actions/upload-artifact@v7
+        with:
+          name: frok-${{ matrix.platform }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+            release/*.AppImage
+
+  release:
+    needs: [version, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: frok-*
+          path: artifacts
+          merge-multiple: true
+      - name: Attach installers to a draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+          PRERELEASE: ${{ needs.version.outputs.prerelease }}
+        shell: bash
+        run: |
+          cd artifacts
+          sha256sum -- * > SHA256SUMS.txt
+          cd ..
+          if gh release view "$RELEASE_TAG" --json isDraft > existing.json 2>/dev/null; then
+            node -e "if (!JSON.parse(require('fs').readFileSync('existing.json')).isDraft) throw Error('Published releases are immutable; use a new version.')"
+            gh release upload "$RELEASE_TAG" artifacts/* --clobber
+          else
+            flags=()
+            if [ "$PRERELEASE" = true ]; then flags+=(--prerelease); fi
+            gh release create "$RELEASE_TAG" artifacts/* --verify-tag --draft --generate-notes --title "Frok $RELEASE_VERSION" "${flags[@]}"
+          fi
