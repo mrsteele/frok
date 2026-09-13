@@ -109,7 +109,7 @@ Frok uses the exact model paths declared by a pipeline, so models prepared direc
 
 ## Krea defaults and Utilities
 
-The bundled workflow uses **krea/Krea-2-Turbo** with its original transformer, encoder and VAE. Its preparation file only downloads the base model. There are no extra LoRAs, fused transformers or weighted projector adjustments. Both native files also work directly in a Vpipe workspace. Startup updates untouched bundled copies in `~/frok/pipelines`; edited copies are preserved and incoming defaults are staged in `~/frok/pipeline-updates`.
+The bundled workflow uses **krea/Krea-2-Turbo** with its original transformer, encoder and VAE. Its preparation file downloads the base model. Both native files also work directly in a Vpipe workspace. Startup updates untouched bundled copies in `~/frok/pipelines`; edited copies are preserved and incoming defaults are staged in `~/frok/pipeline-updates`.
 
 **Utilities → Create a pipeline folder** accepts a native Vpipe run workflow or ComfyUI API export. Give it a name and choose Images, Videos or Reference videos. The ZIP contains:
 

@@ -6,6 +6,8 @@ import { desktopIcons } from './desktop-icons.mjs';
 import { desktopNode } from './desktop-node.mjs';
 import { buildDesktopDocs } from './desktop-docs.mjs';
 import { desktopNotices } from './desktop-notices.mjs';
+import { ensureMediaTools, mediaDirectory } from './media-tools.mjs';
+const media = await ensureMediaTools();
 await buildDesktopDocs();
 
 const root = process.cwd(), output = path.join(root, '.desktop');
@@ -43,6 +45,7 @@ await fs.cp(path.join(output,'pipeline-templates'),path.join(backend,'resources/
 await fs.mkdir(path.join(backend,'desktop'),{recursive:true});
 for(const file of ['workspace.mjs','pipelines.json'])await fs.copyFile(path.join('desktop',file),path.join(backend,'desktop',file));
 await fs.copyFile('package.json',path.join(backend,'frok-package.json'));
+await fs.cp(media, mediaDirectory(backend), {recursive: true});
 await desktopNotices(root, path.join(output, 'licenses'));
 await desktopNode(path.join(output, 'runtime'));
 console.log('Desktop payload ready. Run npm run package:dir for an unpacked app, or npm run package for an installer.');

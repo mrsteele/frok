@@ -6,8 +6,8 @@ import { signingConfiguration } from './desktop-signing.mjs';
 
 const args = process.argv.slice(2);
 if (args.some(arg => arg !== '--dir')) throw Error('Use --dir for an unpacked app, or no arguments for the native installer.');
-// A stale backend build must not silently retain external tool executables.
-await checkMediaTools(path.resolve('.desktop/backend'));
+// Refuse incomplete, stale, or nonfree media tool payloads before packaging.
+await checkMediaTools();
 const config=signingConfiguration(JSON.parse(await fs.readFile('electron-builder.json','utf8')));
 const configFile=path.resolve('.desktop/builder-config.json');
 await fs.mkdir(path.dirname(configFile),{recursive:true});

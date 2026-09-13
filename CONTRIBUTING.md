@@ -6,7 +6,7 @@ For a substantial feature or architectural change, open an issue first so we can
 
 ## Develop locally
 
-Use Node.js 24 or newer. Run `npm ci` and `npm --prefix docs ci`, then `npm run dev` for the web interface or `npm run dev:desktop` for Electron. Both modes build the bundled documentation before starting. External generation services are only needed when you actually want to generate media.
+Use Node.js 24 or newer and the [media build prerequisites](docs/development.md#bundled-video-tools). Run `npm ci` and `npm --prefix docs ci`, then `npm run dev` for the web interface or `npm run dev:desktop` for Electron. Both modes prepare documentation and bundled video tools before starting; the media build is cached. External generation services are only needed when you actually want to generate media.
 
 See [the development guide](docs/development.md) for the source layout and commands. Read `AGENTS.md` and the installed Next.js documentation before changing framework behavior.
 

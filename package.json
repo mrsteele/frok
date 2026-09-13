@@ -6,8 +6,9 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "predev": "npm run build:docs:web",
-    "prebuild": "npm run build:docs:web",
+    "predev": "npm run build:media && npm run build:docs:web",
+    "prebuild": "npm run build:media && npm run build:docs:web",
+    "build:media": "node scripts/media-tools.mjs",
     "build:brand": "node scripts/brand-assets.mjs",
     "build:docs:web": "node scripts/desktop-docs.mjs --web",
     "dev": "node scripts/run.mjs dev",

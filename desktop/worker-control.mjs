@@ -1,4 +1,4 @@
-// IPC only: the browser cannot stop other users' jobs or inspect their queue.
+// Desktop supervisor IPC controls whether the worker may claim queued jobs.
 export class WorkerControl {
   draining = false;
   stopped = false;

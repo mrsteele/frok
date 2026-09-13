@@ -1,6 +1,6 @@
 # Krea 2 Turbo with Vpipe
 
-The bundled Krea workflow uses **`krea/Krea-2-Turbo`** with its original transformer, encoder and VAE. It adds no LoRAs, fused tensors or projector adjustments.
+The bundled Krea workflow uses **`krea/Krea-2-Turbo`** with its original transformer, encoder and VAE.
 
 ## Copy the complete folder
 

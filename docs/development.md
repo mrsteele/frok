@@ -42,7 +42,17 @@ npm run typecheck
 node --import tsx --test tests/asset-navigation.test.ts tests/media-family.test.ts
 ```
 
-Use focused tests for the area you changed. The full `npm test` suite includes synthetic runner and FFmpeg integration work, so install external FFmpeg/FFprobe first (with libx264 and AAC support). The suite uses PATH detection or explicit `FFMPEG_BIN` and `FFPROBE_BIN` paths; it does not use your saved library preferences. CI installs its test tools separately. These tests do not prove real-model output quality. UI-only edits do not need model inference or downloads. Test against disposable storage and synthetic assets, not a contributor's private library.
+Use focused tests for the area you changed. Before the full `npm test` suite, run `npm run build:media` once to prepare the bundled FFmpeg/FFprobe tools. Tests use synthetic media and disposable storage, not your saved library preferences. They do not prove real-model output quality. UI-only edits do not need model inference or downloads.
+
+## Bundled video tools
+
+Desktop installers already include FFmpeg and FFprobe. Source development builds them once with `npm run build:media`; `npm run dev`, `npm run dev:desktop` and desktop packaging also prepare them automatically and reuse a verified cache. Internet access is needed for the first source download, not for subsequent launches.
+
+Build prerequisites: Xcode Command Line Tools on macOS; a C compiler, make, bash and tar on Linux; MSYS2 with MinGW64 GCC, make, tar and diffutils on Windows (run the first build in a MinGW64 shell). NASM is recommended on x64; builds fall back to C implementations when it is absent. These are developer prerequisites only. Frok never installs them on the user's system.
+
+The build uses pinned SHA-256 source archives for FFmpeg, x264, zlib and the pkgconf build tool. It disables automatic detection of optional libraries, network protocols and nonfree components. Outputs stay in ignored `.media-tools/<platform>-<arch>/`; source downloads are cached under `.data/desktop-build-cache`. No system installation is modified. `FROK_MEDIA_BUILD_JOBS` optionally controls parallel compilation (default 4).
+
+Source archives, the recipe and component licenses accompany the binaries in every installer. To update a dependency, review and update `scripts/media-sources.json`, rebuild, run synthetic media checks, and verify every release platform. Do not replace these binaries with an arbitrary prebuilt download. Runtime folder overrides and `FFMPEG_BIN`/`FFPROBE_BIN` remain available for advanced use.
 
 ## Build boundaries
 

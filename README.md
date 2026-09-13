@@ -32,14 +32,14 @@ Frok is a desktop interface and queue for **other local AI services**. It does n
 | Requirement | What to install |
 | --- | --- |
 | Image/video generation — choose one or both | [Vpipe](https://vpipe.ai/) on a supported Apple Silicon Mac, or [ComfyUI](https://www.comfy.org/download) on a device it supports. |
-| Video processing | [FFmpeg and FFprobe](https://ffmpeg.org/download.html), installed separately with H.264 (`libx264`) and AAC support. Images and prompt enhancement work without these commands. |
+| Video processing | FFmpeg and FFprobe are included in Frok. No separate installation needed. |
 | Prompt enhancement — optional | [Ollama](https://ollama.com/download), running locally with an installed text-generation model. |
 | Hardware and storage | Enough memory and free disk space for your chosen runner and models. Requirements vary significantly; check the upstream instructions before downloading model packs. |
-| Running from source — developers | Node.js **24 or newer** and npm. Desktop installers include the application runtime, so end users do not need to install Node.js. |
+| Running from source — developers | Node.js **24 or newer**, npm, and a C build toolchain for the first media-tools build. See [development setup](docs/development.md#bundled-video-tools). Desktop users need none of these. |
 
 Frok does **not host or redistribute Vpipe, ComfyUI, Ollama, or model weights**. Connections point to your installations; preparation workflows can download dependencies directly from their providers. Each service and model has its own license and requirements. You can use different runners for images and video. Ollama alone enables prompt enhancement, not media generation.
 
-Frok bundles its interface, workflow definitions, documentation, and application runtime. It detects installed FFmpeg/FFprobe commands for video finishing; it does not include or download them. Once services and models are ready, local generation does not require a Frok account or a network connection.
+Frok bundles its interface, workflow definitions, documentation, application runtime, and FFmpeg/FFprobe for video finishing. Once services and models are ready, local generation does not require a Frok account or a network connection.
 
 ## Get running
 
@@ -151,7 +151,7 @@ The green folder panel in Settings shows the active location, detected workflows
 
 Startup installs factory files from `resources/pipelines`. Untouched bundled files can update; locally edited groups are preserved and new factory versions are staged in `~/frok/pipeline-updates`. Personal folders may use a `.local` suffix. External working files are outside repository tracking, and matching personal copies under `resources/pipelines` are ignored.
 
-The included Krea workflow uses **original Krea 2 Turbo weights**, without added LoRAs, fusion or projector adjustments. To bring your own graph, Utilities creates a ZIP containing run, prepare, metadata and review notes. Unknown requirements need manual review before use.
+The included Krea workflow uses **original Krea 2 Turbo weights**. To bring your own graph, Utilities creates a ZIP containing run, prepare, metadata and review notes. Unknown requirements need manual review before use.
 
 [Pipeline reference](docs/pipelines.md) · [Krea example](docs/examples/krea.md) · [ComfyUI example](docs/examples/comfyui.md) · [Custom workflow tutorial](docs/tutorials/custom-pipeline.md)
 

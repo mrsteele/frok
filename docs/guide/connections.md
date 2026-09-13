@@ -42,8 +42,8 @@ In the desktop app, **API tokens** stores Hugging Face and ComfyUI credentials s
 
 ## Video tools
 
-Frok uses an external **FFmpeg and FFprobe** installation to finish videos, preserve audio, inspect metadata and prepare frames for AI upscaling. Frok does not include or download these commands. Image generation and prompt enhancement work without them.
+Frok includes **FFmpeg and FFprobe** to finish videos, preserve audio, inspect metadata and prepare frames for AI upscaling. They work immediately in the desktop installer, including offline. You do not need to install them separately.
 
-Install a build from [FFmpeg’s download page](https://ffmpeg.org/download.html) with `libx264` and AAC encoding support. Frok detects commands on your PATH and common installation locations, including Homebrew’s standard Mac directories. Vpipe’s bundled FFmpeg libraries are not a substitute for these two standalone commands.
+Vpipe, ComfyUI, Ollama and AI models remain independent installations. Including these small media utilities does not install or require a particular AI runner.
 
-If automatic detection misses your installation, enter the folder containing both commands in **Settings → Generate → Generation preferences → Video tools folder**. Leave it blank for automatic detection. Save and refresh connections; no restart is needed. Finish or cancel queued work before changing the folder.
+For an advanced override, enter a folder containing both commands in **Settings → Generate → Generation preferences → Video tools folder**. Leave it blank to use Frok's included tools. Overrides need `libx264` and AAC encoding support. Save and refresh connections; no restart is needed. Finish or cancel queued work before changing the folder.

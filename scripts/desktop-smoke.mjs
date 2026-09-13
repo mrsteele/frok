@@ -6,11 +6,13 @@ import { once } from 'node:events';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import { ensureWorkspace } from '../desktop/workspace.mjs';
+import { checkMediaTools } from './check-media-tools.mjs';
 
 // Run only against the packaged payload and a new, disposable workspace.
 const base = path.resolve('.data'); await fs.mkdir(base, { recursive: true });
 const home = await fs.mkdtemp(path.join(base, 'desktop-smoke-test-'));
 const backend = path.resolve('.desktop/backend');
+await checkMediaTools();
 const groups = JSON.parse(await fs.readFile('desktop/pipelines.json', 'utf8'));
 const workspace = await ensureWorkspace({ home, templates: path.resolve('.desktop/pipeline-templates'), groups, version: '0.1.0' });
 const port = await new Promise((resolve, reject) => { const server = net.createServer(); server.once('error', reject); server.listen(0, '127.0.0.1', () => { const port = server.address().port; server.close(() => resolve(port)); }); });

@@ -96,7 +96,7 @@ The desktop origin is stable: port 3440 for packaged builds and 3441 for desktop
 
 ## Packaging and future releases
 
-The payload includes Electron, the built UI/backend/worker, and an official Node.js 24 runtime verified against the provider's SHA-256 checksums. It does not require end users to install Git, npm or Node. Models, runners, and external FFmpeg/FFprobe commands remain setup-time dependencies.
+The payload includes Electron, the built UI/backend/worker, an official Node.js 24 runtime verified against the provider's SHA-256 checksums, and FFmpeg/FFprobe built from pinned sources. It does not require end users to install Git, npm, Node, FFmpeg or a compiler. AI runners and models remain separate setup-time dependencies. Media tools include their source archives, build recipe and license texts inside the backend resources.
 
 Build on the target platform/architecture with Node.js 24+. Build artifacts are ignored by Git. Native binaries and supporting libraries must be tested on a clean machine. Local unsigned Mac builds are useful for development; public distribution needs signing, notarization and license/source-distribution review, including Electron and Sharp dependencies. No signing credentials are committed.
 

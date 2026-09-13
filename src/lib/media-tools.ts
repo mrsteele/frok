@@ -3,11 +3,11 @@ import os from 'node:os';
 import path from 'node:path';
 
 type Tool = 'ffmpeg' | 'ffprobe';
-type Options = { directory?: string; env?: Partial<NodeJS.ProcessEnv>; platform?: NodeJS.Platform; home?: string };
+type Options = { directory?: string; env?: Partial<NodeJS.ProcessEnv>; platform?: NodeJS.Platform; home?: string; bundledDirectory?: string };
 
-// Resolve installed commands only. Never download tools or search the library,
-// model workspaces, current directory, or Electron's bundled dependencies.
-export function resolveMediaTool(tool: Tool, { directory = '', env = process.env, platform = process.platform, home = os.homedir() }: Options = {}) {
+// Bundled commands are the default. Explicit overrides and system installations
+// remain available; runtime resolution never downloads or compiles anything.
+export function resolveMediaTool(tool: Tool, { directory = '', env = process.env, platform = process.platform, home = os.homedir(), bundledDirectory = path.resolve(env.FROK_APP_ROOT || process.cwd(), '.media-tools', `${platform}-${process.arch}`) }: Options = {}) {
   const paths = platform === 'win32' ? path.win32 : path.posix;
   const executable = `${tool}${platform === 'win32' ? '.exe' : ''}`;
   if (directory.trim()) {
@@ -17,6 +17,10 @@ export function resolveMediaTool(tool: Tool, { directory = '', env = process.env
   }
   const override = env[tool === 'ffmpeg' ? 'FFMPEG_BIN' : 'FFPROBE_BIN']?.trim();
   if (override) return override;
+  if (bundledDirectory) {
+    const file = paths.join(bundledDirectory, executable);
+    try { if (fs.statSync(file).isFile()) { fs.accessSync(file, platform === 'win32' ? fs.constants.F_OK : fs.constants.X_OK); return file; } } catch { /* Fall back to an installed command in source development. */ }
+  }
   const defaults = platform === 'win32'
     ? [env.LOCALAPPDATA && paths.join(env.LOCALAPPDATA, 'Microsoft', 'WinGet', 'Links'), env.ProgramFiles && paths.join(env.ProgramFiles, 'FFmpeg', 'bin'), paths.join(home, 'ffmpeg', 'bin')]
     : [...(platform === 'darwin' ? ['/opt/homebrew/bin'] : []), '/usr/local/bin', '/usr/bin'];
@@ -30,4 +34,4 @@ export function resolveMediaTool(tool: Tool, { directory = '', env = process.env
   return paths.join(defaults.filter((folder): folder is string => !!folder).at(-1)!, executable);
 }
 
-export const missingMediaToolsMessage = 'Install FFmpeg and FFprobe separately, then refresh connections. If needed, choose their folder under Generation preferences → Video tools folder.';
+export const missingMediaToolsMessage = 'The included video tools could not start. Clear any Video tools folder override, or reinstall Frok. For source development, run npm run build:media.';

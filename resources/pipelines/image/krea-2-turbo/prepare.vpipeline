@@ -1,6 +1,6 @@
 {
   "id": "prepare-krea-2-turbo",
-  "description": "Download Krea 2 Turbo, including its transformer, encoder, tokenizer and VAE. No fused adapters or projector adjustments.",
+  "description": "Download Krea 2 Turbo, including its transformer, encoder, tokenizer and VAE.",
   "stages": [
     {
       "id": "fetch-krea-2",

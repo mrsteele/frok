@@ -1,6 +1,6 @@
 'use client';
 import { ChevronDown, Image as ImageIcon, Loader2, Maximize2, Play, RefreshCw } from 'lucide-react';
-import React, { type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import type { Media } from '@/lib/types';
 
 export function assetVideoFeatures(root:Media,selected:Media) {

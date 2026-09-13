@@ -3,6 +3,8 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { desktopIcons } from './desktop-icons.mjs';
 import { buildDesktopDocs } from './desktop-docs.mjs';
+import { ensureMediaTools } from './media-tools.mjs';
+await ensureMediaTools();
 await buildDesktopDocs();
 await desktopIcons();
 // Electron downloads its development binary lazily on the first launch.

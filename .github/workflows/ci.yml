@@ -30,10 +30,11 @@ jobs:
             package-lock.json
             docs/package-lock.json
       - run: npm run check:source
-      - name: Install external media tools for synthetic integration tests
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install media build prerequisites
+        run: sudo apt-get update && sudo apt-get install -y build-essential nasm
       - run: npm ci
       - run: npm --prefix docs ci
+      - run: npm run build:media
       - name: Audit application dependencies
         run: npm audit --omit=dev --audit-level=high
       - name: Audit documentation dependencies

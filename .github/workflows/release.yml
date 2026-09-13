@@ -57,8 +57,27 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm --prefix docs ci
+      - name: Media build tools (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y build-essential nasm
+      - name: Media build tools (Windows)
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          path-type: inherit
+          install: make tar diffutils mingw-w64-x86_64-gcc mingw-w64-x86_64-nasm
+      - name: Build bundled media tools (Windows)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: npm run build:media
+      - name: Build bundled media tools (macOS and Linux)
+        if: runner.os != 'Windows'
+        run: npm run build:media
       - name: Desktop and storage checks (no inference)
         run: npm run test:release
+      - name: Bundled video tools (synthetic clip, no AI inference)
+        run: node --test tests/media-tool-distribution.test.mjs
       - name: Build platform installer
         run: npm run package
         env:

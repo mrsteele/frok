@@ -14,6 +14,7 @@ test('source checks distinguish templates from secrets without returning secret 
   assert.ok(sourceIssues('docs/public/demo/personal.mp4', '').length);
   assert.ok(sourceIssues('.data/sailboat.mp4', '').length);
   assert.ok(sourceIssues('.next-product-review/server/app.js', '').length);
+  assert.ok(sourceIssues('.media-tools/darwin-arm64/ffmpeg', '').length);
   assert.ok(sourceIssues('resources/pipelines/custom.local/run.json', '').length);
   const token = 'hf_' + 'a'.repeat(36);
   assert.deepEqual(sourceIssues('config.ts', token), ['possible Hugging Face token']);

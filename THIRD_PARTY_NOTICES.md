@@ -10,7 +10,7 @@ Ollama and Vpipe runtime binaries are optional downloads from their official Git
 
 [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) and its [NCNN Vulkan runtime](https://github.com/xinntao/Real-ESRGAN-ncnn-vulkan) are optional project-local downloads from the official v0.2.5.0 release. The bundle supplies the `realesrgan-x4plus` weights and retains upstream notices and licenses (Real-ESRGAN and its NCNN implementation use BSD-3-Clause). Retain all bundled third-party notices when redistributing binaries or weights.
 
-FFmpeg and FFprobe are external tools installed by the user. Frok invokes their commands for video processing but does not include their executables or source in its backend payload. They retain their upstream licenses. Electron/Chromium's built-in media playback libraries are separate and retain Electron's bundled third-party notices.
+Frok bundles FFmpeg and FFprobe 8.0.3, built with x264 and zlib under GPL-3.0-or-later, without nonfree components. Complete unmodified source archives, SHA-256 checksums, the build recipe, and license texts are included under `backend/.media-tools/<platform>-<arch>/`. See its `SOURCE.txt` for rebuilding instructions. The source manifest is `scripts/media-sources.json`; pkgconf is used only during compilation. This software is based in part on the work of the Independent JPEG Group; FFmpeg's IJG-derived files are unmodified. These components retain their own copyrights. Electron/Chromium's built-in media playback libraries are separate and retain Electron's bundled third-party notices.
 
 Frok's original source and documentation are GPL-3.0-only; see LICENSE and COPYRIGHT. Other npm dependencies carry their respective licenses. See `package-lock.json` and the packages' LICENSE files.
 

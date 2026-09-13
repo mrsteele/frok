@@ -6,6 +6,7 @@ node_modules/
 .next-desktop/
 .next-*/
 .desktop/
+.media-tools/
 /public/docs/
 release/
 dist/

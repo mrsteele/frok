@@ -63,7 +63,7 @@ test('external FFmpeg readiness requires libx264 and AAC, not just a successful 
     assert.equal(result.ready, false); assert.match(result.detail, /encoding support/);
   }
   const result = await mediaToolsStatus(commands, undefined, toolStub([' V....D libx264 H.264\n A..... aac AAC\n'], false));
-  assert.equal(result.ready, false); assert.match(result.detail, /Install FFmpeg and FFprobe separately/);
+  assert.equal(result.ready, false); assert.match(result.detail, /included video tools could not start/);
 });
 
 test('encoder checks survive chunk boundaries, long listings and a final line without a newline', async () => {
