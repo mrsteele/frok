@@ -33,7 +33,13 @@ After hosting the public site, set `websiteUrl` in `desktop/product.mjs` and reb
 
 The default base path is `/`, suitable for a dedicated domain. For a subdirectory such as `/frok/`, set **`DOCS_BASE=/frok/`** in the build environment. It must begin and end with a slash. Rebuild after changing it.
 
-Set **`DOCS_SITE_URL`** to the real public site URL when one exists to emit a sitemap. A domain is intentionally not hard-coded. No analytics, deployment credentials, deployment workflow or in-app documentation URL is configured yet.
+Set **`DOCS_SITE_URL`** to the full public site URL, including its base path and trailing slash, to emit a sitemap. A domain is intentionally not hard-coded.
+
+## GitHub Pages
+
+In the repository's **Settings → Pages**, choose **GitHub Actions** as the source. The **Publish documentation** workflow in `.github/workflows/docs.yml` builds and deploys the docs on pushes to `main`. You can also run it from the Actions tab with `main` selected.
+
+The workflow derives the base path and site URL from GitHub Pages, so repository sites and custom domains do not need hard-coded URLs. It uses the pinned Node version and docs lockfile, and uploads only `docs/.vitepress/dist`. It does not build the application or media tools, and needs no personal access token. After changing the Pages domain, rerun the workflow to rebuild the links.
 
 On a static host, use these project settings:
 

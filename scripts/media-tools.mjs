@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { checkMediaTools } from './check-media-tools.mjs';
+import { downloadMediaSource } from './download-media-source.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const sources = JSON.parse(await fs.readFile(path.join(here, 'media-sources.json'), 'utf8'));
@@ -45,10 +46,7 @@ export async function ensureMediaTools(root = path.resolve(here, '..')) {
       const file = path.join(cache, source.archive);
       let data = await fs.readFile(file).catch(() => undefined);
       if (!data || sha256(data) !== source.sha256) {
-        const response = await fetch(source.url, {signal: AbortSignal.timeout(120_000)});
-        if (!response.ok) throw Error(`Could not download ${source.name}: HTTP ${response.status}`);
-        data = Buffer.from(await response.arrayBuffer());
-        if (sha256(data) !== source.sha256) throw Error(`${source.name} source checksum mismatch. Refusing to build.`);
+        data = await downloadMediaSource(source);
         await fs.writeFile(file, data);
       }
       await fs.copyFile(file, path.join(stage, 'sources', source.archive));
