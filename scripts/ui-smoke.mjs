@@ -75,6 +75,20 @@ async function smoke() {
       ]) {
         await load(view);
         await noOverflow(`${view} ${width}`);
+        if (view === 'primitives' || view === 'generation') {
+          const selects = await js(`Array.from(document.querySelectorAll('.ui-select')).map(el => {
+            const style = getComputedStyle(el);
+            return { appearance: style.appearance, arrow: style.backgroundImage !== 'none',
+              inset: style.backgroundPositionX, padding: parseFloat(style.paddingRight) };
+          })`);
+          assert.ok(selects.length > 0, `${view} renders shared dropdowns`);
+          for (const select of selects) {
+            assert.equal(select.appearance, 'none', `${view} uses an inset dropdown arrow`);
+            assert.equal(select.arrow, true, `${view} dropdown arrow is visible`);
+            assert.equal(select.inset, 'calc(100% - 12px)', `${view} dropdown arrow has edge spacing`);
+            assert.ok(select.padding >= 40, `${view} dropdown text leaves room for its arrow`);
+          }
+        }
         await fs.writeFile(
           path.join(screenshots, `${view}-${width}.png`),
           (await window.webContents.capturePage()).toPNG(),
