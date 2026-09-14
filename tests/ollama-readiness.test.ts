@@ -1,4 +1,4 @@
-import { OllamaConnection } from '../src/components/ollama-connection';
+import { OllamaConnection } from '../src/components/settings/ollama-connection';
 import { createLibraryFixture } from './fixtures/library';
 import { mock, test as pureTest } from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,7 +8,7 @@ import childProcess from 'node:child_process';
 import { syncBuiltinESMExports } from 'node:module';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement } from 'react';
-import { PromptModelSettings } from '../src/components/prompt-model-settings';
+import { PromptModelSettings } from '../src/components/settings/prompt-model-settings';
 import { installedOllamaModels } from '../src/lib/ollama-models';
 
 const previousDir = process.cwd();

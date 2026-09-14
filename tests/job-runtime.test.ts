@@ -6,7 +6,7 @@ import path from 'node:path';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { jobElapsedSeconds } from '../src/lib/runner-time';
-import { JobRuntime } from '../src/components/job-runtime';
+import { JobRuntime } from '../src/components/queue/job-runtime';
 import type { Generation, Job } from '../src/lib/types';
 
 const directory = path.join(process.cwd(), '.data', `job-runtime-test-${process.pid}`);

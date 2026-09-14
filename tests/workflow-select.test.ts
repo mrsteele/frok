@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { WorkflowSelect } from '../src/components/workflow-select';
-import { PipelineSelect } from '../src/components/pipeline-select';
-import { PipelineSettings } from '../src/components/pipeline-settings';
+import { WorkflowSelect } from '../src/components/generation/workflow-select';
+import { PipelineSelect } from '../src/components/generation/pipeline-select';
+import { PipelineSettings } from '../src/components/settings/pipeline-settings';
 import { pipelineMetadata, type PipelineKind, type PipelineStatus } from '../src/lib/pipelines/schema';
 import type { Health } from '../src/lib/types';
 

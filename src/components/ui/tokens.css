@@ -1,0 +1,26 @@
+:root {
+  --ui-surface: #141414;
+  --ui-control: #171717;
+  --ui-control-hover: #252925;
+  --ui-border: #38423c;
+  --ui-text: #ecefec;
+  --ui-muted: #a0aaa4;
+  --ui-accent: #c3e0cf;
+  --ui-accent-text: #132219;
+  --ui-success: #9ac9a7;
+  --ui-warning: #ffb267;
+  --ui-danger: #f0b1a9;
+  --ui-danger-bg: #a74638;
+  --ui-space-1: 4px;
+  --ui-space-2: 8px;
+  --ui-space-3: 12px;
+  --ui-space-4: 16px;
+  --ui-space-5: 20px;
+  --ui-space-6: 24px;
+  --ui-radius-control: 10px;
+  --ui-radius-panel: 16px;
+  --ui-control-height: 36px;
+  --ui-control-compact: 32px;
+  --ui-font-control: 0.929rem;
+  --ui-font-small: 0.857rem;
+}

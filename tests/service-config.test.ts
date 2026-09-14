@@ -11,9 +11,9 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createLibraryFixture } from './fixtures/library';
 import { emptyConnections, emptyModelSelections } from '../src/lib/service-config';
-import { Setup } from '../src/components/setup';
-import { RunnerConnection } from '../src/components/runner-connection';
-import { OllamaConnection } from '../src/components/ollama-connection';
+import { Setup } from '../src/components/settings/setup';
+import { RunnerConnection } from '../src/components/settings/runner-connection';
+import { OllamaConnection } from '../src/components/settings/ollama-connection';
 
 const directory=fs.mkdtempSync(path.join(process.cwd(),'.data/service-config-test-'));
 Object.assign(process.env,{FROK_DATA_DIR:directory,VPIPE_WORKDIR:path.join(directory,'models-workspace'),VPIPE_BIN:'synthetic-vpipe',FFMPEG_BIN:'synthetic-ffmpeg',FFPROBE_BIN:'synthetic-ffprobe',OLLAMA_URL:'http://127.0.0.1:19701',OLLAMA_MODEL:'synthetic:writer',COMFYUI_URL:'http://127.0.0.1:19702',COMFYUI_DIR:path.join(directory,'comfy'),FROK_COMFYUI_PRIVATE:'1',PORT:'3000'});

@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { advanceVideoProgress, completedVideoProgress, finishingVideoProgress, jobProgress, parseProgressLog, parseStepProgress, preparingVideoProgress, tracksVideoStages } from '../src/lib/progress';
-import { JobProgressBar } from '../src/components/job-progress';
-import { VideoProgress } from '../src/components/video-progress';
+import { JobProgressBar } from '../src/components/queue/job-progress';
+import { VideoProgress } from '../src/components/queue/video-progress';
 import type { Generation, Job, JobStep } from '../src/lib/types';
 
 const request: Generation = { mode: 'video', prompt: 'Synthetic motion', aspect: '4:3', duration: 6, quality: 'preview', count: 1, enhance: false, referenceIds: [] };

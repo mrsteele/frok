@@ -47,6 +47,12 @@ node --import tsx --test tests/asset-navigation.test.ts tests/media-family.test.
 
 Use focused tests for the area you changed. Before the full `npm test` suite, run `npm run build:media` once to prepare the bundled FFmpeg/FFprobe tools. Tests use synthetic media and disposable storage, not your saved library preferences. They do not prove real-model output quality. UI-only edits do not need model inference or downloads.
 
+## Component library
+
+Components are grouped by feature, with shared controls under `ui/primitives` and reusable arrangements under `ui/patterns`. Settings, onboarding and shared dialogs use these foundations first. Reuse existing controls before adding styling; keep service and job logic in feature components. See `src/components/README.md` for ownership, examples and style conventions.
+
+Run `npm run dev:ui` to inspect the standalone component gallery at `http://127.0.0.1:4178`. Its Settings and onboarding screens use synthetic data and cannot reach the app or model runners. `npm run smoke:ui` checks responsive layouts and keyboard interaction in a disposable Electron profile.
+
 ## Bundled video tools
 
 Desktop installers already include FFmpeg and FFprobe. Source development builds them once with `npm run build:media`; `npm run dev`, `npm run dev:desktop` and desktop packaging also prepare them automatically and reuse a verified cache. Internet access is needed for the first source download, not for subsequent launches.

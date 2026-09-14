@@ -9,7 +9,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createLibraryFixture } from './fixtures/library';
 import { captureExportPreferences } from '../src/lib/export-preferences';
-import { ResetLibrary } from '../src/components/reset-library';
+import { ResetLibrary } from '../src/components/settings/reset-library';
 
 const root=await fs.mkdtemp(path.resolve('.data/library-export-test-'));
 Object.assign(process.env,{FROK_DATA_DIR:root,FROK_ENV_FILE:path.join(root,'absent.env'),FROK_ORIGIN:'http://127.0.0.1:3000',VPIPE_WORKDIR:path.join(root,'vpipe'),OLLAMA_URL:'http://127.0.0.1:11434',COMFYUI_URL:'http://127.0.0.1:8000'});

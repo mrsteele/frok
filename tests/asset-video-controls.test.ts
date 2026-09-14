@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { AssetVideoControls } from '../src/components/asset-video-controls';
+import { AssetVideoControls } from '../src/components/assets/asset-video-controls';
 import type { Media,Generation } from '../src/lib/types';
 
 const image:Media={id:'image',kind:'image',origin:'generated',filename:'image.jpg',prompt:'A paper boat',enhancedPrompt:'A blue paper boat',seed:7,width:640,height:480,favorite:false,createdAt:'2026-01-01'};

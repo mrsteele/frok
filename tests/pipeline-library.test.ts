@@ -5,7 +5,7 @@ import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {createLibraryFixture} from './fixtures/library';
 import {ensurePipelines} from '../desktop/workspace.mjs';
-import {PipelineLibrary} from '../src/components/pipeline-library';
+import {PipelineLibrary} from '../src/components/settings/pipeline-library';
 import type {Health} from '../src/lib/types';
 
 const directory=await fs.mkdtemp(path.join(process.cwd(),'.data/pipeline-library-test-'));

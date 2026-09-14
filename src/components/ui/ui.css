@@ -1,0 +1,300 @@
+/* Explicit classes keep component styles independent of their screen. */
+.ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ui-space-2);
+  min-height: var(--ui-control-height);
+  max-width: 100%;
+  padding: var(--ui-space-2) var(--ui-space-3);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-control);
+  background: var(--ui-control);
+  color: var(--ui-text);
+  font: inherit;
+  font-size: var(--ui-font-control);
+  line-height: 1.4;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.ui-button:hover:not(:disabled) {
+  background: var(--ui-control-hover);
+  color: var(--ui-text);
+}
+.ui-button--primary {
+  background: var(--ui-accent);
+  border-color: var(--ui-accent);
+  color: var(--ui-accent-text);
+  font-weight: 600;
+}
+.ui-button--primary:hover:not(:disabled) {
+  background: #d6ecdf;
+  color: var(--ui-accent-text);
+}
+.ui-button--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ui-muted);
+}
+.ui-button--danger {
+  background: var(--ui-danger-bg);
+  border-color: var(--ui-danger-bg);
+  color: #fff;
+}
+.ui-button--danger:hover:not(:disabled) {
+  background: #bd5344;
+  color: #fff;
+}
+.ui-button--compact {
+  min-height: var(--ui-control-compact);
+  padding: 6px 10px;
+  font-size: var(--ui-font-small);
+}
+.ui-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ui-button[aria-pressed='true']:not(.ui-button--danger) {
+  border-color: #68967b;
+  color: var(--ui-accent);
+  background: #183022;
+}
+.ui-icon-button {
+  width: var(--ui-control-height);
+  min-width: var(--ui-control-height);
+  padding: 6px;
+}
+.ui-icon-button.ui-button--compact {
+  width: var(--ui-control-compact);
+  min-width: var(--ui-control-compact);
+}
+.ui-input,
+.ui-select,
+.ui-textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--ui-control-height);
+  margin: 0;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-control);
+  background: var(--ui-control);
+  color: var(--ui-text);
+  padding: 9px 11px;
+  font: inherit;
+  font-size: var(--ui-font-control);
+  line-height: 1.5;
+}
+.ui-select {
+  appearance: auto;
+  padding-right: 8px;
+}
+.ui-select option {
+  background: var(--ui-control);
+  color: var(--ui-text);
+}
+.ui-textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+.ui-input::placeholder,
+.ui-textarea::placeholder {
+  color: var(--ui-muted);
+  opacity: 0.8;
+}
+.ui-input:disabled,
+.ui-select:disabled,
+.ui-textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.ui-input[readonly],
+.ui-textarea[readonly] {
+  color: var(--ui-muted);
+}
+.ui-input[aria-invalid='true'],
+.ui-select[aria-invalid='true'],
+.ui-textarea[aria-invalid='true'] {
+  border-color: var(--ui-danger);
+}
+.ui-checkbox {
+  appearance: auto;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: #92cda7;
+  cursor: pointer;
+}
+.ui-checkbox:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+:is(.ui-button, .ui-input, .ui-select, .ui-textarea, .ui-checkbox):focus-visible {
+  outline: 2px solid var(--ui-accent);
+  outline-offset: 3px;
+}
+.ui-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  border: 1px solid #3b423e;
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: var(--ui-muted);
+  background: #1b201d;
+  font-size: var(--ui-font-small);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.ui-badge--success {
+  color: var(--ui-success);
+  background: #15281d;
+  border-color: #355b43;
+}
+.ui-badge--warning {
+  color: var(--ui-warning);
+  background: #251a11;
+  border-color: #69452c;
+}
+.ui-badge--danger {
+  color: var(--ui-danger);
+  background: #321e1b;
+  border-color: #70453f;
+}
+.ui-spinner {
+  flex-shrink: 0;
+  animation: ui-spin 1s linear infinite;
+}
+@keyframes ui-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.ui-field {
+  display: grid;
+  gap: var(--ui-space-2);
+  min-width: 0;
+  margin-top: var(--ui-space-5);
+  color: var(--ui-text);
+}
+.ui-field-label {
+  display: block;
+  font-size: var(--ui-font-control);
+  line-height: 1.5;
+  cursor: pointer;
+}
+.ui-field-control {
+  min-width: 0;
+}
+.ui-field-hint,
+.ui-field-label small {
+  display: block;
+  color: var(--ui-muted);
+  font-size: var(--ui-font-small);
+  line-height: 1.6;
+}
+.ui-field-error {
+  color: var(--ui-danger);
+  font-size: var(--ui-font-small);
+  line-height: 1.6;
+}
+.ui-field--toggle {
+  grid-template-columns: 18px minmax(0, 1fr);
+  column-gap: var(--ui-space-3);
+  align-items: start;
+}
+.ui-field--toggle .ui-field-label {
+  grid-column: 2;
+  grid-row: 1;
+}
+.ui-field--toggle .ui-field-control {
+  grid-column: 1;
+  grid-row: 1;
+  padding-top: 2px;
+}
+.ui-field--toggle :is(.ui-field-hint, .ui-field-error) {
+  grid-column: 2;
+}
+.ui-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ui-space-2);
+  margin-top: var(--ui-space-5);
+}
+.ui-form-actions--end {
+  justify-content: flex-end;
+}
+.ui-form-actions--start {
+  justify-content: flex-start;
+}
+.ui-form-actions--between {
+  justify-content: space-between;
+}
+.ui-card {
+  min-width: 0;
+  padding: var(--ui-space-6);
+  border: 1px solid #2a332e;
+  border-radius: var(--ui-radius-panel);
+  background: var(--ui-surface);
+}
+.ui-message {
+  margin-top: var(--ui-space-3);
+  color: var(--ui-muted);
+  font-size: var(--ui-font-control);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.ui-message > p + p {
+  margin-top: var(--ui-space-2);
+}
+.ui-message--danger {
+  color: var(--ui-danger);
+}
+.ui-message--warning {
+  color: var(--ui-warning);
+}
+.ui-message--success {
+  color: var(--ui-success);
+}
+.ui-modal {
+  color: var(--ui-text);
+}
+.ui-modal .ui-form-actions {
+  margin-top: var(--ui-space-6);
+}
+.ui-modal .section-header {
+  gap: var(--ui-space-3);
+  align-items: flex-start;
+}
+.ui-modal .section-header h2 {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .ui-card {
+    padding: var(--ui-space-4);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-spinner {
+    animation: none;
+  }
+  .ui-button {
+    transition: none;
+  }
+}
+@media (forced-colors: active) {
+  .ui-button,
+  .ui-input,
+  .ui-select,
+  .ui-textarea,
+  .ui-badge {
+    border-color: ButtonText;
+  }
+}
