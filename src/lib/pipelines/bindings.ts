@@ -10,8 +10,11 @@ export function bindPipeline(snapshot:PipelineSnapshot,input:Omit<RenderInput,'s
     const value=m.runner==='vpipe'?stages.find(stage=>stage.id===id)?.config:(graph as Graph)[id]?.inputs;
     if(!value)throw new Error(`Pipeline ${m.name} has a missing input node: ${id}.`);return value;
   }
-  for(const [key,bindings] of Object.entries(m.bindings))for(const binding of bindings)config(binding.node)[binding.field]=values[key as keyof typeof values];
-  if(source) {
+  for(const [key,bindings] of Object.entries(m.bindings))if(key!=='device')for(const binding of bindings)config(binding.node)[binding.field]=values[key as keyof typeof values];
+  if(m.videoSource) {
+    if(!source)throw Error('This workflow requires a source video.');
+    config(m.videoSource.node)[m.videoSource.field]=source;
+  } else if(source) {
     if(!m.source)throw new Error('This pipeline does not accept a starting image.');
     if(m.runner==='vpipe') {
       const target=stages.find(stage=>stage.id===m.source!.target);if(!target||m.source.port===undefined||!m.source.model)throw Error('Invalid starting-image binding.');

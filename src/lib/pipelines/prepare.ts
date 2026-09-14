@@ -7,14 +7,12 @@ import { workdir } from '../db';
 import { vpipeBin } from '../config';
 import { runProcess } from '../process';
 import { download } from '../download';
-import { runSetup } from '../setup';
 import { assertComfyPrivateBackend } from '../comfyui';
 
 export async function preparePipeline(snapshot:PipelineSnapshot,directory:string,signal:AbortSignal,log:(line:string)=>void) {
   const initial=await pipelineStatus(snapshot);if(initial.ready){log('Pipeline dependencies are already installed and verified.\n');return;}
   if(!initial.canPrepare)throw Error(initial.detail);
-  if(snapshot.metadata.runner==='local')await runSetup(snapshot.metadata.engine==='seedvr2'?'seedvr2':'upscale',signal,log);
-  else if(snapshot.metadata.runner==='comfyui'){
+  if(snapshot.metadata.runner==='comfyui'){
     assertComfyPrivateBackend();
     for(const d of dependencies(snapshot))if(!await dependencyReady(snapshot,d,true)){
       if(!d.url)throw Error(`No download source declared for ${d.reference}.`);

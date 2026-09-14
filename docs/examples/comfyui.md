@@ -11,7 +11,7 @@ Create `~/frok/pipelines/image/my-sdxl.local/` and copy:
 
 When keeping the bundled workflow alongside it, change the copied metadata ID to `comfyui:my-sdxl`, give it a distinct name, and set `default` to `false`.
 
-Start ComfyUI and connect it in Settings → Generate. Refresh Pipelines, select the new image workflow and prepare any missing dependencies. The metadata declares the checkpoint location and its download source, so a separate preparation file is not required for this known download.
+Start ComfyUI and connect it in Settings → Services. Refresh Pipelines, select the new image workflow and prepare any missing dependencies. The metadata declares the checkpoint location and its download source, so a separate preparation file is not required for this known download.
 
 ## API format matters
 

@@ -5,7 +5,7 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 const directory = fs.mkdtempSync(path.resolve('.data/runtime-settings-test-'));
-Object.assign(process.env, { FROK_DATA_DIR: directory, FROK_ENV_FILE: path.join(directory, 'absent.env'), FROK_OLLAMA_MANAGED: '0', FROK_ORIGIN: 'http://localhost:3000' });
+Object.assign(process.env, { FROK_DATA_DIR: directory, FROK_ENV_FILE: path.join(directory, 'absent.env'), FROK_ORIGIN: 'http://localhost:3000' });
 const store = await import('../src/lib/db'), library = await import('../src/lib/library'), registry = await import('../src/lib/registry');
 const { runtimeOptions } = await import('../src/lib/preferences');
 const { jobTimeoutMs } = await import('../src/lib/config');
@@ -21,7 +21,7 @@ test('runtime settings save and render consumers see changes from another proces
   const other = new DatabaseSync(path.join(directory, 'library/frok.sqlite'));
   other.prepare("UPDATE settings SET value=? WHERE key='runtimeOptions'").run(JSON.stringify({ ...runtimeOptions(), jobTimeoutMinutes: 25, liveImagePreviews: true })); other.close();
   assert.equal(jobTimeoutMs(), 25 * 60_000); assert.equal(liveImagePreviewsEnabled(), true);
-  const response = await (await call('GET')).json(); assert.equal(response.options.jobTimeoutMinutes, 25); assert.equal(response.restartRequired, false);
+  const response = await (await call('GET')).json(); assert.equal(response.options.jobTimeoutMinutes, 25); assert.equal('restartRequired' in response, false);
 });
 test('invalid runtime updates do not partially save preferences', async () => {
   const initial = runtimeOptions();
@@ -29,14 +29,11 @@ test('invalid runtime updates do not partially save preferences', async () => {
     assert.equal((await call('PATCH', input)).status, 400); assert.deepEqual(runtimeOptions(), initial);
   }
 });
-test('Ollama startup changes require idle queue and report a full restart', async () => {
-  store.createJob({ kind: 'setup', request: { task: 'runtime' }, runner: 'vpipe', total: 1 });
-  assert.equal((await call('PATCH', { manageOllama: true, liveImagePreviews: false })).status, 409);
-  assert.equal(runtimeOptions().manageOllama, false); assert.equal(runtimeOptions().liveImagePreviews, true);
-  assert.equal((await call('PATCH', { jobTimeoutMinutes: 60 })).status, 200);
-  store.db.exec('DELETE FROM jobs');
-  const response = await (await call('PATCH', { manageOllama: true })).json();
-  assert.equal(response.restartRequired, true); assert.equal(store.settings().ollamaUrl, 'http://127.0.0.1:11435');
+test('retired managed-runtime options are rejected and ignored in old settings', async () => {
+  assert.equal((await call('PATCH', { manageOllama: true })).status, 400);
+  store.setValue('runtimeOptions', { manageOllama: true });
+  assert.equal('manageOllama' in runtimeOptions(), false);
+  assert.equal(store.settings().ollamaUrl, 'http://127.0.0.1:11434');
 });
 
 test('job retention defaults to three hours and persists custom or disabled cleanup', async () => {

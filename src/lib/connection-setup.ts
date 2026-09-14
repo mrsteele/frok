@@ -1,8 +1,7 @@
 import { catalog, pipelineStatus } from './pipelines/catalog';
 import { pipelineKinds, type PipelineSnapshot } from './pipelines/schema';
-import { createJob, getJob, getValue, listJobs, settings, setValue } from './db';
+import { createJob, listJobs, settings, setValue } from './db';
 import { health } from './setup';
-import { connectionDefaults } from './connection-defaults';
 import { connectionNames, type ConnectionId } from './service-config';
 import { ollamaConfigKey } from './ollama-config';
 import { ollamaModelKey } from './ollama-models';
@@ -49,34 +48,11 @@ export async function prepareConnection(id:ConnectionId,signal:AbortSignal,promp
     setValue('pipelineSelections',selections);
     return {jobs:requests.map(queueSetup),settings:settings()};
   }
-  const plan=connectionDefaults(id,state);
-  if(promptModel){
-    if(!state.ollamaModels?.some(model=>ollamaModelKey(model)===ollamaModelKey(promptModel)))throw new HttpError(409,'That model is no longer available for text generation. Refresh the installed models.');
-    plan.promptModel=promptModel;plan.selections.prompt=promptModel;
-  }
-  if(id==='ollama'&&!plan.promptModel)throw new HttpError(409,'No compatible prompt model is available. Choose a model in Settings → Generate → Ollama.');
-  // All checks finish before this synchronous studio settings update. Preparation
-  // reuses existing model files and verifies them through the regular setup queue.
-  setValue('modelSelections',plan.selections);
-  const jobs=plan.tasks.map(task=>queueSetup({task,
-    ...(task==='ollama'?{ollama:{url:state.ollamaUrl!,model:plan.promptModel!}}:{}),
-  }));
-  if(id==='ollama')setValue('pendingPromptSetup',jobs[0]?{jobId:jobs[0].id,model:plan.promptModel}:null);
-  return {jobs,settings:settings()};
-}
-
-// Called only after runSetup has verified the downloaded completion model.
-// Explicit model edits or disconnection clear this intent in the settings API.
-export function activateVerifiedPrompt(job:Job) {
-  const pending=getValue<{jobId:string;model:string}|null>('pendingPromptSetup',null);
-  if(job.kind!=='setup'||(job.request as SetupRequest).task!=='ollama'||pending?.jobId!==job.id||getJob(job.id)?.status==='cancelled')return;
-  const current=settings(),config=(job.request as SetupRequest).ollama;
-  if(current.connections.ollama&&config?.url===current.ollamaUrl&&config?.model===pending.model&&(!current.modelSelections.prompt||current.modelSelections.prompt===pending.model))
-    setValue('modelSelections',{...current.modelSelections,prompt:pending.model});
-  setValue('pendingPromptSetup',null);
-}
-
-export function retryPromptSetup(previous:Job,next:Job) {
-  const pending=getValue<{jobId:string;model:string}|null>('pendingPromptSetup',null);
-  if(pending?.jobId===previous.id)setValue('pendingPromptSetup',{...pending,jobId:next.id});
+  const installed=state.ollamaModels||[];
+  if(promptModel&&!installed.some(model=>ollamaModelKey(model)===ollamaModelKey(promptModel)))throw new HttpError(409,'That model is no longer available for text generation. Refresh the installed models.');
+  const selected=promptModel||installed.find(model=>ollamaModelKey(model)===ollamaModelKey(before.modelSelections.prompt||''))
+    ||installed.find(model=>ollamaModelKey(model)===ollamaModelKey(state.recommendedPromptModel||''))||installed[0];
+  if(!selected)throw new HttpError(409,'No compatible prompt model is available. Install a model in Ollama, then check the connection.');
+  setValue('modelSelections',{...before.modelSelections,prompt:selected});
+  return {jobs:[],settings:settings()};
 }

@@ -60,9 +60,8 @@ syncBuiltinESMExports();
         env: {
           NODE_ENV: 'test', PATH: process.env.PATH, FROK_DATA_DIR: directory,
           VPIPE_WORKDIR: path.join(directory, 'unused-models'),
-          OLLAMA_BIN: path.join(directory, 'unused-ollama'), VPIPE_BIN: path.join(directory, 'unused-vpipe'),
+          VPIPE_BIN: path.join(directory, 'unused-vpipe'),
           FFMPEG_BIN: path.join(directory, 'unused-ffmpeg'), FFPROBE_BIN: path.join(directory, 'unused-ffprobe'),
-          REALESRGAN_BIN: path.join(directory, 'unused-upscaler'), REALESRGAN_MODEL_DIR: path.join(directory, 'unused-upscaler-models'),
           COMFYUI_DIR: path.join(directory, 'unused-comfy'), COMFYUI_URL: 'http://127.0.0.1:19999', FROK_COMFYUI_PRIVATE: '0',
           OLLAMA_URL: 'http://127.0.0.1:19998', OLLAMA_MODEL: 'synthetic:startup-test',
         },

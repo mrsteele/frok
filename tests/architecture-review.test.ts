@@ -10,10 +10,9 @@ const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'frok-arc
 Object.assign(process.env, {
   FROK_DATA_DIR: path.join(root, 'data'), FROK_ENV_FILE: path.join(root, 'absent.env'),
   FROK_PIPELINE_HOME: root, FROK_DOCUMENTS_DIR: path.join(root, 'documents'),
-  FROK_ORIGIN: 'http://127.0.0.1:3000', FROK_OLLAMA_MANAGED: '0',
-  VPIPE_BIN: path.join(root, 'unused-vpipe'), OLLAMA_BIN: path.join(root, 'unused-ollama'),
+  FROK_ORIGIN: 'http://127.0.0.1:3000',
+  VPIPE_BIN: path.join(root, 'unused-vpipe'),
   FFMPEG_BIN: path.join(root, 'unused-ffmpeg'), FFPROBE_BIN: path.join(root, 'unused-ffprobe'),
-  REALESRGAN_BIN: path.join(root, 'unused-upscaler'), REALESRGAN_MODEL_DIR: path.join(root, 'unused-models'),
 });
 await fs.mkdir(path.join(root, 'pipelines'));
 const store = await import('../src/lib/db');
@@ -81,11 +80,11 @@ test('cancelled jobs keep runner and runtime locations locked until their worker
   const folder = path.join(root, 'new-tools');
   try {
     assert.equal(queueBusy(), true);
-    for (const input of [{ mediaToolsDirectory: folder }, { manageOllama: true }]) {
+    for (const input of [{ mediaToolsDirectory: folder }]) {
       const response = await call('settings/runtime', 'PATCH', input);
       assert.equal(response.status, 409); assert.match((await response.json()).error, /wait for the runner to stop/);
     }
-    assert.equal(runtimeOptions().mediaToolsDirectory, ''); assert.equal(runtimeOptions().manageOllama, false);
+    assert.equal(runtimeOptions().mediaToolsDirectory, '');
     assert.throws(() => assertRunnerLocationsIdle({ vpipeWorkdir: path.join(root, 'new-vpipe') }), /wait for the runner to stop/);
     assert.throws(() => assertRunnerLocationsIdle({ comfyDir: path.join(root, 'new-comfy') }), /wait for the runner to stop/);
     assert.doesNotThrow(() => assertRunnerLocationsIdle({ vpipeWorkdir: store.settings().vpipeWorkdir }));

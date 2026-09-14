@@ -12,9 +12,11 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { createLibraryFixture } from './fixtures/library';
 import { emptyConnections, emptyModelSelections } from '../src/lib/service-config';
 import { Setup } from '../src/components/setup';
+import { RunnerConnection } from '../src/components/runner-connection';
+import { OllamaConnection } from '../src/components/ollama-connection';
 
 const directory=fs.mkdtempSync(path.join(process.cwd(),'.data/service-config-test-'));
-Object.assign(process.env,{FROK_DATA_DIR:directory,VPIPE_WORKDIR:path.join(directory,'models-workspace'),VPIPE_BIN:'synthetic-vpipe',FFMPEG_BIN:'synthetic-ffmpeg',FFPROBE_BIN:'synthetic-ffprobe',OLLAMA_BIN:'synthetic-ollama',OLLAMA_URL:'http://127.0.0.1:19701',OLLAMA_MODEL:'synthetic:writer',COMFYUI_URL:'http://127.0.0.1:19702',COMFYUI_DIR:path.join(directory,'comfy'),FROK_COMFYUI_PRIVATE:'1',PORT:'3000'});
+Object.assign(process.env,{FROK_DATA_DIR:directory,VPIPE_WORKDIR:path.join(directory,'models-workspace'),VPIPE_BIN:'synthetic-vpipe',FFMPEG_BIN:'synthetic-ffmpeg',FFPROBE_BIN:'synthetic-ffprobe',OLLAMA_URL:'http://127.0.0.1:19701',OLLAMA_MODEL:'synthetic:writer',COMFYUI_URL:'http://127.0.0.1:19702',COMFYUI_DIR:path.join(directory,'comfy'),FROK_COMFYUI_PRIVATE:'1',PORT:'3000'});
 for(const type of ['INPUT','OUTPUT','TEMP']){process.env[`COMFYUI_${type}_DIR`]=path.join(directory,type);fs.mkdirSync(process.env[`COMFYUI_${type}_DIR`]!);}
 fs.mkdirSync(process.env.VPIPE_WORKDIR!,{recursive:true});
 let offline=new Set<string>(), models=['synthetic:writer','synthetic:second','synthetic:embedding'];
@@ -56,7 +58,6 @@ mock.method(globalThis,'fetch',async(input:string|URL|Request,init:RequestInit={
 const fixture=await createLibraryFixture(),{test,beforeEach,after}=fixture;
 const store=await import('../src/lib/db');
 const setup=await import('../src/lib/setup');
-const {activateVerifiedPrompt}=await import('../src/lib/connection-setup');
 const registry=await import('../src/lib/registry');
 const {workerProtocolVersion}=await import('../src/lib/worker-health');
 
@@ -75,7 +76,7 @@ const {dependencies}=await import('../src/lib/pipelines/dependencies');
 const {writeReferencePack}=await import('./fixtures/reference-pack');
 const header=Buffer.from(JSON.stringify({synthetic:{dtype:'U8',shape:[1],data_offsets:[0,1]}})),length=Buffer.alloc(8);length.writeBigUInt64LE(BigInt(header.length));const tensor=Buffer.concat([length,header,Buffer.from([0])]);
 async function installFixtures(){
- for(const pipeline of (await diskCatalog()).entries){if(pipeline.metadata.runner==='local'||pipeline.metadata.id==='comfyui:z-image-turbo')continue;
+ for(const pipeline of (await diskCatalog()).entries){if(pipeline.kind==='upscale'||pipeline.metadata.id==='comfyui:z-image-turbo')continue;
   for(const d of dependencies(pipeline)){
    const base=pipeline.metadata.runner==='comfyui'?path.join(directory,'comfy/models'):path.join(process.env.VPIPE_WORKDIR!,'models');
    if(d.layout==='minimax'){const source=await writeReferencePack(process.env.VPIPE_WORKDIR!);if(source!==path.join(base,d.reference))await fs.promises.cp(source,path.join(base,d.reference),{recursive:true});}
@@ -162,16 +163,16 @@ test('a connection changed in another tab during validation cannot queue work us
 test('a live protocol-6 worker cannot admit generation, setup, retries or queue starts',async()=>{
   const {workerStatus,workerProtocolVersion}=await import('../src/lib/worker-health');
   const {queueSetup}=await import('../src/lib/connection-setup');
-  await patch({connections:{vpipe:true},modelSelections:{image:'krea-2-turbo'}});
+  await patch({connections:{vpipe:true,ollama:true},modelSelections:{image:'krea-2-turbo'}});
   const keys=['workerPid','workerHeartbeat','workerProtocol'],before=keys.map(key=>registry.serviceValue(key,null));
   try {
     registry.setServiceValue('workerPid',process.pid);registry.setServiceValue('workerHeartbeat',Date.now());
     registry.setServiceValue('workerProtocol',{pid:process.pid,version:6});
     assert.ok(workerProtocolVersion>6);assert.equal(workerStatus().ready,false);assert.equal(workerStatus().outdated,true);
-    assert.throws(()=>queueSetup({task:'runtime'}),/Restart Frok/);
-    const stopped=store.createJob({kind:'setup',runner:'vpipe',total:1,request:{task:'runtime'}});store.updateJob(stopped.id,{status:'failed'});
-    const queued=store.createJob({kind:'setup',runner:'vpipe',total:1,request:{task:'runtime'}});
-    for(const [endpoint,body] of [['jobs',request],['setup',{task:'runtime'}],[`jobs/${stopped.id}/retry`,{}],[`jobs/${queued.id}/start`,{}]] as const){
+    assert.throws(()=>queueSetup({task:'ollama'}),/Restart Frok/);
+    const stopped=store.createJob({kind:'setup',runner:'vpipe',total:1,request:{task:'ollama'}});store.updateJob(stopped.id,{status:'failed'});
+    const queued=store.createJob({kind:'setup',runner:'vpipe',total:1,request:{task:'ollama'}});
+    for(const [endpoint,body] of [['jobs',request],['setup',{task:'ollama'}],[`jobs/${stopped.id}/retry`,{}],[`jobs/${queued.id}/start`,{}]] as const){
       const response=await call(endpoint,'POST',body);assert.equal(response.status,409);assert.match((await response.json()).error,/Restart Frok/);
     }
     assert.equal(store.listJobs().length,2);assert.equal(store.getJob(queued.id)!.status,'queued');
@@ -199,19 +200,24 @@ test('saved legacy browser preferences migrate without changing independent imag
   const settings=store.settings();assert.deepEqual(settings.connections,{vpipe:true,comfyui:true,ollama:true});assert.equal(settings.modelSelections.image,'z-image-turbo');assert.equal(settings.modelSelections.video,'vpipe');assert.equal(settings.modelSelections.reference,'vpipe');
 });
 
-test('Connections has independent connect actions; Models and onboarding do not require all services',async()=>{
+test('Services and Generation keep optional capabilities separate from advanced maintenance',async()=>{
   let state=await setup.health();
   const props={health:state,jobs:[],onRefresh:()=>{}};
-  const connections=renderToStaticMarkup(createElement(Setup,{...props,section:'generate'}));
-  for(const name of ['Connect Vpipe','Connect ComfyUI','Connect Ollama'])assert.ok(connections.includes(name));
-  assert.doesNotMatch(connections,/Video runner|Save prompt model/);assert.match(connections,/Ollama model/);
-  let html=renderToStaticMarkup(createElement(Setup,{...props,section:'pipelines'}));assert.doesNotMatch(html,/<option value="(?:sdxl-turbo|krea-2-turbo|z-image-turbo|synthetic:writer)"/);
+  const services=renderToStaticMarkup(createElement(Setup,{...props,section:'services'}));
+  for(const name of ['Vpipe','ComfyUI','Ollama'])assert.ok(services.includes(name));
+  assert.doesNotMatch(services,/Delete all my stuff|API tokens|Video tools folder|Workflow folder/);
+  let html=renderToStaticMarkup(createElement(Setup,{...props,section:'generation'}));
+  for(const id of ['comfyui:sdxl-turbo','vpipe:krea-2-turbo','comfyui:z-image-turbo'])assert.match(html,new RegExp(`<option value="${id}" disabled=""`));
   await patch({connections:{comfyui:true,ollama:true}});state=await setup.health();
-  html=renderToStaticMarkup(createElement(Setup,{...props,health:state,section:'pipelines'}));
-  assert.match(html,/<option value="comfyui:sdxl-turbo"/);assert.match(html,/<option value="comfyui:z-image-turbo"/);assert.doesNotMatch(html,/Ollama model/);const generate=renderToStaticMarkup(createElement(Setup,{...props,health:state,section:'generate'}));assert.match(generate,/<option value="synthetic:writer"/);assert.doesNotMatch(html,/<option value="vpipe:krea-2-turbo"|<option value="synthetic:embedding"/);
-  const welcome=renderToStaticMarkup(createElement(Setup,{...props,section:'welcome'}));assert.match(welcome,/generation turned off/);assert.match(welcome,/Each capability becomes ready independently/);
-  await patch({modelSelections:{prompt:'synthetic:writer'}});
-  const promptsOnly=renderToStaticMarkup(createElement(Setup,{...props,health:await setup.health(),section:'welcome'}));assert.match(promptsOnly,/Prepare pipelines/);assert.doesNotMatch(promptsOnly,/Start creating|Open your studio/);
+  html=renderToStaticMarkup(createElement(Setup,{...props,health:state,section:'generation'}));
+  assert.match(html,/<option value="comfyui:sdxl-turbo"/);assert.match(html,/<option value="comfyui:z-image-turbo"/);
+  assert.doesNotMatch(html,/Ollama model|Pipeline details|Revision |Workflow folder|API tokens/);
+  assert.match(html,/<option value="vpipe:krea-2-turbo" disabled=""/);
+  assert.doesNotMatch(html,/<option value="comfyui:sdxl-turbo" disabled=""|<option value="synthetic:embedding"/);
+  const ollama=renderToStaticMarkup(createElement(OllamaConnection,{...props,health:state,checking:false,onPrepare:async()=>{}}));
+  assert.match(ollama,/<option value="synthetic:writer"/);
+  const advanced=renderToStaticMarkup(createElement(Setup,{...props,health:state,section:'advanced'}));
+  assert.match(advanced,/Workflow folder/);assert.match(advanced,/API tokens/);assert.match(advanced,/Delete all my stuff/);
 });
 
 
@@ -244,38 +250,27 @@ test('Ollama quick setup selects an installed completion model without downloadi
   assert.equal(store.settings().modelSelections.prompt,'synthetic:second');
 });
 
-test('a missing default Ollama model is never Ready until verified setup completes',async()=>{
-  store.setValue('runtimeOptions',{manageOllama:true});
-  models=['synthetic:embedding'];await patch({connections:{ollama:true}});
-  const result=await (await call('setup/connection','POST',{connection:'ollama'})).json();
-  const job=result.jobs[0];assert.equal(job.request.ollama.model,'synthetic:writer');
-  assert.equal(store.settings().modelSelections.prompt,'synthetic:writer');assert.equal((await setup.health()).ollama,false);
-  assert.equal((await (await call('setup/connection','POST',{connection:'ollama'})).json()).jobs[0].id,job.id);
-  // The worker calls activation after runSetup verifies completion capability.
-  models.push('synthetic:writer');activateVerifiedPrompt(job);store.updateJob(job.id,{status:'completed'});
-  assert.equal(store.settings().modelSelections.prompt,'synthetic:writer');assert.equal((await setup.health()).ollama,true);
-  assert.equal(store.getValue('pendingPromptSetup',null),null);
-});
-
-test('explicit prompt selection or disconnect prevents a late download from activating the old model',async()=>{
-  store.setValue('runtimeOptions',{manageOllama:true});
-  for(const change of [{modelSelections:{prompt:null}},{connections:{ollama:false}}]){
-    models=[];await patch({connections:{ollama:true}});
-    const job=(await (await call('setup/connection','POST',{connection:'ollama'})).json()).jobs[0];
-    await patch(change);models.push('synthetic:writer');activateVerifiedPrompt(job);
-    assert.equal(store.settings().modelSelections.prompt,null);
-  }
-});
-
-test('cancelled prompt setup never activates; retry carries the original setup intent',async()=>{
-  store.setValue('runtimeOptions',{manageOllama:true});
+test('connecting Ollama cannot install a runtime or silently download a missing model',async()=>{
   models=[];await patch({connections:{ollama:true}});
-  const job=(await (await call('setup/connection','POST',{connection:'ollama'})).json()).jobs[0];
-  await call(`jobs/${job.id}/cancel`,'POST',{});activateVerifiedPrompt(job);
-  assert.equal((await setup.health()).ollama,false);assert.ok(store.getValue('pendingPromptSetup',null));
+  assert.equal((await call('setup/connection','POST',{connection:'ollama'})).status,409);
+  for(const task of ['runtime','ollama-runtime'])assert.equal((await call('setup','POST',{task})).status,400);
+  assert.equal(store.listJobs().length,0);
+});
+
+test('explicit prompt downloads use the configured service and preserve selection on retry',async()=>{
+  models=[];await patch({connections:{ollama:true}});
+  const response=await call('setup','POST',{task:'ollama'});
+  assert.equal(response.status,201);
+  const job=(await response.json()).job;
+  assert.deepEqual(job.request.ollama,{url:'http://127.0.0.1:19701',model:'synthetic:writer'});
+  assert.equal((await (await call('setup','POST',{task:'ollama'})).json()).job.id,job.id);
+  assert.equal((await setup.health()).ollama,false);
+  await call(`jobs/${job.id}/cancel`,'POST',{});
   const retry=(await (await call(`jobs/${job.id}/retry`,'POST',{})).json()).job;
-  assert.notEqual(retry.id,job.id);models.push('synthetic:writer');activateVerifiedPrompt(retry);
-  assert.equal(store.settings().modelSelections.prompt,'synthetic:writer');
+  assert.notEqual(retry.id,job.id);assert.deepEqual(retry.request.ollama,job.request.ollama);
+  await patch({modelSelections:{prompt:null}});
+  models.push('synthetic:writer');store.updateJob(retry.id,{status:'completed'});
+  assert.equal(store.settings().modelSelections.prompt,null);
 });
 
 test('quick setup rejects stale or disconnected services without selecting models or queuing downloads',async()=>{
@@ -381,11 +376,11 @@ test('a ComfyUI folder that does not match the connected service is not saved',a
 test('Settings shows direct editable connection and pipeline fields without redundant utilities',async()=>{
   await patch({connections:{vpipe:true},pipelineSelections:{image:'vpipe:krea-2-turbo'}});
   const props={health:await setup.health(),jobs:[],onRefresh:()=>{}};
-  const generate=renderToStaticMarkup(createElement(Setup,{...props,section:'generate'}));
-  assert.match(generate,/Model workspace/);assert.match(generate,/ComfyUI folder/);assert.match(generate,/Use default location/);
+  const generate=renderToStaticMarkup(createElement(Setup,{...props,section:'services'}));
+  assert.match(generate,/Model workspace/);assert.match(generate,/Use default location/);assert.doesNotMatch(generate,/ComfyUI folder/);
   assert.doesNotMatch(generate,/<details|Shared utilities|Settings for this studio|readOnly|VPIPE_WORKDIR|COMFYUI_DIR/);
-  const pipelines=renderToStaticMarkup(createElement(Setup,{...props,section:'pipelines'}));
-  assert.match(pipelines,/Pipeline details/);assert.doesNotMatch(pipelines,/<details/);
+  const pipelines=renderToStaticMarkup(createElement(Setup,{...props,section:'generation'}));
+  assert.match(pipelines,/Images workflow/);assert.doesNotMatch(pipelines,/Pipeline details/);assert.doesNotMatch(pipelines,/<details/);
 });
 
 test('blank connection fields persist as blanks and use the displayed device defaults',async()=>{
@@ -405,7 +400,8 @@ test('blank connection fields persist as blanks and use the displayed device def
     assert.equal(state.workdir,defaults.vpipeWorkdir);assert.equal(state.comfyDir,defaults.comfyDir);
     assert.equal(state.comfyUrl,'http://127.0.0.1:8000');assert.equal(state.ollamaUrl,'http://127.0.0.1:11434');
     assert.ok(serviceAddresses.includes(state.ollamaUrl!));assert.ok(serviceAddresses.includes(state.comfyUrl!));
-    const html=renderToStaticMarkup(createElement(Setup,{health:state,jobs:[],onRefresh:()=>{},section:'generate'}));
+    const props={health:state,jobs:[],onRefresh:()=>{},checking:false,onPrepare:async()=>{}};
+    const html=renderToStaticMarkup(createElement(RunnerConnection,{...props,id:'vpipe'}))+renderToStaticMarkup(createElement(RunnerConnection,{...props,id:'comfyui'}))+renderToStaticMarkup(createElement(OllamaConnection,props));
     for(const placeholder of ['~/vpipe',state.connectionFields!.defaults.comfyDir,'http://127.0.0.1:8000','http://127.0.0.1:11434']) {
       const input=html.match(new RegExp(`<input[^>]*placeholder="${placeholder.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}"[^>]*>`))?.[0];
       assert.ok(input,placeholder);assert.match(input,/value=""/);assert.doesNotMatch(input,/required/);

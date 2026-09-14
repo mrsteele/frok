@@ -1,6 +1,9 @@
 import { product } from '../../desktop/product.mjs';
 import { defineConfig } from 'vitepress';
 import { existsSync } from 'node:fs';
+import { syncExamples } from '../scripts/sync-examples.mjs';
+
+await syncExamples();
 
 const base=process.env.DOCS_BASE || '/';
 if(!base.startsWith('/')||!base.endsWith('/'))throw Error('DOCS_BASE must start and end with /.');
@@ -35,7 +38,7 @@ export default defineConfig({
     ],
     search:{provider:'local'}, outline:{level:[2,3]},
     socialLinks:[{icon:'x',link:product.supportUrl}],
-    footer:{message:`An open-source studio. Made for your machine. · <a href="${base}legal.html">Legal &amp; responsible use</a>`,copyright:`© 2026 Matt Steele · Frok · ${process.env.DOCS_APP_VERSION || '0.1.0'} · <a href="${base}license.html">GPL-3.0-only</a>`},
+    footer:{message:`An open-source studio. Made for your machine. · <a href="${base}legal.html">Legal &amp; responsible use</a>`,copyright:`<a href="${base}license.html">License &amp; attribution</a>`},
     docFooter:{prev:'Previous guide',next:'Next guide'},
   },
 });

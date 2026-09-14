@@ -32,10 +32,12 @@
   ],
   [
     "upscale/realesrgan/run.json",
-    "upscale/realesrgan/meta.json"
+    "upscale/realesrgan/meta.json",
+    "upscale/realesrgan/prepare.json"
   ],
   [
     "upscale/seedvr2/run.json",
-    "upscale/seedvr2/meta.json"
+    "upscale/seedvr2/meta.json",
+    "upscale/seedvr2/prepare.json"
   ]
 ]

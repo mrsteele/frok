@@ -2,10 +2,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { nodeVersion } from './node-version.mjs';
 
 // Use the official portable runtime, not a Homebrew/system binary that may
 // depend on libraries installed only on the developer's machine.
-export const nodeVersion = '24.15.0';
 export async function desktopNode(destination) {
   const { platform, arch } = process;
   if (!['darwin', 'linux', 'win32'].includes(platform) || !['arm64', 'x64'].includes(arch)) throw Error('Build on a supported target platform and architecture.');

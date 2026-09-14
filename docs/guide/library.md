@@ -44,6 +44,6 @@ Download exports the current image or video. If an enhanced copy exists, the dow
 | Delete a prompt section | Eligible unsaved creations in that section | Favorites, even when in the section |
 | Delete all my stuff | The entire library and app settings | Downloaded models, runners, pipeline files and saved API tokens |
 
-Review the confirmation before deleting. A favorite is protected from **Clear unsaved**, but explicitly deleting its root can still delete it. Active jobs may prevent deletion of a source they need; finish or cancel the job first. Whole-library reset is in **Settings → Generate**. [Storage and backups →](../storage.md)
+Review the confirmation before deleting. A favorite is protected from **Clear unsaved**, but explicitly deleting its root can still delete it. Active jobs may prevent deletion of a source they need; finish or cancel the job first. Whole-library reset is in **Settings → Services**. [Storage and backups →](../storage.md)
 
 Asset deletion removes its library media files and records. Associated job records, logs and working files are also deleted. For image batches, a log may be shared with other images; those saved images stay. Deleting a job directly or letting it expire keeps its saved media. Downloads and backups you keep separately are independent of library deletion. [What deletion removes →](../storage.md#what-deletion-removes)

@@ -54,10 +54,8 @@ report.*.json
 /resources/pipelines/**/*.local/
 /resources/pipelines/**/*.local.*
 
-# Local configuration and credentials; only explicit templates are shareable.
+# Local configuration and credentials stay out of source control.
 .env*
-!.env.example
-!.env.*.example
 .npmrc
 *.pem
 *.key
@@ -83,9 +81,11 @@ report.*.json
 *.tar.gz
 *.zip
 desktop/icon.png
+desktop/icon-mac.png
 desktop/tray.png
 desktop/trayTemplate.png
 desktop/trayTemplate@2x.png
+desktop/tray/
 
 # Device/editor files and accidental screenshots
 .DS_Store

@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { randomBytes, createCipheriv, createDecipheriv } from 'node:crypto';
 import { createCredentialStore } from '../desktop/credentials.mjs';
+import { migrateApplicationData } from '../desktop/application-data.mjs';
 
 // Exercise persistence with actual ciphertext, without touching the user's keychain.
 function fixture(t) {
@@ -37,6 +38,20 @@ test('save and removal apply on restart; cleared tokens cannot reappear from an 
   const restarted = createCredentialStore(options); assert.equal(restarted.environment().HF_TOKEN, 'synthetic-replacement-token');
   assert.equal(restarted.save('HF_TOKEN', '').configured.HF_TOKEN, false);
   assert.equal(createCredentialStore(options).environment().HF_TOKEN, '');
+});
+
+test('encrypted workspace tokens still unlock after moving into application data', t => {
+  const options = fixture(t), home = path.join(options.directory, 'workspace'), state = path.join(options.directory, 'machine');
+  fs.mkdirSync(home);
+  const previous = createCredentialStore({ ...options, directory: home });
+  previous.save('HF_TOKEN', 'synthetic-preserved-token');
+  const ciphertext = fs.readFileSync(path.join(home, 'credentials.json'));
+  migrateApplicationData({ home, state, logs: path.join(state, 'logs') });
+  const migrated = createCredentialStore({ ...options, directory: state });
+  assert.equal(migrated.environment().HF_TOKEN, 'synthetic-preserved-token');
+  assert.equal(migrated.status().configured.HF_TOKEN, true);
+  assert.deepEqual(fs.readFileSync(path.join(state, 'credentials.json')), ciphertext);
+  assert.equal(fs.existsSync(path.join(home, 'credentials.json')), false);
 });
 test('unavailable and insecure storage never writes a plaintext fallback; invalid input cannot change storage', t => {
   const options = fixture(t);

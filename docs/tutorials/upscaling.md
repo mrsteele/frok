@@ -4,14 +4,22 @@ AI enhancement is a separate step after video generation. It keeps the original 
 
 ## Choose an AI upscaler
 
-In **Settings → Pipelines → HD enhancement**, select a pipeline and prepare its runtime and models:
+Both bundled upscalers run as ComfyUI workflows. Connect your running ComfyUI installation in **Settings → Services**, even if you generated the original video with Vpipe. There is no bundled Vpipe upscaling workflow.
 
-| Upscaler | Approach | Useful tradeoff |
+In **Settings → Generation → Video upscaling**, select a workflow:
+
+| Upscaler | Approach | Required ComfyUI nodes |
 | --- | --- | --- |
-| Real-ESRGAN | Enhances frames independently | Lighter local setup |
-| SeedVR2 | Restores batches of frames with temporal context | Heavier runtime and memory requirements |
+| Real-ESRGAN | Enhances frames independently | Built-in model upscaling and video nodes |
+| SeedVR2 | Restores batches of frames with temporal context | Video nodes and the SeedVR2 extension |
 
-These are local integrations with their own setup. Choosing a ComfyUI generation pipeline does not require using ComfyUI for enhancement. Frok's SeedVR2 profile uses its standalone CLI with a 3B Q4 model, tiled VAE processing and a 720p target.
+For SeedVR2, install [ComfyUI-SeedVR2_VideoUpscaler](https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler#-installation) in the ComfyUI installation you connected, following its ComfyUI extension instructions, then restart ComfyUI.
+
+Use the selected workflow's preparation/download action and follow its job in **Queue**. Preparation downloads the declared models into your configured ComfyUI models folders and reuses matching files already there. Frok does not install separate upscaler runtimes, Python environments or NCNN binaries.
+
+If required nodes are missing, follow the workflow's **Needs attention** action, install or update the required nodes in ComfyUI, then restart ComfyUI and refresh readiness in Frok. Model preparation does not install custom nodes. Wait for the selected workflow to be ready before upscaling.
+
+Frok supplies the source video and uses the SeedVR2 workflow's device bindings to select an available MPS or CUDA GPU reported by the connected ComfyUI service.
 
 ## Enhance one take
 
@@ -20,12 +28,20 @@ These are local integrations with their own setup. Choosing a ComfyUI generation
 3. Follow the upscaling job in Queue. It may take longer than expected on a small GPU.
 4. When finished, use **SD / HD** over the video to compare versions.
 
-Frok uses the chosen AI workflow, not just an FFmpeg resize. The improvement is model-dependent: enhancement may sharpen texture or restore detail, but can also introduce artifacts. Compare faces, fine patterns and temporal consistency before keeping the result.
+The selected ComfyUI workflow enhances the frames and rebuilds the video with its source frame rate and audio. The improvement is model-dependent: enhancement may sharpen texture or restore detail, but can also introduce artifacts. Compare faces, fine patterns and temporal consistency before keeping the result.
 
 ## Compare and export
 
-The viewer keeps both video elements available and switches visibility, carrying playback position across. The HD version shares the SD take's URL and render number. Download offers both versions. Original audio and duration are preserved by the export path.
+The viewer keeps both video elements available and switches visibility, carrying playback position across. The HD version shares the SD take's URL and render number. Download offers both versions. The bundled workflows preserve the original frame rate, audio and duration.
 
 Changing the selected upscaler allows another enhancement from the original SD video; it does not feed an already enhanced result back through a different model. The viewer shows the latest enhanced copy for that take.
 
-If setup fails, open the preparation log and check model downloads, runtime compatibility and available disk space. If rendering runs out of memory, stop other GPU work and try a lighter upscaler. There is no silent switch to a different enhancement model.
+If preparation fails, open its queue log and check the declared model paths, downloads and available disk space. If rendering fails, check the job log and ComfyUI's node requirements. For memory errors, stop other GPU work or select a compatible workflow with lower memory requirements. There is no silent switch to a different enhancement model.
+
+## Run directly in ComfyUI
+
+1. Import `run.json` from the `upscale/seedvr2/` or `upscale/realesrgan/` folder into ComfyUI, with its required nodes and models installed. `meta.json` and `prepare.json` are Frok companions; import only the run graph.
+2. Upload your source video or copy it into that ComfyUI installation's `input` folder, then select it in `LoadVideo`, replacing the `input.mp4` placeholder.
+3. For SeedVR2, select your GPU in both the DiT and VAE model loaders. The bundled file selects `mps` for Apple Silicon; CUDA users must choose their CUDA GPU in both loaders. Keep `offload_device` set to `none`; the bundled workflow has no CPU offloading.
+
+Real-ESRGAN's final `ImageScale` defaults to height `720` and width `0`, preserving the source aspect ratio. When run through Frok, width and height come from the job's bindings. Keep the source audio and frame-rate connections to `CreateVideo` intact. See [bundled workflow settings](../pipelines.md#bundled-upscaling-settings).

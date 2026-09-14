@@ -13,7 +13,7 @@ import { writeReferencePack } from './fixtures/reference-pack';
 
 const directory=await fs.mkdtemp(path.join(process.cwd(),'.data/reference-readiness-test-'));
 const workspace=path.join(directory,'workspace');
-Object.assign(process.env,{FROK_DATA_DIR:directory,VPIPE_WORKDIR:workspace,VPIPE_REFERENCE_MODEL:'local/MiniMax-H3-Ref2VA-8bit',VPIPE_BIN:'synthetic-vpipe',FFMPEG_BIN:'synthetic-ffmpeg',FFPROBE_BIN:'synthetic-ffprobe',OLLAMA_BIN:'synthetic-ollama',OLLAMA_URL:'http://127.0.0.1:19751',FROK_COMFYUI_PRIVATE:'0'});
+Object.assign(process.env,{FROK_DATA_DIR:directory,VPIPE_WORKDIR:workspace,VPIPE_REFERENCE_MODEL:'local/MiniMax-H3-Ref2VA-8bit',VPIPE_BIN:'synthetic-vpipe',FFMPEG_BIN:'synthetic-ffmpeg',FFPROBE_BIN:'synthetic-ffprobe',OLLAMA_URL:'http://127.0.0.1:19751',FROK_COMFYUI_PRIVATE:'0'});
 let prepares=0,turboPrepares=0,publish=false;
 mock.method(childProcess,'spawn',(command:string,args:string[])=>{
   assert.match(command,/^synthetic-/);

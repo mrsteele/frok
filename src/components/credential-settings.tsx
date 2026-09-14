@@ -18,9 +18,9 @@ export function CredentialSettings() {
     try { setStatus(await window.frokDesktop.saveCredential(key, remove ? '' : values[key])); setValues(current => ({ ...current, [key]: '' })); setNotice(remove ? 'Token removed.' : 'Token saved securely.'); }
     catch (error) { setError((error as Error).message); } finally { setBusy(''); }
   }
-  return <section className="credential-settings desktop-settings" aria-labelledby="credential-settings-title">
+  return <section id="api-tokens" className="credential-settings desktop-settings" aria-labelledby="credential-settings-title">
     <h3 id="credential-settings-title"><KeyRound size={17}/>API tokens</h3>
-    <p>Tokens are encrypted with your system keychain and kept outside library backups.</p>
+    <p>Tokens are encrypted with your system keychain and saved in application data, outside your portable workspace and backups.</p>
     {!desktop && <p>Open Frok Desktop to manage API tokens securely.</p>}
     {status && !status.available && <p role="alert">Secure storage is unavailable. Unlock your system keychain and reopen Frok.</p>}
     {status && providers.map(provider => <form key={provider.key} onSubmit={event => { event.preventDefault(); void save(provider.key); }}>

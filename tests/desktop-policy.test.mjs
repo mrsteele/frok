@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
-import { isAppUrl, externalUrl, updatesConfigured } from '../desktop/policy.mjs';
+import { isAppUrl, externalUrl } from '../desktop/policy.mjs';
 import { WorkerControl } from '../desktop/worker-control.mjs';
 
 test('native bridge accepts only the exact desktop origin', () => {
@@ -22,14 +22,11 @@ test('queue drain prevents new claims without stopping the current job', () => {
 test('unknown control messages do not change worker behavior', () => {
   const control = new WorkerControl(); control.accept({ type: 'delete-everything' }); control.accept(null); assert.equal(control.mayClaim, true);
 });
-test('in-app updates and local publishing remain deliberately unwired', async () => {
-  assert.equal(updatesConfigured, false);
-  const config = JSON.parse(await fs.readFile('electron-builder.json', 'utf8'));
-  assert.equal(config.publish, null);
+test('local packaging never publishes a release', async () => {
   const pkg = JSON.parse(await fs.readFile('package.json', 'utf8'));
   assert.match(pkg.scripts.package, /desktop-package.mjs/);
   assert.match(await fs.readFile('scripts/desktop-package.mjs', 'utf8'), /'--publish', 'never'/);
-  assert.equal(pkg.dependencies['electron-updater'], undefined);
+  assert.ok(pkg.dependencies['electron-updater']);
 });
 test('the installer pipeline manifest excludes personal workflows and includes every companion', async () => {
   const groups = JSON.parse(await fs.readFile('desktop/pipelines.json', 'utf8'));

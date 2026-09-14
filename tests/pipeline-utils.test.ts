@@ -26,7 +26,7 @@ const input={request:{mode:'video' as const,prompt:'A boat',aspect:'1:1',duratio
 
 test('every bundled native workflow exports a discoverable complete folder with working bindings',async()=>{
   const exported=path.join(directory,'exports');await fs.mkdir(exported);
-  const templates=(await diskCatalog()).entries.filter(p=>p.metadata.runner!=='local');
+  const templates=(await diskCatalog()).entries;
   for(const source of templates) {
     const before=structuredClone(source);
     const result=await buildPipelineBundle({name:source.metadata.name,kind:source.kind,runner:source.metadata.runner,graph:source.graph});
@@ -35,11 +35,11 @@ test('every bundled native workflow exports a discoverable complete folder with 
     const p=unpack(result,source.kind);validatePipeline(p);
     assert.deepEqual(p.metadata.bindings,source.metadata.bindings,source.metadata.id);
     assert.deepEqual(p.metadata.source,source.metadata.source);assert.deepEqual(p.metadata.references,source.metadata.references);
-    const graph=bindPipeline(p,{...input,...(p.metadata.source?{source:'private/first-frame.png'}:{}),references:p.metadata.references?['private/reference.png']:[]});
+    const graph=bindPipeline(p,{...input,...(p.metadata.source?{source:'private/first-frame.png'}:p.metadata.videoSource?{source:'private/video.mp4'}:{}),references:p.metadata.references?['private/reference.png']:[]});
     for(const b of p.metadata.bindings.prompt||[]){const config=p.metadata.runner==='vpipe'?(graph.stages as any[]).find(s=>s.id===b.node).config:(graph[b.node] as any).inputs;assert.equal(config[b.field],input.prompt);}
     assert.deepEqual(source,before,'Export must not mutate its source.');
   }
-  const catalog=await diskCatalog(exported);assert.deepEqual(catalog.errors,[]);assert.equal(catalog.entries.length,7);
+  const catalog=await diskCatalog(exported);assert.deepEqual(catalog.errors,[]);assert.equal(catalog.entries.length,9);
 });
 
 test('Krea exports use just the base model with no hidden adapters or projector edits',async()=>{

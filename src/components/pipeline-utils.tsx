@@ -45,7 +45,7 @@ export function PipelineUtils() {
       <form onSubmit={event=>{event.preventDefault();void download();}}>
         <label className="settings-field">Pipeline name<input required value={name} maxLength={80} disabled={busy} placeholder="My image pipeline" onChange={event=>{setName(event.target.value);setResult(undefined);}}/></label>
         <div className="settings-grid">
-          <label className="settings-field">Use for<select value={kind} disabled={busy} onChange={event=>{setKind(event.target.value);setResult(undefined);}}><option value="image">Images</option><option value="video">Videos</option><option value="reference">Reference videos</option></select></label>
+          <label className="settings-field">Use for<select value={kind} disabled={busy} onChange={event=>{setKind(event.target.value);setResult(undefined);}}><option value="image">Images</option><option value="video">Videos</option><option value="reference">Reference videos</option><option value="upscale">Video upscaling</option></select></label>
           <label className="settings-field">Workflow format<select value={runner} disabled={busy} onChange={event=>{setRunner(event.target.value);setResult(undefined);}}><option value="vpipe">Vpipe</option><option value="comfyui">ComfyUI · API format</option></select></label>
         </div>
         <label className="settings-field">Run workflow<input type="file" accept=".json,.vpipeline" disabled={busy} onChange={event=>void read(event.target.files?.[0])}/><small>Choose a native Vpipe generation pipeline or a ComfyUI API export, up to 1 MB.</small></label>
@@ -55,7 +55,7 @@ export function PipelineUtils() {
       {error&&<p className="viewer-error" role="alert">{error}</p>}
       {result&&<div className={result.unresolved.length?'service-warning':'settings-hint'} role="status">
         <strong>{result.unresolved.length?'Draft downloaded · review needed':'Pipeline folder downloaded'}</strong>
-        <p>Extract the ZIP into your pipeline location. It creates <code>{result.folder}/</code>. Review the files, then refresh <Link href="/settings/pipelines">Settings → Pipelines</Link>.</p>
+        <p>Extract the ZIP into your workflow folder. It creates <code>{result.folder}/</code>. Review the files, then refresh <Link href="/settings/advanced#workflow-files">Advanced → Workflow files</Link>.</p>
         {!!result.unresolved.length&&<ul>{result.unresolved.map((item,index)=><li key={index}>{item}</li>)}</ul>}
       </div>}
     </section>

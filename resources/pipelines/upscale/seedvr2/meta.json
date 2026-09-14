@@ -1,8 +1,36 @@
 {
   "version": 1,
-  "id": "local:seedvr2",
+  "id": "comfyui:seedvr2",
   "name": "SeedVR2",
-  "runner": "local",
-  "engine": "seedvr2",
-  "default": true
+  "runner": "comfyui",
+  "default": true,
+  "description": "Temporal AI video restoration using the SeedVR2 ComfyUI extension. Install ComfyUI-SeedVR2_VideoUpscaler in ComfyUI first. Uses a 3B Q4 model and tiled VAE; retains source audio and frame rate. Device bindings follow the connected service; for direct ComfyUI use select your GPU in the two loaders.",
+  "videoSource": {
+    "node": "load-video",
+    "field": "file"
+  },
+  "bindings": {
+    "output": [
+      {
+        "node": "save-video",
+        "field": "filename_prefix"
+      }
+    ],
+    "seed": [
+      {
+        "node": "upscale",
+        "field": "seed"
+      }
+    ],
+    "device": [
+      {
+        "node": "dit",
+        "field": "device"
+      },
+      {
+        "node": "vae",
+        "field": "device"
+      }
+    ]
+  }
 }

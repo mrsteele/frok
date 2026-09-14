@@ -7,7 +7,7 @@ export async function download(url:string,destination:string,signal:AbortSignal,
   const headers:Record<string,string>={};if(size)headers.Range=`bytes=${size}-`;
   if(process.env.HF_TOKEN&&new URL(url).hostname==="huggingface.co")headers.Authorization=`Bearer ${process.env.HF_TOKEN}`;
   const response=await fetch(url,{headers,signal});
-  if(!response.ok)throw new Error(`Download failed (${response.status}) for ${path.basename(destination)}. For gated models, accept the license, save your Hugging Face token in Settings → Generate → API tokens, and quit and reopen Frok.`);
+  if(!response.ok)throw new Error(`Download failed (${response.status}) for ${path.basename(destination)}. For gated models, accept the license, save your Hugging Face token in Settings → Services → API tokens, and quit and reopen Frok.`);
   const {Readable}=await import("node:stream");const {pipeline}=await import("node:stream/promises");const {createWriteStream}=await import("node:fs");
   let bytes=response.status===206?size:0;let last=0;
   const stream=Readable.fromWeb(response.body as never);

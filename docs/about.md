@@ -16,10 +16,10 @@ Image batches use different seeds. Video takes stay with their starting asset. A
 
 The queue runs one job at a time. You can follow progress and logs, cancel work, or retry a failed job. The desktop app keeps processing when its window is closed; quitting the app is a separate action.
 
-## Open source, early days
+## Open source
 
-Frok is open-source software under [GPL-3.0-only](./license.md) and is currently version **0.1.0**. You can inspect, modify and share its source code under that license. Models and bundled tools retain their own licenses. Desktop packaging is included; signing, public distribution and in-app update delivery are separate release work.
+Frok is open-source software. Its [license and attribution](./license.md) are included with the source and in the app. You can inspect, modify and share its source code under that license. Models and bundled tools retain their own licenses. See the [release guide](./releasing.md) for desktop packaging and distribution.
 
 Everything Frok stores for your studio—including prompts, media, settings, logs and local performance readings—stays on your device. Its developers collect none of this information, and the app has no built-in reporting channel or developer remote access to retrieve it. Read [how Frok keeps your studio data local](./legal.md#no-collection-of-your-studio-data), including the distinction for third-party tools and content you choose to share.
 
-Start with [quick setup](./guide/getting-started.md), try the [first-creation tutorial](./tutorials/first-creation.md), or learn how to [contribute](./development.md). For support, find [Matt R. Steele on X](https://x.com/Matt_R_Steele).
+Start with [quick setup](./guide/getting-started.md), try the [first-creation tutorial](./tutorials/first-creation.md), or learn how to [contribute](./development.md).

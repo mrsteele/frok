@@ -81,7 +81,8 @@ test('measured final duration can use a monotonic clock and keeps the reported r
   const complete = store.updateJob(job.id, { status: 'completed', elapsedSeconds: 700.5, runnerSeconds: 685 })!;
   assert.equal(jobElapsedSeconds(complete), 700.5);
   assert.match(markup(complete), /Ran for · 11m 41s/);
-  assert.match(markup(complete), /Vpipe rendering: 11m 25s/);
+  assert.match(markup(complete), /ComfyUI rendering: 11m 25s/);
+  assert.match(markup({...complete,runner:'vpipe'}), /Vpipe rendering: 11m 25s/);
 });
 
 test('interrupted runs stop at their last known activity, excluding downtime before restart', () => {
@@ -93,6 +94,7 @@ test('interrupted runs stop at their last known activity, excluding downtime bef
 test('legacy records use captured runner time, otherwise omit an unknowable duration', () => {
   const old = { ...create(), status: 'completed' as const, updatedAt: new Date(epoch + 685000).toISOString() };
   assert.equal(jobElapsedSeconds(old), undefined); assert.match(markup(old), /Time not recorded/);
-  assert.match(markup({ ...old, runnerSeconds: 685 }), /Vpipe rendering · 11m 25s/);
+  assert.match(markup({ ...old, runnerSeconds: 685 }), /ComfyUI rendering · 11m 25s/);
+  assert.match(markup({ ...old, runner:'vpipe', runnerSeconds: 685 }), /Vpipe rendering · 11m 25s/);
   assert.equal(jobElapsedSeconds({ ...old, startedAt: 'bad', finishedAt: old.updatedAt }), undefined);
 });

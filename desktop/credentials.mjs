@@ -15,7 +15,7 @@ export function createCredentialStore({ directory, safeStorage, environment = pr
       if (saved.tokens[key] !== null && typeof saved.tokens[key] !== 'string') throw Error();
       tokens[key] = saved.tokens[key];
     }
-  } catch (error) { if (error.code !== 'ENOENT') throw Error('Saved API tokens could not be read. Check credentials.json in your workspace.'); }
+  } catch (error) { if (error.code !== 'ENOENT') throw Error('Saved API tokens could not be read. Check credentials.json in Frok’s application-data folder.'); }
   function write(next) {
     const temporary = `${file}.${randomUUID()}.tmp`;
     try {

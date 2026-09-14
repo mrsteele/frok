@@ -1,8 +1,32 @@
 {
   "version": 1,
-  "id": "local:realesrgan",
+  "id": "comfyui:realesrgan",
   "name": "Real-ESRGAN",
-  "runner": "local",
-  "engine": "realesrgan",
-  "default": false
+  "runner": "comfyui",
+  "default": false,
+  "description": "Frame-by-frame neural enhancement with ComfyUI core upscale nodes and Real-ESRGAN x4plus. Resizes the enhanced frames to Frok\u2019s HD target and retains source audio and frame rate.",
+  "videoSource": {
+    "node": "load-video",
+    "field": "file"
+  },
+  "bindings": {
+    "output": [
+      {
+        "node": "save-video",
+        "field": "filename_prefix"
+      }
+    ],
+    "width": [
+      {
+        "node": "resize",
+        "field": "width"
+      }
+    ],
+    "height": [
+      {
+        "node": "resize",
+        "field": "height"
+      }
+    ]
+  }
 }

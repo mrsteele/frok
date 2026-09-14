@@ -27,7 +27,7 @@ for(const s of graph.stages)if(s.type==='model-fetch'&&s.config.model_path==='fi
 `,{mode:0o700});
 after(async()=>{fixture.close();await fs.rm(directory,{recursive:true,force:true});});
 function snapshot(reference='fixture/download'):PipelineSnapshot {
- return {kind:'image',revision:'one',graph:{stages:[]},metadata:pipelineMetadata.parse({version:1,id:'vpipe:fixture',name:'Fixture',runner:'vpipe',dependencies:[{kind:'model',reference,files:['weights.txt'],fetch:{model:reference}}]}),prepare:{id:'expensive-companion',stages:[{id:'expensive',type:'model-quantize',config:{}}]}};
+ return {kind:'image',revision:'one',graph:{stages:[{id:'prompt',type:'text-prompt',config:{text:'fixture'}},{id:'generate',type:'generate-image',config:{seed:1},iports:[{src:'prompt',oport:0}]},{id:'save',type:'save-image',config:{path:'fixture.png'},iports:[{src:'generate',oport:0}]}]},metadata:pipelineMetadata.parse({version:1,id:'vpipe:fixture',name:'Fixture',runner:'vpipe',bindings:{prompt:[{node:'prompt',field:'text'}],seed:[{node:'generate',field:'seed'}],output:[{node:'save',field:'path'}]},dependencies:[{kind:'model',reference,files:['weights.txt'],fetch:{model:reference}}]}),prepare:{id:'expensive-companion',stages:[{id:'expensive',type:'model-quantize',config:{}}]}};
 }
 async function jobDirectory(name:string){const dir=path.join(fixture.jobsDir,name);await fs.mkdir(dir,{recursive:true});return dir;}
 test('known missing downloads bypass expensive preparation; installed dependencies are reused',async()=>{

@@ -4,9 +4,7 @@ description: Frok's open-source license, local studio data, no developer data co
 
 # Legal & responsible use
 
-Last updated: September 11, 2026
-
-Frok is **open-source software**, licensed under [GPL-3.0-only](./license.md). You can inspect, modify and share its source code under that license.
+Frok is **open-source software**, distributed under the [included software license](./license.md). You can inspect, modify and share its source code under that license.
 
 **You are responsible for the prompts, files and references you provide, the content you generate, and how you use or share it.** Frok is a tool for working with models and runners you choose. Making content with Frok does not establish that you have permission to use it.
 
@@ -24,9 +22,9 @@ This describes the Frok app itself. Separate runners, custom pipelines, download
 
 Deleting an asset removes the selected library records and their media files from your device when cleanup completes. Files still used by another retained asset are kept. Asset deletion also removes associated job records, logs and working files. A batch's job details can be shared by several images; deleting one image removes those shared details while keeping the other saved images. Deleting a job or log directly keeps its saved media.
 
-Cancelling a job keeps its details and logs for review. By default, completed, failed and cancelled job records, logs and working files are automatically deleted **3 hours after the job finishes**. You can change that period or disable automatic cleanup in **Settings → Generate → Generation preferences**. Saved media and its generation settings are kept. Cleanup runs while Frok is open and catches up after reopening; it waits for runners to stop and retries pending cleanup.
+Cancelling a job keeps its details and logs for review. Completed, failed and cancelled job records, logs and working files are automatically deleted after the configured retention period. You can change that period or disable automatic cleanup in **Settings → Advanced → Background tasks & tools**. Saved media and its generation settings are kept. Cleanup runs while Frok is open and catches up after reopening; it waits for runners to stop and retries pending cleanup.
 
-To remove the library's media, job history, working files, logs, settings and local export archives, use **Settings → Generate → Delete all my stuff**. Downloaded models, installed runners, pipeline files and saved API tokens are kept. Tokens can be removed separately in **Settings → Generate → API tokens**.
+To remove the library's media, job history, working files, logs, settings and local export archives, use **Settings → Services → Delete all my stuff**. Downloaded models, installed runners, pipeline files and saved API tokens are kept. Tokens can be removed separately in **Settings → Advanced → API tokens**.
 
 Copies you download, export, back up or sync separately remain under your control. Deleting the Frok library does not delete those copies or data held by separately configured tools. If deletion is interrupted, temporary local recovery files may remain until cleanup is retried. Frok uses ordinary file and database deletion and does not guarantee that storage recovery tools cannot recover remnants.
 
@@ -68,6 +66,6 @@ As set out in sections 16 and 17 of the [GNU GPL version 3](./license.md), and u
 
 ## Your software license remains the same
 
-Frok is licensed under **GPL-3.0-only**. You may use, study, modify and share the software under that license. This page explains responsibilities under applicable law and third-party terms, and summarizes the existing warranty and liability provisions. It does not impose additional restrictions on your GPL rights or require a separate agreement to use Frok. If a summary here differs from the GPL, the GPL controls the software license.
+The [included software license](./license.md) governs Frok. You may use, study, modify and share the software under that license. This page explains responsibilities under applicable law and third-party terms, and summarizes the existing warranty and liability provisions. It does not impose additional restrictions on your GPL rights or require a separate agreement to use Frok. If a summary here differs from the GPL, the GPL controls the software license.
 
 Read the [full software license](./license.md), which is also available in the app's offline documentation.

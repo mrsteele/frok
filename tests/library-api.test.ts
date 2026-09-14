@@ -43,7 +43,7 @@ test('reset waits for active operations, clears all content and settings, and pr
   const operation=registry.beginOperation('worker');let released=false;
   setTimeout(()=>{released=true;registry.endOperation(operation);},100);
   const response=await call('library','DELETE',{confirm:'DELETE ALL DATA'});assert.equal(response.status,200);assert.equal(released,true);
-  assert.deepEqual((await import('../src/lib/preferences')).runtimeOptions(), {liveImagePreviews:true,jobTimeoutMinutes:180,manageOllama:false,jobRetentionHours:3,mediaToolsDirectory:''});
+  assert.deepEqual((await import('../src/lib/preferences')).runtimeOptions(), {liveImagePreviews:true,jobTimeoutMinutes:180,jobRetentionHours:3,mediaToolsDirectory:''});
   assert.deepEqual(store.listMedia(),[]);assert.deepEqual(store.listJobs(),[]);assert.equal(store.getValue('example',null),null);assert.equal(fs.existsSync(path.join(root,'users')),false);
   assert.equal(store.db.prepare('SELECT COUNT(*) AS n FROM prompt_sections').get()!.n,0);
   assert.deepEqual(fs.readdirSync(publications),[]);

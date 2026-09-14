@@ -7,6 +7,7 @@ import { desktopNode } from './desktop-node.mjs';
 import { buildDesktopDocs } from './desktop-docs.mjs';
 import { desktopNotices } from './desktop-notices.mjs';
 import { ensureMediaTools, mediaDirectory } from './media-tools.mjs';
+import { nodeTarget } from './node-version.mjs';
 const media = await ensureMediaTools();
 await buildDesktopDocs();
 
@@ -23,8 +24,10 @@ try {
 for (const dir of ['app', 'backend', 'pipeline-templates']) await fs.rm(path.join(output, dir), { recursive: true, force: true });
 await fs.mkdir(path.join(output, 'app'), { recursive: true });
 await desktopIcons();
-const desktopFiles = ['main.mjs', 'credentials.mjs', 'product.mjs', 'workspace.mjs', 'policy.mjs', 'preload.cjs', 'docs-content.mjs', 'docs-window.mjs', 'docs-preload.cjs', 'starting.html', 'pipelines.json', 'icon.png', 'tray.png', 'trayTemplate.png', 'trayTemplate@2x.png'];
+const desktopFiles = ['main.mjs', 'profile.mjs', 'application-data.mjs', 'storage-paths.mjs', 'credentials.mjs', 'product.mjs', 'workspace.mjs', 'policy.mjs', 'updates.mjs', 'update-restart.mjs', 'tray-status.mjs', 'preload.cjs', 'docs-content.mjs', 'docs-window.mjs', 'docs-preload.cjs', 'starting.html', 'pipelines.json', 'icon.png', 'icon-mac.png'];
 for (const name of desktopFiles) await fs.copyFile(path.join('desktop', name), path.join(output, 'app', name));
+await fs.cp('desktop/tray', path.join(output, 'app/tray'), { recursive: true });
+await build({ entryPoints: ['desktop/update-provider.cjs'], outfile: path.join(output, 'app/update-provider.cjs'), bundle: true, platform: 'node', format: 'cjs', external: ['electron'] });
 await fs.writeFile(path.join(output, 'app/package.json'), JSON.stringify({ name: 'frok', productName: 'Frok', version: pkg.version, description: pkg.description, author: pkg.author, license: pkg.license, type: 'module', main: 'main.mjs' }, null, 2));
 const backend = path.join(output, 'backend');
 await fs.cp('.next-desktop/standalone', backend, { recursive: true, filter: file => {
@@ -33,14 +36,14 @@ await fs.cp('.next-desktop/standalone', backend, { recursive: true, filter: file
 } });
 await fs.cp('.next-desktop/static', path.join(backend, '.next-desktop/static'), { recursive: true });
 await fs.cp('public', path.join(backend, 'public'), { recursive: true });
-for (const file of ['supervisor.mjs', 'launch-settings.mjs', 'preferences.mjs']) await fs.copyFile(path.join('desktop', file), path.join(backend, file));
-await build({ entryPoints: ['src/worker/index.ts'], outfile: path.join(backend, 'worker.mjs'), bundle: true, platform: 'node', target: 'node24', format: 'esm', external: ['sharp'], banner: { js: "import { createRequire as frokCreateRequire } from 'node:module'; const require = frokCreateRequire(import.meta.url);" } });
+for (const file of ['supervisor.mjs', 'process-log.mjs']) await fs.copyFile(path.join('desktop', file), path.join(backend, file));
+await build({ entryPoints: ['src/worker/index.ts'], outfile: path.join(backend, 'worker.mjs'), bundle: true, platform: 'node', target: nodeTarget, format: 'esm', external: ['sharp'], banner: { js: "import { createRequire as frokCreateRequire } from 'node:module'; const require = frokCreateRequire(import.meta.url);" } });
 const groups = JSON.parse(await fs.readFile('desktop/pipelines.json', 'utf8'));
 for (const file of groups.flat()) {
   const target = path.join(output, 'pipeline-templates', file); await fs.mkdir(path.dirname(target), { recursive: true });
   await fs.copyFile(path.join(root, 'resources/pipelines', file), target);
 }
-await fs.copyFile('resources/pipelines/VPIPE-LICENSE', path.join(output, 'pipeline-templates/VPIPE-LICENSE'));
+for(const name of ['VPIPE-LICENSE','VPIPE-NOTICE'])await fs.copyFile(path.join('resources/pipelines',name),path.join(output,'pipeline-templates',name));
 await fs.cp(path.join(output,'pipeline-templates'),path.join(backend,'resources/pipelines'),{recursive:true});
 await fs.mkdir(path.join(backend,'desktop'),{recursive:true});
 for(const file of ['workspace.mjs','pipelines.json'])await fs.copyFile(path.join('desktop',file),path.join(backend,'desktop',file));

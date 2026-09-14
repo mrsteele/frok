@@ -62,8 +62,9 @@ export function MediaViewer({initialMedia,renderNumber,onSelect,health,jobs,subm
   const selection=quality?.renderId===original?.id?quality:undefined;
   const displayed=(selection?.version==='sd'?original:render?.hd) || original || family?.root || initialMedia;
   const enhancedLabel=render?.hd&&Math.min(render.hd.width,render.hd.height)>=720?'HD':'AI';
-  const upscalerName=health?.upscaler==='seedvr2'?'SeedVR2':'Real-ESRGAN';
-  const enhancedWithSelected=!!render?.hd&&(render.hd.upscaler||'realesrgan')===(health?.upscaler||'realesrgan');
+  const upscaleWorkflow=health?.pipelines?.find(p=>p.kind==='upscale'&&p.id===health.pipelineSelections?.upscale);
+  const upscalerName=upscaleWorkflow?.name||'your selected workflow';
+  const enhancedWithSelected=!!upscaleWorkflow&&render?.hd?.upscalePipeline?.id===upscaleWorkflow.id&&render.hd.upscalePipeline.revision===upscaleWorkflow.revision;
   const prompts=family?promptDetails(family.root,original):[];
   const timingMedia=displayed.elapsedSeconds!==undefined||displayed.runnerSeconds!==undefined?displayed:original || displayed;
   const runnerTime=formatRunnerTime(timingMedia.elapsedSeconds ?? timingMedia.runnerSeconds);

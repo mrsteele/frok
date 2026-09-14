@@ -18,16 +18,15 @@ import { publishMedia } from '../lib/media-publication';
 import { registry, serviceValue as getValue, setServiceValue as setValue, activeOperations, endOperation, isAlive } from '../lib/registry';
 import { libraryDatabase, closeLibraryDatabase } from '../lib/library';
 import { claimNextJob } from '../lib/worker-queue';
-import { dimensions } from "../lib/validation";
+import { dimensions, hdDimensions } from "../lib/validation";
 import { prepareGenerationPrompts } from "../lib/generation-prompt";
 import { generationSeeds } from "../lib/generation-seeds";
 import { recoverJobTimes } from "../lib/recover-job-times";
-import { upscaleVideo } from "../lib/upscale";
+import { finishUpscale } from "../lib/upscale-workflow";
 import { renderVpipe } from "../lib/vpipe";
 import { renderComfy } from "../lib/comfyui";
 import { runProcess } from "../lib/process";
 import { runSetup } from "../lib/setup";
-import { activateVerifiedPrompt } from '../lib/connection-setup';
 import { sampleGpu } from '../lib/telemetry';
 import { tracksVideoStages, parseProgressLog, preparingVideoProgress, finishingVideoProgress, completedVideoProgress, videoPhaseLabel } from '../lib/progress';
 import type { Job, Generation, Media, SetupRequest } from "../lib/types";
@@ -84,6 +83,7 @@ async function generate(job:Job,signal:AbortSignal,log:(s:string)=>void,onFinish
   if(request.pipeline)log(`Pipeline: ${request.pipeline.metadata.name} · ${request.pipeline.revision.slice(0,12)}\n`);
   else if(job.runner==='vpipe' && ['video','reference'].includes(request.mode))log('Video attention: SOL (Vpipe 0.1.46+)\n');
   const source=request.sourceId?getMedia(request.sourceId):undefined;
+  if(request.mode==='upscale'&&(!source||source.kind!=='video'||!request.pipeline?.metadata.videoSource))throw Error('Choose a video and an upscaling workflow in Settings → Generation.');
   const video=request.mode!=="image";
   if(video){const tools=await mediaToolsStatus({ffmpeg:ffmpeg(),ffprobe:ffprobe()},signal);if(!tools.ready)throw new Error(tools.detail);}
   const dir=path.join(jobsDir(),job.id);await fs.mkdir(dir,{recursive:true});
@@ -94,12 +94,14 @@ async function generate(job:Job,signal:AbortSignal,log:(s:string)=>void,onFinish
   });
   const refs=request.referenceIds.map(id=>getMedia(id)!);
   const {width,height,outputWidth,outputHeight}=dimensions(request.aspect,request.quality,video,source?.kind==="image"?source:undefined);
+  const target=request.mode==='upscale'?hdDimensions(source!.width,source!.height):{width,height};
   let sourcePath:string|undefined;
   if(source?.kind==="image"){
     sourcePath=path.join(dir,"starting-frame.png");
     const anchor=path.join(mediaDir(),source.filename);
     await sharp(anchor).resize(outputWidth,outputHeight,{fit:"contain",background:"#000000",withoutEnlargement:true}).extend({top:Math.floor((height-outputHeight)/4)*2,bottom:height-outputHeight-Math.floor((height-outputHeight)/4)*2,left:Math.floor((width-outputWidth)/4)*2,right:width-outputWidth-Math.floor((width-outputWidth)/4)*2,background:"#000000"}).png().toFile(sourcePath);
   }
+  if(request.mode==='upscale')sourcePath=path.join(mediaDir(),source!.filename);
   const count=request.mode==="image"?request.count:1;
   const seeds=generationSeeds(count,request.seed);
   for(let i=job.completed;i<count;i++){
@@ -110,17 +112,17 @@ async function generate(job:Job,signal:AbortSignal,log:(s:string)=>void,onFinish
     const itemDir=path.join(dir,String(i));await fs.mkdir(itemDir,{recursive:true});
     const raw=path.join(itemDir,video?"raw.mp4":"raw.jpeg");
     const filename=`${id}.${video?"mp4":"jpg"}`;const output=path.join(itemDir,`finished.${video?"mp4":"jpg"}`);
-    updateJob(job.id,{step:null,message:request.mode==="upscale"?"Enhancing video to 720p…":video?"Rendering your video…":`Creating image ${i+1} of ${count}…`});
+    updateJob(job.id,{step:null,message:request.mode==="upscale"?`Enhancing video with ${request.pipeline!.metadata.name}…`:video?"Rendering your video…":`Creating image ${i+1} of ${count}…`});
     let runnerSeconds:number|undefined;
-    if(request.mode==="upscale") {
-      if(!source||source.kind!=="video")throw new Error("Choose an existing video to upscale.");
-      await upscaleVideo(source,output,itemDir,signal,log,(done,total,message)=>updateJob(job.id,{step:{current:Math.round(done/total*100),total:100,label:'AI upscaling'},message:message||`Enhancing frame ${done} of ${total}`}),request.upscaler,seed);
-    } else {
+    {
       const render=job.runner==="vpipe"?renderVpipe:renderComfy;
       const previousRunnerSeconds=getJob(job.id)?.runnerSeconds || 0;
-      await render({request,prompt,seed,width,height,output:raw,directory:itemDir,source:sourcePath,references:refs.map(r=>path.join(mediaDir(),r.filename)),signal,log,waitForStop:()=>!!getJob(job.id)?.pauseRequested,onRuntime:(seconds:number)=>{runnerSeconds=seconds;updateJob(job.id,{runnerSeconds:previousRunnerSeconds+seconds});}});
+      await render({request:request.mode==='upscale'?{...request,duration:source!.duration!}:request,prompt,seed,...target,output:raw,directory:itemDir,source:sourcePath,references:refs.map(r=>path.join(mediaDir(),r.filename)),signal,log,waitForStop:()=>!!getJob(job.id)?.pauseRequested,onRuntime:(seconds:number)=>{runnerSeconds=seconds;updateJob(job.id,{runnerSeconds:previousRunnerSeconds+seconds});}});
       signal.throwIfAborted();
-      if(video) {
+      if(request.mode==='upscale'){
+        updateJob(job.id,{step:null,message:'Saving the enhanced video and original audio…'});
+        await finishUpscale(source!,raw,output,signal,log);
+      }else if(video) {
         onFinishingVideo();
         // H3 runs on a 17n+5 grid. Trim the extra frames to the exact selected duration.
         await runProcess(ffmpeg(),["-hide_banner","-y","-i",raw,"-vf",`crop=${outputWidth}:${outputHeight}`,"-t",String(request.duration),"-map","0:v:0","-map","0:a?","-c:v","libx264","-preset","fast","-crf","18","-pix_fmt","yuv420p","-c:a","aac","-movflags","+faststart",output],{signal,onLog:log});
@@ -137,7 +139,7 @@ async function generate(job:Job,signal:AbortSignal,log:(s:string)=>void,onFinish
     signal.throwIfAborted();
     const sourceId=source?.id;
     if(video){if(sourceId)favoriteMedia(sourceId,true);refs.filter(r=>!r.referenceOnly).forEach(r=>favoriteMedia(r.id,true));}
-    const media:Media={id,...(!video&&request.imageModel?{imageModel:request.imageModel}:{}),batchIndex:i,promptTrace,runnerSeconds,elapsedSeconds:(performance.now()-outputStarted)/1000,rootId:video?(request.mode==="upscale"?mediaRoot(source!.id)?.id:request.rootId || sourceId || id):undefined,generation:request.mode==="upscale"?source?.generation:structuredClone(request),videoStyle:request.mode==="upscale"?source?.videoStyle:videoStyle,kind:video?"video":"image",filename,prompt:request.mode==="upscale"?source!.prompt:request.prompt,enhancedPrompt:prompt,width:actualWidth,height:actualHeight,duration,seed,favorite:video,sourceId,createdAt:new Date().toISOString(),jobId:job.id,origin:request.mode==="upscale"?"upscale":"generated",runner:job.runner,upscaler:request.mode==='upscale'?(request.upscaler||'realesrgan'):undefined,quality:request.mode==="upscale"?(Math.min(actualWidth,actualHeight)>=720?`HD 720p · ${request.upscaler==='seedvr2'?'SeedVR2':'Real-ESRGAN'}`:`AI enhanced · ${request.upscaler==='seedvr2'?'SeedVR2':'Real-ESRGAN'}`):request.quality};
+    const media:Media={id,...(!video&&request.imageModel?{imageModel:request.imageModel}:{}),batchIndex:i,promptTrace,runnerSeconds,elapsedSeconds:(performance.now()-outputStarted)/1000,rootId:video?(request.mode==="upscale"?mediaRoot(source!.id)?.id:request.rootId || sourceId || id):undefined,generation:request.mode==="upscale"?source?.generation:structuredClone(request),videoStyle:request.mode==="upscale"?source?.videoStyle:videoStyle,kind:video?"video":"image",filename,prompt:request.mode==="upscale"?source!.prompt:request.prompt,enhancedPrompt:prompt,width:actualWidth,height:actualHeight,duration,seed,favorite:video,sourceId,createdAt:new Date().toISOString(),jobId:job.id,origin:request.mode==="upscale"?"upscale":"generated",runner:job.runner,upscalePipeline:request.mode==='upscale'?{id:request.pipeline!.metadata.id,name:request.pipeline!.metadata.name,revision:request.pipeline!.revision}:undefined,quality:request.mode==="upscale"?`${Math.min(actualWidth,actualHeight)>=720?'HD '+Math.min(actualWidth,actualHeight)+'p':'AI enhanced'} · ${request.pipeline!.metadata.name}`:request.quality};
     publishMedia(media,output);updateJob(job.id,{step:null,completed:i+1,message:video?"Video saved to favorites":`${i+1} of ${count} images ready`});
     await fs.rm(raw,{force:true});
   }
@@ -176,7 +178,6 @@ try {
         updateJob(job.id,{step:null,videoProgress,message:"Finishing video and saving audio…"});
       });
       signal.throwIfAborted();
-      if(job.kind==='setup')activateVerifiedPrompt(job);
       updateJob(job.id,{status:"completed",elapsedSeconds:(job.accumulatedSeconds||0)+(performance.now()-jobStarted)/1000,completed:job.total,...(tracksVideoStages(job)?{videoProgress:completedVideoProgress()}:{}),message:job.kind==="setup"?"Setup step complete":"All done"});
     }catch(e){
       const current=getJob(job.id),cancelled=signal.aborted||current?.status==="cancelled";

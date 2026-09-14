@@ -28,6 +28,6 @@ export async function mediaToolsStatus(
   readEncoders('\n');
   if (!ffmpeg || !ffprobe) return { ready: false, detail: missingMediaToolsMessage };
   const missing = ['libx264', 'aac'].filter(name => !encoders.has(name));
-  if (missing.length) return { ready: false, detail: `The selected FFmpeg build is missing ${missing.join(' and ')} encoding support. Choose a build with H.264 (libx264) and AAC encoders under Generation preferences → Video tools folder.` };
+  if (missing.length) return { ready: false, detail: `The selected FFmpeg build is missing ${missing.join(' and ')} encoding support. Choose a build with H.264 (libx264) and AAC encoders under Advanced → Background tasks & tools → Video tools folder.` };
   return { ready: true, detail: 'FFmpeg H.264/AAC encoding and FFprobe ready' };
 }

@@ -1,3 +1,4 @@
+import { OllamaConnection } from '../src/components/ollama-connection';
 import { createLibraryFixture } from './fixtures/library';
 import { mock, test as pureTest } from 'node:test';
 import assert from 'node:assert/strict';
@@ -7,9 +8,7 @@ import childProcess from 'node:child_process';
 import { syncBuiltinESMExports } from 'node:module';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement } from 'react';
-import { Setup } from '../src/components/setup';
 import { PromptModelSettings } from '../src/components/prompt-model-settings';
-import { OllamaConnection } from '../src/components/ollama-connection';
 import { installedOllamaModels } from '../src/lib/ollama-models';
 
 const previousDir = process.cwd();
@@ -21,9 +20,7 @@ function configure(model = original, url = endpoint) { store.setValue('ollamaUrl
 process.env.OLLAMA_MODEL = original; process.env.OLLAMA_URL = endpoint;
 process.env.FROK_DATA_DIR = path.join(testDir, 'data');
 process.env.VPIPE_WORKDIR = path.join(testDir, 'unused-models');
-process.env.REALESRGAN_BIN = path.join(testDir, 'unused-upscaler');
-process.env.REALESRGAN_MODEL_DIR = path.join(testDir, 'unused-upscaler-models');
-process.env.VPIPE_BIN = process.execPath; process.env.OLLAMA_BIN = process.execPath;
+process.env.VPIPE_BIN = process.execPath;
 process.env.FFMPEG_BIN = process.execPath; process.env.FFPROBE_BIN = process.execPath;
 process.chdir(testDir);
 const { ollamaConfig, defaultOllamaModel } = await import('../src/lib/ollama-config');
@@ -169,14 +166,13 @@ test('editing old environment files no longer changes the active saved configura
 });
 
 test('Models shows the missing selected model and a download action without a stale Ready badge', async () => {
-  store.setValue('runtimeOptions',{manageOllama:true});
   configure(replacement); select(replacement); const state = await health();
-  const props = {health:state,jobs:[],section:'generate' as const,onClose:()=>{},onRefresh:()=>{}};
-  const html = renderToStaticMarkup(createElement(Setup, props));
+  const props = {health:state,jobs:[],checking:false,onPrepare:async()=>{},onRefresh:()=>{}};
+  const html = renderToStaticMarkup(createElement(OllamaConnection, props));
   const promptRow = html.slice(html.indexOf('Prompt enhancement</h3>'), html.indexOf('</section>',html.indexOf('Prompt enhancement</h3>')));
   assert.ok(promptRow.includes(replacement));
   assert.ok(promptRow.includes('Download prompt model')); assert.ok(!promptRow.includes('settings-ready'));
-  const checking = renderToStaticMarkup(createElement(Setup, {...props,checkingHealth:true,health:{...state,ollama:true}}));
+  const checking = renderToStaticMarkup(createElement(OllamaConnection, {...props,checking:true,health:{...state,ollama:true}}));
   const checkingRow = checking.slice(checking.indexOf('Prompt enhancement</h3>'), checking.indexOf('</section>',checking.indexOf('Prompt enhancement</h3>')));
   assert.ok(checkingRow.includes('Checking')); assert.ok(!checkingRow.includes('settings-ready'));
 });
@@ -184,11 +180,9 @@ test('Models shows the missing selected model and a download action without a st
 test('saving a local connection refreshes its models, persists the address, and sends prompts to the chosen model',async()=>{
   const nextUrl='http://127.0.0.1:19082';installed.set(nextUrl,new Set([replacement]));
   assert.equal((await status()).ollama,true);
-  store.setValue('pendingPromptSetup',{jobId:'old-job',model:original});
   const connected=await call('PATCH','settings',{ollamaUrl:`${nextUrl}/`,connections:{ollama:true}});
   assert.equal(connected.status,200,await connected.clone().text());
   assert.equal(store.settings().ollamaUrl,nextUrl);assert.equal(ollamaConfig().url,nextUrl);
-  assert.equal(store.getValue('pendingPromptSetup',null),null);
   const next=await status(false);assert.equal(next.ollama,false);assert.deepEqual(next.ollamaModels,[replacement]);
   assert.equal(next.ollamaModel,original); // Preserve the choice, but mark it unavailable.
   assert.equal((await call('PATCH','settings',{modelSelections:{prompt:original}})).status,409);
@@ -235,11 +229,11 @@ test('discovery excludes embedding-only and cloud models while allowing text-cap
   assert.ok(!requested.includes('remote'));
 });
 
-test('new installations default to standard local Ollama; managed runtime remains explicit', () => {
+test('standard local Ollama remains the default even with a retired managed setting', () => {
   store.setValue('environmentDefaults', {}); store.setValue('ollamaUrl', '');
   assert.equal(ollamaConfig().url, 'http://127.0.0.1:11434');
   store.setValue('runtimeOptions', {manageOllama:true});
-  assert.equal(ollamaConfig().url, 'http://127.0.0.1:11435');
+  assert.equal(ollamaConfig().url, 'http://127.0.0.1:11434');
   store.setValue('modelSelections', {...store.settings().modelSelections, prompt:''});
   assert.equal(ollamaConfig().model, defaultOllamaModel);
 });

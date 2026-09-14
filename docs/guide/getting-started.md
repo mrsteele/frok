@@ -8,7 +8,7 @@ You are responsible for your inputs, generated content and how you use or share 
 
 If you have a packaged desktop build, launch it normally. Startup creates `~/frok` and installs the default pipeline definitions. On Windows, `~` means your user profile directory.
 
-For the source build, install Node.js 24 or newer, open a terminal in the repository, and run:
+For the source build, install the Node.js version pinned in `.node-version`, open a terminal in the repository, and run:
 
 ```sh
 npm ci
@@ -24,25 +24,29 @@ Open `http://127.0.0.1:3000`. For the Electron development window instead, run `
 
 *Use Settings to connect your tools. Documentation returns to these guides.*
 
-Open **Settings → Generate**, or use the welcome guide. Connect only the tools you want to use:
+On first launch, Frok opens a three-step **Quick setup** modal: connect the services you have, choose optional generation workflows, and finish. Missing models are queued for preparation when you choose **Download & finish**. You can skip setup and return through **Settings → Services → Quick setup**.
+
+In **Settings → Services**, connect only the tools you want to use:
 
 | Connection | Used for | Default when the input is empty |
 | --- | --- | --- |
 | Vpipe | Native image and video workflows | Workspace `~/vpipe` |
-| ComfyUI | API image and video workflows | `http://127.0.0.1:8000` and the suggested local folder |
+| ComfyUI | API image, video and video upscaling workflows | `http://127.0.0.1:8000` and the suggested local folder |
 | Ollama | Optional prompt enhancement | `http://127.0.0.1:11434` |
 
 Vpipe's workspace is the folder **containing** `models`, not `models` itself. ComfyUI and Ollama must already be running at the address you enter. Manual ComfyUI installations may use another port, such as 8188.
 
-![Settings Generate tab showing the Vpipe model workspace, Connected status and Check connection button](/screenshots/connect-vpipe.png)
+![Settings Services tab showing the Vpipe model workspace, Connected status and Check connection button](/screenshots/connect-vpipe.png)
 
 *Example of a connected Vpipe installation. Enter your workspace here, then check the connection.*
 
-After the connection check succeeds, accept the suggested setup to select starter pipelines and queue missing preparation. You can skip this offer and choose pipelines yourself. [Connection details →](./connections.md)
+After a connection succeeds, move to **Generation** in the wizard or Settings to choose its workflows. Connecting a service alone does not select workflows or start model downloads. [Connection details →](./connections.md)
 
 ## 3. Prepare a pipeline
 
-In **Settings → Pipelines**, choose a workflow for Images, Videos or Reference videos. Only enabled compatible runners can be selected. Each capability has its own readiness state.
+In **Settings → Generation**, choose a workflow for Images, Videos, Reference videos, or Video upscaling. The selectors list all compatible workflows from your workflow folder. A disabled option names the service it requires; connect that service in **Services**, then return to choose it. Quick setup and generation controls use the same choices.
+
+Each selected workflow reports its own readiness and preparation actions. A connected service lets you select its workflows even when their models still need downloading. [Upscaling setup →](../tutorials/upscaling.md)
 
 - **Ready:** the required model files and supported runner requirements were detected.
 - **Missing dependencies:** use the preparation/download action and follow its job in Queue.
@@ -56,7 +60,7 @@ Models can require substantial disk space and memory. Start with one image pipel
 
 ## 4. Optionally enhance prompts
 
-Connect Ollama in **Generate**, then choose one of its installed text-generation models. Check **Use Prompt Enhancement**, or enable **Prompt enhancement** in generation settings; both controls share the same saved preference. Choosing an absent default model will not show Ready. There is no need for a second Ollama installation.
+Connect Ollama in **Services**, then choose one of its installed text-generation models. Check **Use Prompt Enhancement**, or enable **Prompt enhancement** in generation settings; both controls share the same saved preference. Choosing an absent default model will not show Ready. There is no need for a second Ollama installation.
 
 ## 5. Make a first batch
 

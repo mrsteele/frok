@@ -11,12 +11,12 @@ import type {Health} from '../src/lib/types';
 const directory=await fs.mkdtemp(path.join(process.cwd(),'.data/pipeline-library-test-'));
 process.env.FROK_DATA_DIR=directory;
 const fixture=await createLibraryFixture(),{test,beforeEach,after}=fixture;
-const {pipelineHome,defaultPipelinesDir}=await import('../src/lib/paths');
+const {pipelineHome,pipelineStateDirectory,defaultPipelinesDir}=await import('../src/lib/paths');
 assert.equal(pipelineHome,path.join(directory,'pipeline-home'),'Tests must never reset the real user directory.');
 const db=await import('../src/lib/db');
 const routes=await import('../src/app/api/[[...segments]]/route');
 const {catalog}=await import('../src/lib/pipelines/catalog');
-const options={home:pipelineHome,templates:path.resolve('resources/pipelines'),groups:JSON.parse(await fs.readFile('desktop/pipelines.json','utf8')),version:'0.1.0'};
+const options={home:pipelineHome,stateDirectory:pipelineStateDirectory,templates:path.resolve('resources/pipelines'),groups:JSON.parse(await fs.readFile('desktop/pipelines.json','utf8')),version:'0.1.0'};
 function call(endpoint:string,method:'GET'|'PATCH'|'POST'='GET',body?:unknown) {
   return routes[method](fixture.request(`http://localhost:3000/api/${endpoint}`,{method,...(body?{body:JSON.stringify(body)}:{})}),{params:Promise.resolve({segments:endpoint.split('/')})});
 }
@@ -30,9 +30,9 @@ test('empty location uses the external default and audits all installed definiti
   const response=await call('pipelines/library');assert.equal(response.status,200);
   const audit=await response.json();
   assert.equal(audit.configured,'');assert.equal(audit.path,defaultPipelinesDir);
-  assert.deepEqual(audit.counts,{vpipe:3,comfyui:4,local:2});assert.deepEqual(audit.errors,[]);
+  assert.deepEqual(audit.counts,{vpipe:3,comfyui:6});assert.deepEqual(audit.errors,[]);
   const html=renderToStaticMarkup(createElement(PipelineLibrary,{health:{pipelineLibrary:audit} as Health,checking:false,onRefresh:()=>{}}));
-  assert.match(html,/Pipeline location/);assert.match(html,/value=""/);assert.match(html,/Vpipe pipelines/);assert.match(html,/Reset default pipelines/);
+  assert.match(html,/Workflow folder/);assert.match(html,/value=""/);assert.match(html,/Vpipe workflows/);assert.match(html,/Reset default pipelines/);
 });
 test('location edits rescan immediately, retain selections and do not alter queued snapshots',async()=>{
   const current=(await catalog()).entries[0],snapshot=structuredClone(current);
@@ -40,7 +40,7 @@ test('location edits rescan immediately, retain selections and do not alter queu
   const job=db.createJob({kind:'setup',runner:'vpipe',total:1,request:{task:'pipeline',pipeline:snapshot}});
   const custom=path.join(directory,'custom');await fs.mkdir(custom,{recursive:true});
   const saved=await call('pipelines/library','PATCH',{path:custom});assert.equal(saved.status,200);
-  assert.deepEqual((await saved.json()).counts,{vpipe:0,comfyui:0,local:0});assert.equal((await catalog()).entries.length,0);
+  assert.deepEqual((await saved.json()).counts,{vpipe:0,comfyui:0});assert.equal((await catalog()).entries.length,0);
   assert.equal(db.settings().pipelineSelections.image,current.metadata.id);assert.deepEqual(db.getJob(job.id)!.request.pipeline,snapshot);
   const cleared=await call('pipelines/library','PATCH',{path:''});assert.equal(cleared.status,200);
   assert.equal(db.pipelineDirectorySetting(),'');assert.equal((await catalog()).entries.length,9);

@@ -1,3 +1,5 @@
+import { normalizeInterfacePreferences } from '@/lib/interface-preferences';
+import type { ExportPreferences } from '@/lib/export-preferences';
 import { deleteJobs } from '@/lib/job-deletion';
 import { buildPipelineBundle, zipFiles } from '@/lib/pipelines/utils';
 import { runtimeOptions, runtimeStatus } from '@/lib/preferences';
@@ -18,14 +20,13 @@ import { mediaDir, jobsDir } from "@/lib/config";
 import { listAssets, listSessionMedia, getMedia, getValue, listJobs, getJob, moveQueuedJob, createJob, updateJob, settings, setValue, mediaRoot, mediaFamily, favoriteRender } from "@/lib/db";
 import { publishMedia } from '@/lib/media-publication';
 import { generationSchema, hdDimensions } from "@/lib/validation";
-import { installedAdapters } from "@/lib/installed-adapters";
 import { health, setupTasks } from "@/lib/setup";
 import type { Generation, Health, SetupRequest } from "@/lib/types";
 import { deletionPlan, deleteMedia } from '@/lib/media-delete';
 import { readImagePreview, liveImagePreviewsEnabled } from '@/lib/image-preview';
 import { telemetry } from '@/lib/telemetry';
 import { ollamaConfig } from '@/lib/ollama-config';
-import { prepareConnection, queueSetup, retryPromptSetup } from '@/lib/connection-setup';
+import { prepareConnection, queueSetup } from '@/lib/connection-setup';
 import { validateServiceSettings, checkSetupConnection } from '@/lib/service-settings';
 import { connectionIds, connectionsSchema, modelSelectionsSchema, ollamaAddressSettingSchema, promptModelSchema } from '@/lib/service-config';
 import { handleLibraryReset, withAppRequest, privateResponse, HttpError } from '@/lib/app-request';
@@ -174,7 +175,7 @@ async function route(request:Request,{params}:Context) {
     try{runner=await snapshotRequest(input,state);}catch(error){throw new HttpError(409,(error as Error).message);}
     request.signal.throwIfAborted();
     if(JSON.stringify([settings(),runtimeOptions()])!==JSON.stringify([config,runtime]))throw new HttpError(409,'Settings changed while checking the pipeline. Try generating again.');
-    if(input.enhance){if(!state.ollama)return json({error:state.capabilities?.prompt.detail||'Configure prompt enhancement in Settings → Generate → Ollama.',setupRequired:true},409);input.ollama=promptConfig;}
+    if(input.enhance){if(!state.ollama)return json({error:state.capabilities?.prompt.detail||'Configure prompt enhancement in Settings → Services → Ollama.',setupRequired:true},409);input.ollama=promptConfig;}
 
     if(input.mode==='upscale'){const source=getMedia(input.sourceId!)!;hdDimensions(source.width,source.height);}
     return json({job:createJob({kind:"generate",request:input,runner,total:input.mode==="image"?input.count:1})},201);
@@ -204,7 +205,7 @@ async function route(request:Request,{params}:Context) {
       }
       if(job.kind==="setup"){
         const {pipeline,task}=r as SetupRequest;
-        if(pipeline&&pipeline.metadata.runner!=='local'&&!settings().connections[pipeline.metadata.runner])throw new HttpError(409,'Enable this pipeline’s connection before retrying.');
+        if(pipeline&&!settings().connections[pipeline.metadata.runner])throw new HttpError(409,'Enable this pipeline’s connection before retrying.');
         if(!pipeline&&!(setupTasks as readonly string[]).includes(task))throw new HttpError(400,'This setup task is no longer supported.');
         if(task==='ollama'&&!settings().connections.ollama)throw new HttpError(409,'Enable this job’s connection before retrying.');
       }
@@ -212,19 +213,28 @@ async function route(request:Request,{params}:Context) {
       request.signal.throwIfAborted();
       if(JSON.stringify([settings(),runtimeOptions()])!==JSON.stringify([before,runtime]))throw new HttpError(409,'Settings changed while checking the job. Please retry.');
       const next=createJob({kind:job.kind,request:r,runner:job.runner,total:job.kind==="generate"?(r as Generation).mode==="image"?(r as Generation).count:1:1});
-      retryPromptSetup(job,next);return json({job:next},201);
+      return json({job:next},201);
     }
   }
-  if(resource==='adapters'&&!id&&method==='GET') {
-    if(!settings().connections.vpipe)throw new HttpError(409,'Connect Vpipe before choosing installed LoRAs.');
-    return json(await installedAdapters());
+  if(resource==='settings'&&id==='interface'&&!action){
+    if(method==='GET')return json(getValue<ExportPreferences>('interfacePreferences',{}));
+    if(method==='POST'||method==='PATCH'){
+      const input=normalizeInterfacePreferences(await readJson(request,1_000_000),method==='POST');
+      libraryStore.exec('BEGIN IMMEDIATE');
+      try{
+        const saved=getValue<ExportPreferences>('interfacePreferences',{});
+        // Initial migration fills missing keys; it cannot replace newer saved choices.
+        const next=method==='POST'?{...input,...saved}:{...saved,...input};
+        setValue('interfacePreferences',next);
+        libraryStore.exec('COMMIT');return json(next);
+      }catch(error){libraryStore.exec('ROLLBACK');throw error;}
+    }
   }
   if(resource==='settings'&&id==='runtime'&&!action){
     if(method==='GET')return json(runtimeStatus());
     if(method==='PATCH'){
-      const input=z.object({liveImagePreviews:z.boolean().optional(),jobTimeoutMinutes:z.number().int().min(1).max(10080).optional(),manageOllama:z.boolean().optional(),jobRetentionHours:z.number().int().min(1).max(8760).nullable().optional(),mediaToolsDirectory:z.string().trim().max(2048).refine(value=>!value||(!/[\x00-\x1f]/.test(value)&&(path.isAbsolute(value)||/^~[/\\]/.test(value))),"Choose an absolute folder or leave it blank for automatic detection.").optional()}).strict().parse(await body(request));
+      const input=z.object({liveImagePreviews:z.boolean().optional(),jobTimeoutMinutes:z.number().int().min(1).max(10080).optional(),jobRetentionHours:z.number().int().min(1).max(8760).nullable().optional(),mediaToolsDirectory:z.string().trim().max(2048).refine(value=>!value||(!/[\x00-\x1f]/.test(value)&&(path.isAbsolute(value)||/^~[/\\]/.test(value))),"Choose an absolute folder or leave it blank for automatic detection.").optional()}).strict().parse(await body(request));
       const current=runtimeOptions();
-      if(input.manageOllama!==undefined&&input.manageOllama!==current.manageOllama&&queueBusy())throw new HttpError(409,'Finish or cancel queued jobs and wait for the runner to stop before changing how Ollama starts.');
       if(input.mediaToolsDirectory!==undefined&&input.mediaToolsDirectory!==current.mediaToolsDirectory&&queueBusy())throw new HttpError(409,'Finish or cancel queued jobs and wait for the runner to stop before changing the video tools folder.');
       setValue('runtimeOptions',{...current,...input});
       healthCaches.clear();return json(runtimeStatus());
@@ -251,7 +261,6 @@ async function route(request:Request,{params}:Context) {
     if(selections)setValue('pipelineSelections',selections);
     for(const [key,value]of Object.entries(input)){if(key==='connections'||key==='modelSelections'||key==='pipelineSelections'||runnerLocationFields.includes(key as keyof RunnerLocations))continue;setValue(key,value);}
     setValue('connections',services.connections);setValue('modelSelections',services.modelSelections);
-    if(input.connections?.ollama===false||input.modelSelections?.prompt!==undefined||input.ollamaModel!==undefined||input.ollamaUrl!==undefined)setValue('pendingPromptSetup',null);
     healthCaches.clear();return json({settings:settings()});
   }
   if(resource==='setup'&&id==='connection'&&method==='POST') {

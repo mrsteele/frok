@@ -2,7 +2,6 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { expandPath } from './config';
 import { settings, workdir } from './db';
-import type { Adapters } from './types';
 import { turboAdapters } from './adapters';
 
 // model-fetch uses <base>/<owner>/<repo>; model-quantize uses models/<key>.
@@ -73,8 +72,3 @@ async function resolveReference(value: string, adapter: boolean): Promise<string
 
 export const resolveVpipeModel = (value: string) => resolveReference(value, false);
 export const resolveModelAdapter = (value: string) => resolveReference(value, true);
-
-/** Validate at the API boundary; rendering resolves again to prevent stored-path bypasses. */
-export async function validateModelAdapters(adapters: Adapters): Promise<void> {
-  for (const value of [adapters.primary, adapters.secondary]) if (value) await resolveModelAdapter(value);
-}

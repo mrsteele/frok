@@ -4,4 +4,3 @@ export function isAppUrl(value, origin) {
 export function externalUrl(value) {
   try { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password ? url.href : undefined; } catch { return; }
 }
-export const updatesConfigured = false;

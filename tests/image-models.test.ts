@@ -23,8 +23,8 @@ const store=await import('../src/lib/db');
 const registry=await import('../src/lib/registry');
 
 const routes=await import('../src/app/api/[[...segments]]/route');
-const {zImageStatus}=await import('../src/lib/image-readiness');
-const {prepareZImage}=await import('../src/lib/image-setup');
+const {pipelineStatus,resolvePipeline}=await import('../src/lib/pipelines/catalog');
+const {preparePipeline}=await import('../src/lib/pipelines/prepare');
 const {buildComfyGraph}=await import('../src/lib/comfyui');
 const {buildPipeline}=await import('../src/lib/vpipe');
 const {generationBlocker,missingSetup}=await import('../src/lib/readiness');
@@ -91,12 +91,14 @@ test('Z-Image graph uses its own latent, encoder, sampling and private output pr
 });
 
 test('readiness requires every full model file, loader choice, core node and sampler',async()=>{
-  assert.equal((await zImageStatus()).ready,true);
-  for(const [file,size] of [...sizes]){sizes.delete(file);assert.equal((await zImageStatus()).ready,false);sizes.set(file,size-1);assert.equal((await zImageStatus()).ready,false);sizes.set(file,size);}
-  const saved=info.CLIPLoader;delete info.CLIPLoader;assert.match((await zImageStatus()).detail,/Missing Z-Image nodes/);info.CLIPLoader=saved;
-  info.KSampler.input.required.sampler_name=[['euler']];assert.match((await zImageStatus()).detail,/sampling support/);
+  const pipeline=await resolvePipeline('image','comfyui:z-image-turbo');
+  const status=()=>pipelineStatus(pipeline);
+  assert.equal((await status()).ready,true);
+  for(const [file,size] of [...sizes]){sizes.delete(file);assert.equal((await status()).ready,false);sizes.set(file,size-1);assert.equal((await status()).ready,false);sizes.set(file,size);}
+  const saved=info.CLIPLoader;delete info.CLIPLoader;assert.match((await status()).detail,/nodes in ComfyUI.*CLIPLoader/);info.CLIPLoader=saved;
+  info.KSampler.input.required.sampler_name=[['euler']];assert.match((await status()).detail,/sampler_name is unavailable/);
   info.KSampler.input.required.sampler_name=[['res_multistep']];
-  info.CLIPLoader.input.required.clip_name=[['different.safetensors']];assert.equal((await zImageStatus()).ready,false);
+  info.CLIPLoader.input.required.clip_name=[['different.safetensors']];assert.equal((await status()).ready,false);
 });
 
 test('switching models invalidates readiness; missing Z-Image blocks image jobs and flags setup',async()=>{
@@ -137,9 +139,18 @@ test('Z-Image stays blocked on an unprotected remote ComfyUI',async()=>{
 });
 
 test('Z-Image preparation pins all dependencies and never overwrites conflicting shared files',async()=>{
-  for(const file of zImageFiles){assert.match(zImageUrl(file),new RegExp(zImageRevision));assert.match(file.sha256,/^[0-9a-f]{64}$/);}
-  sizes.set([...sizes.keys()][0],1);
-  await assert.rejects(prepareZImage(new AbortController().signal,()=>{}),/no existing model was replaced/);
+  const pipeline=await resolvePipeline('image','comfyui:z-image-turbo');
+  for(const file of zImageFiles){
+    const dependency=pipeline.metadata.dependencies.find(item=>item.reference===`${file.directory}/${file.name}`)!;
+    assert.equal(dependency.url,zImageUrl(file));assert.match(dependency.url!,new RegExp(zImageRevision));
+    assert.equal(dependency.sha256,file.sha256);assert.match(dependency.sha256!,/^[0-9a-f]{64}$/);assert.equal(dependency.size,file.size);
+  }
+  const conflict=[...sizes.keys()][0];sizes.set(conflict,1);
+  fs.mkdirSync(path.dirname(conflict),{recursive:true});fs.writeFileSync(conflict,'x');
+  try{
+    await assert.rejects(preparePipeline(pipeline,directory,new AbortController().signal,()=>{}),/existing shared files are not overwritten/);
+    assert.equal(fs.readFileSync(conflict,'utf8'),'x');
+  }finally{fs.rmSync(conflict);}
 });
 
 test('download receipts cannot make missing Z-Image weights appear ready',async()=>{

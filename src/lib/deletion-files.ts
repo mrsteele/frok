@@ -84,8 +84,6 @@ export function commitDeletion(select: () => { media: Media[]; jobIds: string[] 
     db.exec(`DELETE FROM prompt_sections WHERE
       NOT EXISTS(SELECT 1 FROM media WHERE json_extract(data,'$.sectionId')=prompt_sections.id)
       AND NOT EXISTS(SELECT 1 FROM jobs WHERE json_extract(data,'$.request.sectionId')=prompt_sections.id)`);
-    const pending = getValue<{ jobId: string } | null>('pendingPromptSetup', null);
-    if (pending && ids.includes(pending.jobId)) setValue('pendingPromptSetup', null);
     if (media.length) setValue('mediaRevision', getValue('mediaRevision', 0) + 1);
     db.exec('COMMIT'); committed = true;
     let cleanupPending = false;

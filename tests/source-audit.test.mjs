@@ -6,8 +6,9 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { candidateFiles, checkSource, sourceIssues } from '../scripts/check-source.mjs';
 
-test('source checks distinguish templates from secrets without returning secret values', () => {
-  assert.deepEqual(sourceIssues('.env.example', 'HF_TOKEN=\n'), []);
+test('source checks reject environment and private files without returning secret values', () => {
+  assert.deepEqual(sourceIssues('.env.development.example', ''), ['private/runtime file is included']);
+  assert.ok(sourceIssues('.env', '').length);
   assert.ok(sourceIssues('.env.local', '').length);
   assert.ok(sourceIssues('frok-backup.tar.gz', '').length);
   assert.deepEqual(sourceIssues('docs/public/demo/sailboat.mp4', ''), []);
@@ -23,16 +24,16 @@ test('source checks distinguish templates from secrets without returning secret 
 test('a first-commit audit honors nested ignores without initializing the project', async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'frok-audit-test-'));
   try {
-    await fs.writeFile(path.join(directory, '.gitignore'), '.data/\nnode_modules/\n.env*\n!.env.example\n');
+    await fs.writeFile(path.join(directory, '.gitignore'), '.data/\nnode_modules/\n.env*\n');
     await fs.mkdir(path.join(directory, '.data'));
     await fs.mkdir(path.join(directory, 'docs/node_modules'), { recursive: true });
     await fs.writeFile(path.join(directory, '.data/private.sqlite'), 'private fixture');
     await fs.writeFile(path.join(directory, 'docs/node_modules/cache.json'), 'cache fixture');
     await fs.writeFile(path.join(directory, '.env.local'), 'private fixture');
-    await fs.writeFile(path.join(directory, '.env.example'), 'HF_TOKEN=\n');
+    await fs.writeFile(path.join(directory, '.env.development.example'), 'private fixture');
     await fs.writeFile(path.join(directory, 'app.ts'), 'export const version = "0.1.0";\n');
     const result = await checkSource(directory);
-    assert.deepEqual(result.files, ['.env.example', '.gitignore', 'app.ts']);
+    assert.deepEqual(result.files, ['.gitignore', 'app.ts']);
     assert.deepEqual(result.findings, []);
     await assert.rejects(fs.stat(path.join(directory, '.git')), { code: 'ENOENT' });
   } finally { await fs.rm(directory, { recursive: true, force: true }); }

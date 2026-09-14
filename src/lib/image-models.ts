@@ -8,4 +8,3 @@ export const imageModels = {
   'z-image-turbo': { name: 'Z-Image-Turbo', runner: 'comfyui', task: 'comfy-z-image', detail: 'About 20 GB including the Qwen3 text encoder and VAE. Uses an eight-step ComfyUI workflow. Memory use and speed depend on your hardware and ComfyUI configuration.' },
 } as const;
 export const defaultImageModel = (runner: Runner): ImageModelId => runner === 'vpipe' ? 'krea-2-turbo' : 'sdxl-turbo';
-export const imageModelForTask = (task: string): ImageModelId | undefined => imageModelIds.find(id => imageModels[id].task === task);

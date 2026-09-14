@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';import path from 'node:path';import assert fro
 const directory=await fs.mkdtemp(path.join(process.cwd(),'.data/pipeline-catalog-test-'));
 process.env.FROK_DATA_DIR=directory;process.env.VPIPE_WORKDIR=path.join(directory,'workspace');process.env.COMFYUI_DIR=path.join(directory,'comfy');process.env.VPIPE_LIVE_PREVIEWS='0';
 const {createLibraryFixture}=await import('./fixtures/library');const fixture=await createLibraryFixture();
-const {diskCatalog,catalog,resolvePipeline,validatePipeline,pipelineStatus}=await import('../src/lib/pipelines/catalog');
+const {diskCatalog,catalog,resolvePipeline,validatePipeline,pipelineStatus,pipelineHealth}=await import('../src/lib/pipelines/catalog');
 const {bindPipeline}=await import('../src/lib/pipelines/bindings');
 const {generationSchema}=await import('../src/lib/validation');
 const {dependencyReady}=await import('../src/lib/pipelines/dependencies');
@@ -10,6 +10,21 @@ const db=await import('../src/lib/db');
 const registry=await import('../src/lib/registry');
 after(async()=>{fixture.close();await fs.rm(directory,{recursive:true,force:true});});
 const input={request:{mode:'video' as const,prompt:'A tiny boat',aspect:'1:1',duration:6,quality:'preview' as const,count:1,enhance:false,referenceIds:[]},prompt:'A tiny boat',seed:99,width:512,height:512,output:'/private/job/output.mp4',directory:'/private/job',source:'/private/job/image.jpg',references:[]};
+fixture.test('health includes disconnected workflows without probing their services or advertising readiness',async t=>{
+ const fetch=t.mock.method(globalThis,'fetch',()=>{throw Error('Disconnected workflows must not probe a service.');});
+ const before=db.settings().pipelineSelections;
+ try{
+  const entries=(await diskCatalog()).entries;
+  db.setValue('pipelineSelections',{image:'vpipe:krea-2-turbo',video:null,reference:null,upscale:'comfyui:seedvr2'});
+  const connections={vpipe:{enabled:false,available:true,detail:''},comfyui:{enabled:true,available:false,detail:''},ollama:{enabled:false,available:false,detail:''}};
+  const state=await pipelineHealth({connections,capabilities:{},checks:[{id:'ffmpeg',ready:true}]} as import('../src/lib/types').Health);
+  assert.deepEqual(state.pipelines!.map(p=>p.id).sort(),entries.map(p=>p.metadata.id).sort());
+  assert.ok(state.pipelines!.every(p=>!p.ready&&!p.canPrepare));
+  assert.equal(state.capabilities!.image.connection,'vpipe');assert.equal(state.capabilities!.image.configured,true);assert.equal(state.capabilities!.image.ready,false);
+  assert.match(state.capabilities!.upscale.detail,/Connect ComfyUI to use/);assert.equal(state.upscalerReady,false);
+  assert.equal(fetch.mock.callCount(),0);
+ }finally{db.setValue('pipelineSelections',before);}
+});
 test('bundled native workflows register with colocated companions and no forward declarations',async()=>{
  const result=await diskCatalog();assert.deepEqual(result.errors,[]);assert.equal(result.entries.length,9);
  for(const pipeline of result.entries)validatePipeline(pipeline);

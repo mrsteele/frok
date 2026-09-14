@@ -4,7 +4,7 @@ Start with the warning beside the action you want to use, then open its setup or
 
 ## I cannot generate anything
 
-Open **Settings → Generate**. A fresh library starts with all connections disabled. Connect a compatible runner, then accept its setup offer or select a workflow in **Pipelines**. Wait for required preparation jobs to complete.
+Open **Settings → Services**. A fresh library starts with all connections disabled. Connect a compatible runner, then choose a workflow in Generation in **Pipelines**. Wait for required preparation jobs to complete.
 
 If the queue worker is offline or requests a restart, let any active work finish and restart Frok. Reloading the page does not restart the background worker. In development, stop the server with Ctrl+C and run the same startup command again.
 
@@ -25,6 +25,10 @@ Changing the selection forces a readiness check. Also enable Prompt enhancement 
 ## A ComfyUI workflow will not load
 
 Use an API-format export, with node IDs and `class_type`/`inputs`. A visual editor graph is not equivalent. Check that the connected backend has every required node class, and that metadata bindings name real input fields. The configured folder must belong to that backend.
+
+## Video generation works, but upscaling needs attention
+
+Check **Settings → Generation → Video upscaling**. Disabled workflows name the service they require. Connect it in **Services**, select the workflow, then follow its readiness action for missing nodes or models. Preparation logs are available in Queue. See [upscaling setup](../tutorials/upscaling.md) for the bundled workflows' requirements.
 
 ## Vpipe says a stage is unknown or forward-declared
 

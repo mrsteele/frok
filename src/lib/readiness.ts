@@ -1,7 +1,7 @@
 import { selectedPipeline } from './pipelines/schema';
 import type { Generation, Health, Runner } from './types';
 import { imageModels, type ImageModelId } from './image-models';
-import { capabilityNames, type Capability } from './service-config';
+import { capabilityNames, connectionNames, type Capability } from './service-config';
 
 export const modelModes = ['image', 'video', 'reference'] as const;
 export type SetupTarget = 'worker' | 'runner' | 'ffmpeg' | 'upscale' | 'prompt' | typeof modelModes[number];
@@ -47,9 +47,9 @@ export function generationIssue(health: Health | undefined, mode: Generation['mo
   if (!health.worker) return { message: health.checks.find(check=>check.id==='worker')?.detail||'The generation queue is offline. Start it before creating.', action: 'Open Settings', target: 'worker' };
   if(health.pipelines){
     const p=selectedPipeline(health,mode,pipelineId);
-    if(!p)return {message:'Choose an available pipeline in Settings → Pipelines.',action:'Choose a pipeline',target:mode};
-    const connection=p.runner!=='local'&&health.connections?.[p.runner];
-    if(connection&&(!connection.enabled||!connection.available))return {message:`Connect ${p.runner} to use ${p.name}.`,action:'Configure connections',target:'runner'};
+    if(!p)return {message:'Choose an available pipeline in Settings → Generation.',action:'Choose a pipeline',target:mode};
+    const connection=health.connections?.[p.runner];
+    if(!connection?.enabled||!connection.available)return {message:`Connect ${connectionNames[p.runner]} to use ${p.name}.`,action:'Configure connections',target:'runner'};
     if(mode!=='image'&&!health.checks.find(c=>c.id==='ffmpeg')?.ready)return {message:health.checks.find(c=>c.id==='ffmpeg')?.detail||'Video tools need setup.',action:'Set up video tools',target:'ffmpeg'};
     if(sourceId&&mode!=='upscale'&&!p.supportsSource)return {message:'Choose a pipeline that accepts a starting image.',action:'Choose a pipeline',target:mode};
     if(!p.ready)return {message:p.detail,action:p.canPrepare?'Prepare pipeline':'Review pipeline',target:mode};
@@ -65,14 +65,14 @@ export function generationIssue(health: Health | undefined, mode: Generation['mo
     return;
   }
   if (mode !== 'image' && !health.checks.find(c => c.id === 'ffmpeg')?.ready) return { message: 'Video tools need setup before you can create or enhance videos.', action: 'Set up video tools', target: 'ffmpeg' };
-  if (mode === 'upscale') return health.upscalerReady ? undefined : {message:health.upscaler==='seedvr2'?'Download SeedVR2 and its VAE before upscaling.':'Set up AI video enhancement before upscaling.',action:health.upscaler==='seedvr2'?'Download SeedVR2':'Set up AI enhancement',target:'upscale',task:health.upscaler==='seedvr2'?'seedvr2':'upscale'};
+  if (mode === 'upscale') return {message:'Choose an upscaling workflow in Settings → Generation.',action:'Choose a workflow',target:'upscale'};
   if(mode==='image'&&health.image){
     const image=health.image, model=imageModels[image.model];
-    if(!image.connected)return {message:image.detail||`Connect ${image.runner==='vpipe'?'Vpipe':'ComfyUI'} to use ${model.name}.`,action:'Check image generator',target:'image'};
+    if(!image.connected)return {message:image.detail||`Connect ${connectionNames[image.runner]} to use ${model.name}.`,action:'Check image generator',target:'image'};
     if(!image.ready)return {message:image.detail||`You cannot generate images until ${model.name} is downloaded and prepared.`,action:`Download ${model.name}`,target:'image',task:image.setupTask||model.task};
     return;
   }
-  if (!health.checks.find(c => c.id === 'runner')?.ready) return { message: `Connect ${health.runner === 'vpipe' ? 'Vpipe' : 'ComfyUI'} before generating.`, action: 'Connect runner', target: 'runner' };
+  if (!health.checks.find(c => c.id === 'runner')?.ready) return { message: `Connect ${connectionNames[health.runner]} before generating.`, action: 'Connect runner', target: 'runner' };
   const model = modelRequirement(health.runner, mode, health.image?.model);
   if (!health.models[model.task]) return { message: `You cannot generate ${mode === 'image' ? 'images' : mode === 'reference' ? 'reference videos' : 'videos'} until ${model.name} is downloaded and prepared.`, action: model.action, target: mode, task: model.task };
 

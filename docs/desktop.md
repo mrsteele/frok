@@ -4,7 +4,7 @@ Frok Desktop wraps the same Next.js interface and local queue worker used by the
 
 ## Development
 
-Install Node.js 24 or newer and run `npm ci` and `npm --prefix docs ci` in the project directory. The second command installs the separate documentation build tools.
+Install the Node.js version pinned in `.node-version` and run `npm ci` and `npm --prefix docs ci` in the project directory. The second command installs the separate documentation build tools.
 
 | Command | Use |
 | --- | --- |
@@ -20,7 +20,7 @@ Install Node.js 24 or newer and run `npm ci` and `npm --prefix docs ci` in the p
 
 UI edits refresh in the browser or Electron without packaging. Restart desktop development after changing the Electron main process, preload bridge, supervisor or queue worker. Reloading the UI does not restart the worker or interrupt generation. Use the native View menu to open development tools.
 
-Desktop development uses `.data/desktop-dev/` for media, settings and the app profile, and `.data/desktop-next/` for Next.js development output. Working pipelines are shared with the installed app and web development at `~/frok/pipelines` unless an explicit `FROK_HOME` selects another workspace. It does not adopt the browser app's existing `.data` library. You can run the browser and desktop development interfaces independently. An authenticated desktop backend is intentionally accessible only through its Electron window; use `npm run dev` for ordinary browser testing.
+Installed Frok, Electron development and browser development all use `~/frok` for user data: the same assets, jobs/logs, saved configuration and editable pipelines. Electron keeps its internal browser profile in the OS application-data folder. Useful interface preferences are saved with the library. Run one app/worker per workspace; quit it before switching launch modes. For isolated development, choose a separate folder under `~/frok` with `FROK_HOME`. Next.js compilation output remains in the checkout. An authenticated desktop backend is intentionally accessible only through its Electron window; use `npm run dev` for ordinary browser testing.
 
 ## Offline documentation
 
@@ -43,43 +43,40 @@ The packaged app creates `~/frok` during startup, using the current OS user's ho
     video/
     reference/
     upscale/
-  data/                   # Single local library, queue and managed model runtimes
-  desktop-profile/        # Persistent Electron cookies and localStorage
-  logs/
-  pipeline-updates/       # New bundled definitions that conflict with local edits
-  .pipeline-state.json    # Hashes of the last installed bundled pipeline files
-  credentials.json        # OS-encrypted API tokens; excluded from backups
+  data/                   # Assets, queue, job files/logs and saved settings
+  pipeline-updates/       # Appears only when bundled changes need review
   .env                    # Optional legacy/developer overrides
-  window.json             # Last window size
 ```
 
-Use **Settings → Generate → Frok Desktop** or **Frok → Open Pipelines Folder** to open the pipeline directory. The Help menu also opens logs and pending pipeline updates. Add custom workflows and their matching metadata/prepare companions as a named folder within the relevant service folder, then refresh Settings → Pipelines.
+Use **Settings → Advanced → Frok Desktop** or **Frok → Open Pipelines Folder** to open the pipeline directory. The Help menu opens **App Logs** for startup/update diagnostics and **Pipeline Updates** for pending pipeline changes. Job logs remain attached to their jobs in Queue. Add custom workflows and their matching metadata/prepare companions as a named folder within the relevant service folder, then refresh Settings → Generation.
 
-Only the explicit groups in `desktop/pipelines.json` are included in installers. Personal `*.local/` folders and older `*.local.*` files and other unlisted workflows are excluded. The first launch copies the defaults; subsequent launches update untouched bundled groups. If any companion was edited, the entire group is preserved and the new version is placed under `pipeline-updates` for manual review. Normal startup never overwrites or removes custom workflows; the explicit factory-reset action does remove custom files inside the default pipeline folder. No pipeline is executed or model downloaded by workspace initialization.
+Only the explicit groups in `desktop/pipelines.json` are included in installers. Personal `*.local/` folders and older `*.local.*` files and other unlisted workflows are excluded. The first launch copies the defaults; subsequent launches update untouched bundled groups. If any companion was edited and the bundled files have changed, the entire group is preserved and the new version is placed under `pipeline-updates` for manual review. Local edits alone do not create this folder. An empty updates folder is removed at startup; existing review files are kept. Normal startup never overwrites or removes custom workflows; the explicit factory-reset action does remove custom files inside the default pipeline folder. No pipeline is executed or model downloaded by workspace initialization.
 
 For a different workspace, set an absolute `FROK_HOME` **before launching** the app. For example, during development:
 
 ```sh
-FROK_HOME="$PWD/.data/my-desktop-workspace" npm run dev:desktop
+FROK_HOME="$HOME/frok/development" npm run dev:desktop
 ```
 
 The workspace must be a dedicated directory, not the entire home directory or filesystem root. Files in the workspace belong to the current OS user. Administrator pipelines are available to this installation; all content and settings belong to one local studio.
 
-Configure runner locations directly in **Settings → Generate**. The Vpipe workspace defaults to `~/vpipe`; older managed workspaces are retained. ComfyUI Desktop defaults to the operating system’s Documents/ComfyUI folder and port 8000. Both can be changed and checked without restarting. Finish queued work before changing a location. Frok rechecks model availability after saving, and never moves model files.
+Configure runner locations directly in **Settings → Services**. The Vpipe workspace defaults to `~/vpipe`; explicitly saved locations are preserved. ComfyUI Desktop defaults to the operating system’s Documents/ComfyUI folder and port 8000. Both can be changed and checked without restarting. Finish queued work before changing a location. Frok rechecks model availability after saving, and never moves model files.
 
-Configure connection addresses, model workspaces, pipelines and generation preferences in Settings. Live image previews and job timeout are under **Settings → Generate → Generation preferences**. Timeout changes apply to the next render; model downloads keep their separate timeout.
+Configure connection addresses, model workspaces, pipelines and generation preferences in Settings. Live image previews and job timeout are under **Settings → Advanced → Background tasks & tools**. Timeout changes apply to the next render; model downloads keep their separate timeout.
 
 On the first launch after upgrading, Frok imports non-secret environment defaults into the library once. Saved connection and pipeline choices take priority, including explicit blanks that select device defaults. Old workflow model names and directory mappings remain available for compatible queued jobs. Later `.env` edits do not replace these saved preferences. A library reset clears them without importing the old environment values again.
 
 The repository's `.env.local` is not copied into the desktop workspace. Optional workspace `.env` files still support developer binary and startup overrides; users do not need to create one.
 
-Ollama normally runs independently. In **Settings → Generate → Ollama**, connect its local address and choose an installed text model. The default is `http://127.0.0.1:11434`. Frok does not stop your existing Ollama service, copy its models, or automatically download a starter model.
+Ollama normally runs independently. In **Settings → Services → Ollama**, connect its local address and choose an installed text model. The default is `http://127.0.0.1:11434`. Frok does not stop your existing Ollama service, copy its models, or automatically download a starter model.
 
-To use a separate Frok-managed runtime, turn on **Let Frok start Ollama** under **Generation preferences**, save, and quit and reopen Frok. Its default address is `http://127.0.0.1:11435`; a custom Ollama address saved in Settings also controls the managed launcher. The runtime and its model store remain in the workspace data directory. Install-runtime and starter-model controls appear when this option is enabled. Startup changes require the queue to be idle. Existing model directories are kept when switching modes.
+Frok does not install or start AI runtimes or maintain a separate model store. Install and run Vpipe, ComfyUI and Ollama independently. When you request a model download or pipeline preparation, files go to the configured runner’s own model directory. Upscaling uses ComfyUI workflows.
+
+Electron’s internal profile (cookies, network state, caches and partitions), encrypted credentials, window placement and diagnostic logs live in `~/Library/Application Support/Frok` on macOS, `%APPDATA%/Frok` on Windows, or `$XDG_CONFIG_HOME/Frok` (default `~/.config/Frok`) on Linux. Frok migrates an older `~/frok/desktop-profile`, `credentials.json`, `window.json` and known app log files there on startup, preserving their contents. The pipeline installation record (`.pipeline-state.json`) and temporary installation lock are also kept in application data, associated with the pipeline workspace. Older installation records migrate before any pipeline updates or resets. Diagnostic logs are in its `logs/` subfolder; saved window placement is `window.json` and encrypted tokens are `credentials.json`. Separate `FROK_HOME` workspaces use distinct subfolders under application data for their credentials, diagnostics and window state. These machine files are not needed for a library backup. Recipes, generation defaults and playback preferences are stored in `data/library/frok.sqlite` alongside service settings; old browser preferences migrate when that window first opens.
 
 ### API tokens
 
-In Frok Desktop, save a Hugging Face token or ComfyUI bearer token in **Settings → Generate → API tokens**. Frok encrypts tokens through Electron's `safeStorage` using the operating system's keychain. Secure storage must be available; Linux's insecure `basic_text` fallback is not accepted. Token values are never returned to the page or included in library backups. Quit and reopen Frok after saving or removing one; running jobs retain their startup credentials.
+In Frok Desktop, save a Hugging Face token or ComfyUI bearer token in **Settings → Advanced → API tokens**. Frok encrypts tokens through Electron's `safeStorage` using the operating system's keychain and stores the ciphertext in application data, outside the portable workspace. Credentials are tied to the OS user and machine; enter them again after moving to a different device. Secure storage must be available; Linux's insecure `basic_text` fallback is not accepted. Token values are never returned to the page or included in library backups. Quit and reopen Frok after saving or removing one; running jobs retain their startup credentials.
 
 Existing tokens in the desktop launch environment or workspace `.env` are imported into encrypted storage when it is available. The original environment file is left intact; once the token shows **Configured**, you can remove the old plaintext entry. Saved tokens take priority, and removing a saved token prevents an old environment entry from restoring it. Library resets keep API tokens; remove them explicitly in Settings if desired.
 
@@ -92,23 +89,23 @@ Existing tokens in the desktop launch environment or workspace `.env` are import
 - Reloading the window preserves the backend. The app requests protection from idle app suspension while rendering; lid closure, forced sleep, power loss and OS shutdown can still interrupt a job.
 - Explicit Quit stops the app and its owned services. Running after Quit, login autostart and a standalone OS background daemon are not included.
 
-The desktop origin is stable: port 3440 for packaged builds and 3441 for desktop development. If occupied, startup reports the conflict instead of silently opening another service or changing ports. `FROK_DESKTOP_PORT` can override this through the launch environment or workspace `.env`; changing it creates a different browser origin and can reset window preferences such as volume.
+The desktop origin is stable: port 3440 for packaged builds and 3441 for desktop development. If occupied, startup reports the conflict instead of silently opening another service or changing ports. `FROK_DESKTOP_PORT` can override this through the launch environment or workspace `.env`; changing it creates a different browser origin, while recipes and saved controls remain with the workspace.
 
 ## Packaging and future releases
 
-The payload includes Electron, the built UI/backend/worker, an official Node.js 24 runtime verified against the provider's SHA-256 checksums, and FFmpeg/FFprobe built from pinned sources. It does not require end users to install Git, npm, Node, FFmpeg or a compiler. AI runners and models remain separate setup-time dependencies. Media tools include their source archives, build recipe and license texts inside the backend resources.
+The payload includes Electron, the built UI/backend/worker, the official Node.js runtime pinned in `.node-version` verified against the provider's SHA-256 checksums, and FFmpeg/FFprobe built from pinned sources. It does not require end users to install Git, npm, Node, FFmpeg or a compiler. AI runners and models remain separate setup-time dependencies. Media tools include their source archives, build recipe and license texts inside the backend resources.
 
-Build on the target platform/architecture with Node.js 24+. Build artifacts are ignored by Git. Native binaries and supporting libraries must be tested on a clean machine. Local unsigned Mac builds are useful for development; public distribution needs signing, notarization and license/source-distribution review, including Electron and Sharp dependencies. No signing credentials are committed.
-
-**In-app updates remain unwired.** The native menu and Settings show an inactive update placeholder. The app does not poll GitHub or download updates. Local packaging still uses `--publish never`.
+Build on the target platform/architecture with the Node.js version in `.node-version`. Build artifacts are ignored by Git. Native binaries and supporting libraries must be tested on a clean machine. Local unsigned Mac builds are useful for development; public distribution needs signing, notarization and license/source-distribution review, including Electron and Sharp dependencies. No signing credentials are committed.
 
 The new release workflow (`.github/workflows/release.yml`) builds tagged versions on GitHub, with macOS ARM64/x64, Windows x64 and Linux x64 runners. It attaches installers and SHA-256 checksums to a draft GitHub release. See [Releasing Frok](releasing.md). `release/` is ignored temporary build output, including on the CI runner; binaries belong in GitHub Releases, not the source repository.
 
-Signing/notarization and the in-app updater still need configuration before public distribution. A future updater must drain the queue before restarting and preserve the workspace.
+The menu bar icon animates subtly while a job is running and shows an arrow when an app update is available. Reduced Motion uses a still activity indicator. The menu and **Settings → Advanced → Frok Desktop** show download status and **Restart to update**. A running job can finish before the restart; remaining queued jobs stay saved. Closing the window continues running Frok, so installation happens when the user chooses to restart.
+
+Installed releases download stable updates automatically. Source development and unsigned local macOS builds keep updates disabled. Public macOS distribution requires Apple signing and notarization credentials; see [releasing Frok](./releasing.md#in-app-updates). Development also uses the Frok Dock icon.
 
 ## Desktop boundary
 
-The renderer uses context isolation and sandboxing, with Node integration disabled. Its preload bridge exposes only version/workspace information, three fixed folder-opening actions and documentation page navigation. IPC validates the exact window, main frame and origin. Documentation uses a separate session and a dedicated static-file protocol confined to its bundled site. External HTTPS links open in the system browser; executable and filesystem URL schemes are rejected. Browser permissions are denied by default.
+The renderer uses context isolation and sandboxing, with Node integration disabled. Its preload bridge exposes specific actions for desktop information, credentials, documentation, fixed folders and app updates. Update actions accept no arbitrary feed URLs, files or commands. IPC validates the exact window, main frame and origin. Documentation uses a separate session and a dedicated static-file protocol confined to its bundled site. External HTTPS links open in the system browser; executable and filesystem URL schemes are rejected. Browser permissions are denied by default.
 
 The backend binds only to loopback and requires a random, per-launch desktop token, attached by Electron outside page JavaScript. Host, Origin and mutation-request checks protect the local API; no browser account is required. The UI cannot invoke the supervisor's privileged queue-control messages. Do not remove those checks when adding desktop features.
 
@@ -116,4 +113,4 @@ The backend binds only to loopback and requires a random, per-launch desktop tok
 
 ## Pipeline location and factory reset
 
-The editable pipeline location and directory audit live at the top of **Settings → Pipelines**. Blank uses `~/frok/pipelines`; **Save & scan** selects an existing custom folder. Native **Open Pipelines Folder** follows the saved choice. Reset always targets the default folder, asks for confirmation, stages a complete factory replacement first and leaves custom locations and model workspaces alone. App installers carry an explicit factory copy from `resources/pipelines`; editable user files are never packaged.
+The editable pipeline location and directory audit live in **Settings → Advanced → Workflow files**. Blank uses `~/frok/pipelines`; **Save & scan** selects an existing custom folder. Native **Open Pipelines Folder** follows the saved choice. Reset always targets the default folder, asks for confirmation, stages a complete factory replacement first and leaves custom locations and model workspaces alone. App installers carry an explicit factory copy from `resources/pipelines`; editable user files are never packaged.

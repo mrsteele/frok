@@ -39,7 +39,7 @@ export async function buildPipeline(input: Omit<RenderInput,"signal"|"log">):Pro
     }
     return p;
   }
-  throw Error('This job has no pipeline. Choose a pipeline in Settings → Pipelines and start a new generation.');
+  throw Error('This job has no pipeline. Choose a pipeline in Settings → Generation and start a new generation.');
 }
 export async function renderVpipe(input:RenderInput) {
   const directory = await privateRenderDirectory(input);

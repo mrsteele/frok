@@ -8,6 +8,7 @@ export async function createLibraryFixture(){
   assert.ok(directory&&path.isAbsolute(directory));assert.match(directory,/[/\\]\.data[/\\][^/\\]*test[^/\\]*(?:[/\\]|$)/);
   process.env.FROK_PIPELINES_DIR=path.resolve('resources/pipelines');
   process.env.FROK_PIPELINE_HOME=path.join(directory,'pipeline-home');
+  process.env.FROK_PIPELINE_STATE_DIR=path.join(directory,'pipeline-state');
   const registry=await import('../../src/lib/registry'),context=await import('../../src/lib/library');
   const {workerProtocolVersion}=await import('../../src/lib/worker-health');
   assert.equal(context.libraryDirectory(),path.join(directory,'library'),'A module loaded storage before the disposable fixture was configured.');

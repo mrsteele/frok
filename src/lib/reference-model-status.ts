@@ -30,7 +30,7 @@ async function weights(directory:string, component:string) {
 
 /** Use the same trusted root as rendering, not just a previous setup receipt. */
 export async function referenceModelStatus(model=modelNames.reference):Promise<{ready:boolean;detail:string}> {
-  const retry='Use Settings → Pipelines → Reference video → Download & prepare to finish preparation.';
+  const retry='Use Settings → Generation → Reference video → Download & prepare to finish preparation.';
   let directory:string;
   try {directory=await resolveVpipeModel(model);}
   catch {return {ready:false,detail:`MiniMax H3 Ref2VA is missing or inaccessible (${model}). ${retry}`};}

@@ -4,20 +4,23 @@ Frok is an Electron desktop app around a Next.js interface, a local API and a se
 
 ## Run the app
 
-Use Node.js 24 or newer. From the repository root:
+Use the Node.js version pinned in `.node-version`. From the repository root:
 
 ```sh
 npm ci
+npm --prefix docs ci
 npm run dev
 ```
 
 Open `http://127.0.0.1:3000`. For Electron with hot reload, install its documentation build tools once with `npm --prefix docs ci`, then use `npm run dev:desktop`. Restart after worker or native-process changes; page reloads only refresh the UI.
 
+Both modes use the installed app's `~/frok` workspace by default, including its media, jobs and settings. Stop the current app before switching modes. Use `FROK_HOME="$HOME/frok/development" npm run dev` for an isolated development workspace. Builds use disposable storage and do not open the live library; compiler output and dependency caches remain in the checkout.
+
 ## Configuration
 
-Use Settings for service addresses, model folders, pipelines, live image previews, job timeout and managed Ollama startup. Legacy environment preferences migrate once per library; editing `.env.local` afterwards does not change saved Settings.
+No environment file is required. Use Settings for service addresses, model folders, pipelines, live image previews, job timeout and retention. In Electron, save credentials under **Settings → Advanced → API tokens**.
 
-An environment file is optional. `.env.example` lists development overrides for workspace, ports and executable paths. Browser development can supply `HF_TOKEN` and `COMFYUI_API_KEY` in `.env.local`; Electron provides encrypted token controls in Settings. Internal `FROK_*` variables still connect the desktop launcher, backend and worker. Keep those internal startup variables out of user setup instructions.
+Environment variables remain in use for desktop process startup, build tooling and development overrides such as ports and executable paths. Browser development can supply `HF_TOKEN` and `COMFYUI_API_KEY` through the launch environment when needed. Existing environment files remain supported; legacy preferences migrate once per library, and later file edits do not override saved Settings. See [Desktop configuration](./desktop.md#workspace-and-first-launch) for migration and workspace details. Keep local environment files out of source control.
 
 ## Source map
 
@@ -61,6 +64,27 @@ Source archives, the recipe and component licenses accompany the binaries in eve
 Documentation has its own package and lockfile. Inside `docs`, run `npm ci`, then `npm run dev` or `npm run build`. Updating docs does not require compiling Frok. [Documentation hosting →](./hosting.md)
 
 Run `npm run check:source` before committing. It uses Git's ignore rules to inspect the candidate source tree, including already-tracked files that would otherwise be ignored, without reading ignored library content.
+
+## Shared sources
+
+Keep frequently changing facts at their owning source. Link to that source from Markdown, or import its value where the interface or built docs need to display it.
+
+| Detail | Source | Consumers |
+| --- | --- | --- |
+| Application version, package license and author | Root `package.json` | Packaging, About/version information and exports; npm maintains the lockfile |
+| Tested and bundled Node release | `.node-version` | CI and portable desktop runtime |
+| Supported Node range | `package.json` → `engines.node` | Development guard and worker compilation target |
+| Repository, support and public website links | `desktop/product.mjs` | App, desktop shell and documentation navigation |
+| Runtime and retention defaults | `desktop/preferences.mjs` | Launchers, backend and relevant docs pages |
+| License text and attribution | Root `LICENSE` and `COPYRIGHT` | Included directly in the documentation license page |
+| Bundled video-tool versions and checksums | `scripts/media-sources.json` | Media build, verification and generated distribution notices |
+| Downloadable workflow examples | `resources/pipelines` | Refreshed automatically when the documentation starts or builds |
+
+The private docs package has its own dependency lockfile, but no application version or duplicate author/license metadata. Keep release numbers out of narrative guides. Dependency pins, schema versions, migration markers and synthetic test versions serve different purposes and remain explicit.
+
+### Brand assets
+
+Edit `public/brand/mark.svg`, then run `npm run build:brand` to regenerate the favicon and documentation marks. App and docs builds do this automatically; desktop packaging also generates the app and tray icons. Edit theme colors in the application and documentation styles when changing the palette.
 
 ## Adding another generation service
 

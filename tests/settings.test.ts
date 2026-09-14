@@ -34,7 +34,8 @@ after(() => { mock.restoreAll(); fixture.close(); fs.rmSync(testDir, { recursive
 
 test('first-run dismissal persists as a studio preference while jobs are queued', async () => {
   assert.equal(store.settings().setupDismissed, false);
-  assert.equal((await patch({ pipelineSelections: {upscale:'local:seedvr2'} })).status, 200);
+  store.setValue('connections',{vpipe:false,comfyui:true,ollama:false});
+  assert.equal((await patch({ pipelineSelections: {upscale:'comfyui:seedvr2'} })).status, 200);
   assert.equal(store.settings().setupDismissed, false);
   store.createJob({ kind: 'setup', request: { task: 'image' }, runner: 'vpipe', total: 1 });
   assert.equal((await patch({ setupDismissed: true })).status, 200);

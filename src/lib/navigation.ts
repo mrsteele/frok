@@ -1,4 +1,4 @@
-export type SettingsSection = 'generate' | 'pipelines' | 'recipes' | 'welcome';
+export type SettingsSection = 'services' | 'generation' | 'recipes' | 'advanced' | 'welcome';
 export type StudioRoute =
   | { view: 'envision' | 'about' | 'utils' }
   | { view: 'favorites'; filter: 'all' | 'image' | 'video' }
@@ -15,9 +15,9 @@ export function studioRoute(pathname: string): StudioRoute | null {
   if (parts.length <= 2 && area === 'favorites' && (!value || value === 'images' || value === 'videos')) {
     return { view: area, filter: value === 'videos' ? 'video' : value === 'images' ? 'image' : 'all' };
   }
-  if (parts.length <= 2 && area === 'settings' && (!value || ['generate', 'overview', 'connection', 'models', 'pipelines', 'recipes', 'video', 'welcome'].includes(value))) {
-    // Keep old settings links working while Generate becomes the default page.
-    return { view: 'settings', section: (!value||['generate','overview','connection'].includes(value)?'generate':value==='models'||value==='video'?'pipelines':value) as SettingsSection };
+  if (parts.length <= 2 && area === 'settings' && (!value || ['services', 'generation', 'advanced', 'generate', 'overview', 'connection', 'models', 'pipelines', 'recipes', 'video', 'welcome'].includes(value))) {
+    // Keep saved settings links working after reorganizing the sections.
+    return { view: 'settings', section: (!value||['services','generate','overview','connection'].includes(value)?'services':['models','video','pipelines'].includes(value)?'generation':value) as SettingsSection };
   }
   // IDs are single, opaque URL segments; never pass an arbitrary URL to the router or API.
   if (area === 'asset' && parts.length >= 2 && parts.length <= 3 && /^[a-zA-Z0-9_-]+$/.test(value)) {
@@ -31,7 +31,7 @@ export function studioRoute(pathname: string): StudioRoute | null {
   return null;
 }
 
-export const settingsPath = (section: SettingsSection) => section === 'generate' ? '/settings' : `/settings/${section}`;
+export const settingsPath = (section: SettingsSection) => section === 'services' ? '/settings' : `/settings/${section}`;
 export const assetPath = (rootId:string, number=1) => `/asset/${encodeURIComponent(rootId)}${number>1?`/${number}`:''}`;
 export const mediaPath = (item: { id: string; kind: 'image' | 'video'; rootId?: string; assetNumber?: number }) =>
   item.assetNumber ? assetPath(item.rootId||item.id,item.assetNumber) : `/${item.kind==='image'?'images':'videos'}/${encodeURIComponent(item.id)}`;

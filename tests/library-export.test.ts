@@ -58,6 +58,7 @@ test('archive contains all records and exact media, SQLite WAL data, recipes, lo
   await write(path.join(fixture.directory,'publications/interrupted.json'),JSON.stringify({filename:`${videoId}.mp4`}));
   await write(path.join(pipelines,'image/private.local/run.vpipeline'),'{"pipeline":"private"}');
   await write(path.join(pipelines,'image/private.local/meta.json'),'{"name":"Custom pipeline"}');
+  await write(path.join(pipelines,'VPIPE-NOTICE'),'synthetic upstream attribution');
   await write(path.join(pipelines,'.env'),'DO_NOT_EXPORT_ENV');
   await write(path.join(root,'vpipe/models/keep.safetensors'),'DO_NOT_EXPORT_MODELS');
   await write(path.join(root,'media/old-content.jpg'),'retained synthetic image');
@@ -86,6 +87,7 @@ test('archive contains all records and exact media, SQLite WAL data, recipes, lo
   assert.equal(await fs.readFile(path.join(unpacked,'library/jobs/retained-job/runner.log'),'utf8'),'synthetic runner log');
   assert.equal(await fs.readFile(path.join(unpacked,'library/publications/interrupted.json'),'utf8'),JSON.stringify({filename:`${videoId}.mp4`}));
   assert.equal(await fs.readFile(path.join(unpacked,'pipelines/image/private.local/run.vpipeline'),'utf8'),'{"pipeline":"private"}');
+  assert.equal(await fs.readFile(path.join(unpacked,'pipelines/VPIPE-NOTICE'),'utf8'),'synthetic upstream attribution');
   assert.equal(await fs.readFile(path.join(unpacked,'retained-data/media/old-content.jpg'),'utf8'),'retained synthetic image');
   for(const excluded of ['pipelines/.env','vpipe/models/keep.safetensors','library/jobs/model-link'])await assert.rejects(fs.stat(path.join(unpacked,excluded)),{code:'ENOENT'});
   assert.equal((await call('library/export/'+result.id,'HEAD')).status,200);

@@ -11,7 +11,7 @@ Create `~/frok/pipelines/image/my-krea.local/` and place these public example fi
 - [meta.json](/examples/krea/meta.json)
 - [VPIPE-LICENSE](/examples/krea/VPIPE-LICENSE.txt) and [NOTICE.txt](/examples/krea/NOTICE.txt) — keep these with redistributed copies.
 
-If installing beside the bundled Krea workflow, change the copied metadata `id` to `vpipe:my-krea`, give it a distinct name, and set `default` to `false`. Refresh Settings → Pipelines after saving.
+If installing beside the bundled Krea workflow, change the copied metadata `id` to `vpipe:my-krea`, give it a distinct name, and set `default` to `false`. Refresh Settings → Generation after saving.
 
 ## What happens at each step
 

@@ -46,7 +46,7 @@ Select Reference video, add the reference images and choose a reference-capable 
 
 The generated video is the root asset. Uploaded references stay attached to it and do not appear as standalone cards in History or Favorites. Its asset page shows small previews of the saved reference images; click one to download it. Use **Redo** to repeat a take, or edit the prompt and choose **Generate video**. These actions keep the original reference images in their original order. To use different reference images, start a new creation.
 
-Reference generation is a separate capability with its own model pack. A ready ordinary MiniMax video workflow does not mean the reference model is ready. Check **Settings → Pipelines → Reference videos** and inspect the specific preparation job if files are missing.
+Reference generation is a separate capability with its own model pack. A ready ordinary MiniMax video workflow does not mean the reference model is ready. Check **Settings → Generation → Reference videos** and inspect the specific preparation job if files are missing.
 
 ## Refine a take
 

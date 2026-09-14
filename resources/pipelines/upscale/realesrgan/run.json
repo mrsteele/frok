@@ -1,1 +1,78 @@
-{}
+{
+  "load-video": {
+    "class_type": "LoadVideo",
+    "inputs": {
+      "file": "input.mp4"
+    }
+  },
+  "components": {
+    "class_type": "GetVideoComponents",
+    "inputs": {
+      "video": [
+        "load-video",
+        0
+      ]
+    }
+  },
+  "model": {
+    "class_type": "UpscaleModelLoader",
+    "inputs": {
+      "model_name": "RealESRGAN_x4plus.pth"
+    }
+  },
+  "upscale": {
+    "class_type": "ImageUpscaleWithModel",
+    "inputs": {
+      "upscale_model": [
+        "model",
+        0
+      ],
+      "image": [
+        "components",
+        0
+      ]
+    }
+  },
+  "resize": {
+    "class_type": "ImageScale",
+    "inputs": {
+      "image": [
+        "upscale",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "width": 0,
+      "height": 720,
+      "crop": "disabled"
+    }
+  },
+  "create-video": {
+    "class_type": "CreateVideo",
+    "inputs": {
+      "images": [
+        "resize",
+        0
+      ],
+      "audio": [
+        "components",
+        1
+      ],
+      "fps": [
+        "components",
+        2
+      ]
+    }
+  },
+  "save-video": {
+    "class_type": "SaveVideo",
+    "inputs": {
+      "video": [
+        "create-video",
+        0
+      ],
+      "filename_prefix": "frok/upscaled",
+      "format": "mp4",
+      "codec": "h264"
+    }
+  }
+}

@@ -23,7 +23,7 @@ function legacy(key:string, value:string|undefined) { store.setValue('environmen
 const runJob=<T>(_label:string,fn:()=>T,_kind?:string)=>fn();
 const {renderVpipe,factoryPipeline} = await import('./fixtures/pipeline');
 const {renderComfy, comfyFetch, cleanupComfyJob, comfyIsolationIssue} = await import('../src/lib/comfyui');
-const {validateModelAdapters, resolveVpipeModel, resolveModelAdapter} = await import('../src/lib/model-access');
+const {resolveVpipeModel, resolveModelAdapter} = await import('../src/lib/model-access');
 const owners=['job-a','job-b'];
 const models = path.join(process.env.VPIPE_WORKDIR!, 'models');
 for (const name of ['krea/Krea-2-Turbo', 'local/MiniMax-H3-FL2VA-8bit', 'local/MiniMax-H3-Ref2VA-8bit', 'mgwr/M87', 'larryvrh/MiniMax-H3-Turbo-Lora']) await fs.mkdir(path.join(models, name), {recursive: true});
@@ -101,13 +101,11 @@ beforeEach(() => {
 after(async () => { mock.restoreAll(); registry.close(); await fs.rm(root, {recursive: true, force: true}); });
 
 test('adapters reject traversal, unrelated paths, protocols, ambiguous folders, and symlink escapes', async () => {
-  const valid = {primaryWeight: 1, secondary: '', secondaryWeight: .7};
-  await validateModelAdapters(valid);
-  for (const primary of ['mgwr/M87', 'models/mgwr/M87/m87_lora_v1.safetensors', path.join(trustedComfyModels, 'style.safetensors')]) await validateModelAdapters({...valid, primary});
+  for (const reference of ['mgwr/M87', 'models/mgwr/M87/m87_lora_v1.safetensors', path.join(trustedComfyModels, 'style.safetensors')]) await resolveModelAdapter(reference);
   const outside = path.join(root, 'other-user.safetensors'); await fs.writeFile(outside, 'synthetic private marker');
   await fs.symlink(outside, path.join(models, 'escape.safetensors'));
   await fs.mkdir(path.join(models, 'ambiguous')); for (const name of ['a', 'b']) await fs.writeFile(path.join(models, 'ambiguous', `${name}.safetensors`), 'synthetic');
-  for (const primary of ['../other-user.safetensors', 'x/../mgwr/M87', '%2e%2e/other', 'file:///tmp/key', 'https://example.test/style', '\\server\\file', outside, 'escape.safetensors', 'ambiguous']) await assert.rejects(validateModelAdapters({...valid, primary}));
+  for (const reference of ['../other-user.safetensors', 'x/../mgwr/M87', '%2e%2e/other', 'file:///tmp/key', 'https://example.test/style', '\\server\\file', outside, 'escape.safetensors', 'ambiguous']) await assert.rejects(resolveModelAdapter(reference));
   assert.equal(await resolveModelAdapter('larryvrh/MiniMax-H3-Turbo-Lora-v4-600-ema'), path.join(models, 'larryvrh/MiniMax-H3-Turbo-Lora/minimax_h3_turbo_v4_step600_ema.safetensors'));
   const link = path.join(models, 'krea/Krea-2-Turbo/escaped-weight.safetensors'); await fs.symlink(outside, link);
   await assert.rejects(resolveVpipeModel('krea/Krea-2-Turbo'), /symlink/); await fs.unlink(link);

@@ -1,3 +1,4 @@
+import { readInterfacePreference, writeInterfacePreference, subscribeInterfacePreferences } from './client-preferences';
 export type VideoAudio = { muted: boolean; volume: number };
 export const videoAudioKey = 'frok-video-audio';
 const defaults: VideoAudio = { muted: true, volume: 1 };
@@ -52,13 +53,10 @@ let shared: ReturnType<typeof createVideoAudioStore> | undefined;
 export function connectVideoAudio(player: HTMLVideoElement) {
   if (!shared) {
     shared = createVideoAudioStore({
-      read: () => window.localStorage.getItem(videoAudioKey),
-      write: raw => window.localStorage.setItem(videoAudioKey, raw),
+      read: () => readInterfacePreference(videoAudioKey),
+      write: raw => { void writeInterfacePreference(videoAudioKey, raw).catch(() => {}); },
     });
-    window.addEventListener('storage', event => {
-      if (event.key !== null && event.key !== videoAudioKey) return;
-      try { if (event.storageArea === window.localStorage) shared?.restore(); } catch { /* Storage is unavailable. */ }
-    });
+    subscribeInterfacePreferences(() => shared?.restore());
   }
   return shared.connect(player);
 }

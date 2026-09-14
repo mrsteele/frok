@@ -43,12 +43,18 @@ On a static host, use these project settings:
 | Install | `npm ci` |
 | Build | `npm run build` |
 | Output relative to build root | `.vitepress/dist` |
-| Node | 24 or newer |
+| Node | Version pinned in `.node-version` at the repository root |
 
 ## Maintain the example downloads
 
-Public examples are checked-in snapshots of named factory workflows, so this docs folder can build by itself. To refresh them from this repository, run `npm run examples` inside `docs`. The script copies only an explicit list of factory files; it never reads the user's pipeline directory or generated library.
+Example downloads are refreshed from `resources/pipelines` whenever VitePress starts or builds, including the copies bundled with the app. Edit the factory workflow rather than its generated copy in `docs/public/examples`. `npm run examples` inside `docs` also refreshes them without building. Only the named factory examples are copied; the script never reads the user's pipeline directory or generated library.
 
 Review the changed examples and their guide pages together. Do not place real prompts, private workflows or credentials under `public`: every file there is published verbatim.
 
 VitePress references: [static deployment](https://vuejs.github.io/vitepress/v1/guide/deploy) and [local search](https://vuejs.github.io/vitepress/v1/reference/default-theme-search).
+
+## Homepage demonstration
+
+The homepage uses `docs/public/demo/sailboat.webp` and `sailboat.mp4`. Its typing, mouse movement and render progress are staged; the media are example Frok outputs. Replacement clips should remain silent, short and within the source audit's size limit. The walkthrough pauses while hidden and shows a still image for reduced-motion preferences. Rebuild the docs after replacing the media.
+
+Only the explicitly allowed demonstration video belongs in source control; personal renders remain ignored.

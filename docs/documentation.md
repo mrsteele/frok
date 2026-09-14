@@ -40,6 +40,6 @@ features:
 2. **Choose a pipeline.** Prepare its missing models and wait for Ready.
 3. **Create and refine.** Make images, animate a frame, then save or enhance a take.
 
-Frok is in early development at **0.1.0**. These guides cover the current source build and desktop workflow. Model performance depends on your hardware; the app starts without downloading models or enabling generators automatically.
+These guides cover the current source build and desktop workflow. Model performance depends on your hardware; the app starts without downloading models or enabling generators automatically.
 
 [Open the setup guide →](./guide/getting-started.md)

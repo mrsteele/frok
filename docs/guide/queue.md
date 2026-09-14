@@ -1,5 +1,9 @@
 # Queue and progress
 
+<script setup>
+import { runtimeDefaults } from '../../desktop/preferences.mjs'
+</script>
+
 Frok's worker processes one job at a time. Image batches, video renders, upscaling and model preparation all use the queue. Closing a page does not cancel its job.
 
 Drag a pending job by its grip to change its position. Pending jobs cannot be dragged ahead of the running job. Queue order is saved across page reloads.
@@ -36,9 +40,9 @@ Cancelling stops work and keeps the job record, log and any saved outputs. After
 
 ## Automatic job cleanup
 
-By default, Frok deletes completed, failed and cancelled job records, logs and working files **3 hours after the job finishes**. Saved media and the generation settings stored with it stay in your library.
+By default, Frok deletes completed, failed and cancelled job records, logs and working files **{{ runtimeDefaults.jobRetentionHours }} hours after the job finishes**. Saved media and the generation settings stored with it stay in your library.
 
-In **Settings → Generate → Generation preferences**, change **Delete job details after** to the number of hours you want, or turn off **Automatically delete finished jobs and logs** to retain details until you delete them yourself. Changes apply to existing jobs too.
+In **Settings → Advanced → Background tasks & tools**, change **Delete job details after** to the number of hours you want, or turn off **Automatically delete finished jobs and logs** to retain details until you delete them yourself. Changes apply to existing jobs too.
 
 The worker checks about once a minute while Frok is running and catches up after reopening. It waits for a stopping runner to finish and retries pending cleanup; a disconnected runner can delay deletion. Once a job is deleted, its log and job-level Retry are unavailable. You can still create another take from retained media. Exports or backups you previously saved keep their own copies.
 

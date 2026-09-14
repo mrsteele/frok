@@ -1,21 +1,22 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
-import { Check, Download, Loader2, Plug } from 'lucide-react';
+import { Check, Loader2, Plug } from 'lucide-react';
 import { PromptModelSettings } from './prompt-model-settings';
 import { api } from '@/lib/client-api';
-import type { Health, Job, SetupRequest } from '@/lib/types';
+import type { Health, Job } from '@/lib/types';
 
-export function OllamaConnection({health,jobs,checking,onRefresh,onPrepare,enhance,onEnhancementChange}:{health?:Health;jobs:Job[];checking:boolean;onRefresh:()=>void;onPrepare:(task:string)=>Promise<void>;enhance?:boolean;onEnhancementChange?:(enabled:boolean)=>void}) {
+export function OllamaConnection({health,jobs,checking,onRefresh,onPrepare,enhance,onEnhancementChange,onBusyChange,wizard=false}:{health?:Health;jobs:Job[];checking:boolean;onRefresh:()=>void;onPrepare:(task:string)=>Promise<void>;enhance?:boolean;onEnhancementChange?:(enabled:boolean)=>void;onBusyChange?:(busy:boolean)=>void;wizard?:boolean}) {
   const savedAddress=health?.connectionFields?.values.ollamaUrl||'';
   const [address,setAddress]=useState(savedAddress);
   const [busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
   const lock=useRef(false);
+  const [modelBusy,setModelBusy]=useState(false);
+  useEffect(()=>{onBusyChange?.(busy||modelBusy);return()=>onBusyChange?.(false);},[busy,modelBusy,onBusyChange]);
   useEffect(()=>{setAddress(savedAddress);},[savedAddress]);
   const state=health?.connections?.ollama,dirty=!!health&&address.trim().replace(/\/+$/,'')!==savedAddress;
   const pending=busy||checking||!health,connected=!!state?.enabled&&state.available;
   const models=health?.ollamaModels||[];
-  const installing=jobs.find(job=>job.kind==='setup'&&(job.request as SetupRequest).task==='ollama-runtime'&&['running','queued'].includes(job.status));
+
 
   async function connect() {
     if(lock.current)return;
@@ -24,8 +25,8 @@ export function OllamaConnection({health,jobs,checking,onRefresh,onPrepare,enhan
       await api('settings','PATCH',{ollamaUrl:address,connections:{ollama:true}});
       const next=await api<Health>('health?refresh=1');
       setAddress(next.connectionFields?.values.ollamaUrl||'');
-      setNotice(next.ollamaModels?.length?`Connected · ${next.ollamaModels.length} compatible models found.`:'Connected. Install a text-generation model in Ollama, then check again.');
-      onRefresh();
+      setNotice(next.ollamaModels?.length?'':'Connected. Install a text-generation model in Ollama, then check again.');
+      await onRefresh();
     }catch(error){setError((error as Error).message);onRefresh();}
     finally{lock.current=false;setBusy(false);}
   }
@@ -54,9 +55,6 @@ export function OllamaConnection({health,jobs,checking,onRefresh,onPrepare,enhan
         <a className="settings-text-button" href="https://ollama.com/download" target="_blank" rel="noreferrer">Get Ollama ↗</a>
       </footer>
     </form>
-    <PromptModelSettings embedded health={health} jobs={jobs} checking={pending||dirty} onRefresh={onRefresh} onPrepare={onPrepare} enhance={enhance} onEnhancementChange={onEnhancementChange}/>
-    {health?.ollamaManaged&&<div className="service-details"><h4>Frok-managed runtime</h4><p className="settings-hint">This workspace is configured to start a separate Ollama runtime. Its models stay in the workspace. Restart Frok after installing the runtime.</p>
-      {installing?<p className="settings-working"><Loader2 size={13} className="spin"/>{installing.message} <Link href={`/queue/${installing.id}`}>View job →</Link></p>:!health.ollamaInstalled&&health.platform.startsWith('darwin ')&&<button className="settings-text-button" disabled={pending||!health.worker} onClick={()=>void onPrepare('ollama-runtime')}><Download size={13}/>Install runtime</button>}
-    </div>}
+    {connected&&<PromptModelSettings embedded anchor={!wizard} health={health} jobs={jobs} checking={pending||dirty} onRefresh={onRefresh} onPrepare={onPrepare} enhance={enhance} onEnhancementChange={onEnhancementChange} onBusyChange={setModelBusy}/>}
   </section>;
 }

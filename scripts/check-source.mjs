@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // Intentionally published, size-limited homepage sample; personal renders stay excluded.
 const publicDemoVideo = filename => filename === 'docs/public/demo/sailboat.mp4';
-const privatePath = /(?:^|\/)(?:node_modules|\.data|\.desktop|\.media-tools|\.next(?:-[^/]+)?|\.npm-cache|release|\.codex|\.claude|\.agents)(?:\/|$)|(?:^|\/)\.env(?![^/]*\.example$)(?:\.|$)|\.local(?:\/|\.)|\.(?:safetensors|gguf|ggml|ckpt|pt|pth|onnx|sqlite(?:3)?(?:-[^/]*)?|db(?:-[^/]*)?|pem|key|p12|pfx|dmg|pkg|exe|AppImage|tar\.gz|mp4|mov|webm)$/i;
+const privatePath = /(?:^|\/)(?:node_modules|\.data|\.desktop|\.media-tools|\.next(?:-[^/]+)?|\.npm-cache|release|\.codex|\.claude|\.agents)(?:\/|$)|(?:^|\/)\.env(?:\.|$)|\.local(?:\/|\.)|\.(?:safetensors|gguf|ggml|ckpt|pt|pth|onnx|sqlite(?:3)?(?:-[^/]*)?|db(?:-[^/]*)?|pem|key|p12|pfx|dmg|pkg|exe|AppImage|tar\.gz|mp4|mov|webm)$/i;
 const secretPatterns = [
   ['private key', /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/],
   ['GitHub token', /\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,})\b/],

@@ -26,9 +26,10 @@ import { About } from "./about";
 import { BrandMark } from './brand-mark';
 import { SocialLinks } from "./social-links";
 import { Setup } from "./setup";
+import { SetupWizard } from './setup-wizard';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { mediaPath, studioRoute } from '@/lib/navigation';
+import { mediaPath, settingsPath, studioRoute } from '@/lib/navigation';
 import { BackButton, PageShell } from './page-shell';
 import { JobLog } from './job-log';
 import { GenerationSettings } from './generation-settings';
@@ -82,7 +83,7 @@ export default function Studio({ children }: { children: ReactNode }) {
   const [draggingJob,setDraggingJob]=useState<string>(),[dropBefore,setDropBefore]=useState<string|null>(),[movingQueue,setMovingQueue]=useState(false);
   const queueMoveLock=useRef(false);
   const jobLocks=useRef(new Set<string>()),[busyJobs,setBusyJobs]=useState<string[]>([]);
-  useEffect(()=>{if(pathname==='/settings/models'||pathname==='/settings/video')router.replace('/settings/pipelines');},[pathname,router]);
+  useEffect(()=>{const current=studioRoute(pathname);if(current?.view==='settings'&&current.section!=='welcome'&&pathname!==settingsPath(current.section))router.replace(settingsPath(current.section)+window.location.search+window.location.hash);},[pathname,router]);
   const currentView = useRef(view); currentView.current = view;
   const currentFilter = useRef(filter); currentFilter.current = filter;
   const refresh = useCallback(async () => {
@@ -126,10 +127,10 @@ export default function Studio({ children }: { children: ReactNode }) {
     window.addEventListener('focus', focus);
     return () => { clearInterval(timer); window.removeEventListener('focus', focus); };
   }, [refreshHealth]);
-  const promptSetupState = jobs.filter(job => job.kind === 'setup' && ['ollama','ollama-runtime'].includes((job.request as {task:string}).task)).map(job => `${job.id}:${job.status}`).join(',');
+  const promptSetupState = jobs.filter(job => job.kind === 'setup' && (job.request as {task:string}).task === 'ollama').map(job => `${job.id}:${job.status}`).join(',');
   useEffect(() => { if (promptSetupState) void refreshHealth(true); }, [promptSetupState, refreshHealth]);
   useEffect(() => {
-    if (view !== 'envision' || !health || welcomeSeen.current) return;
+    if (!health || welcomeSeen.current) return;
     welcomeSeen.current = true;
     if (!health.setupDismissed) setOnboarding(true);
   }, [health, view]);
@@ -170,9 +171,9 @@ export default function Studio({ children }: { children: ReactNode }) {
   const needsSetup = !!health && missing.length > 0;
   const setupDescription = needsSetup ? `Setup needed: ${missing.map(item => item.name).join(', ')}` : health ? 'Settings · All required models are ready' : 'Settings · Checking setup';
   const preparation = issue?.task ? jobs.find(j => j.kind === 'setup' && (j.request as {task:string}).task === issue.task && isActive(j)) : undefined;
-  function openSetup(target?: SetupTarget) { router.push(target ? `${['worker', 'runner', 'ffmpeg', 'prompt'].includes(target) ? '/settings' : '/settings/pipelines'}#setup-${target}` : '/settings'); }
+  function openSetup(target?: SetupTarget) { router.push(target==='prompt'?'/settings?service=ollama#setup-prompt':target==='ffmpeg'?'/settings/advanced#video-tools-folder':target?`${['worker','runner'].includes(target)?'/settings':'/settings/generation'}#setup-${target}`:'/settings'); }
   function openQueue(id?:string) { router.push(id?`/queue/${encodeURIComponent(id)}`:'/queue'); }
-  async function dismissWelcome() { try { await api('settings', 'PATCH', { setupDismissed: true }); setOnboarding(false); void refreshHealth(); } catch (e) { setError((e as Error).message); } }
+  function finishWelcome(destination?:string) { setOnboarding(false); if(destination)router.push(destination);else if(pathname==='/settings/welcome')router.replace('/settings'); }
   const patch = (p: Partial<Generation>) => setRequest(r => {
     const mode=p.mode||r.mode,choices={...r.pipelineChoices,...p.pipelineChoices};
     if(Object.hasOwn(p,'pipelineId')&&(!p.mode||p.mode===r.mode))choices[mode]=p.pipelineId;
@@ -187,7 +188,7 @@ export default function Studio({ children }: { children: ReactNode }) {
   function changeView(next: View) { router.push(viewPath(next)); }
   async function submit(input = request, stay = false): Promise<Job | undefined> {
     const reason = generationBlocker(health, input.mode, input.sourceId,input.pipelineId);
-    if(input.enhance&&!health?.ollama){setError(health?.capabilities?.prompt.detail||'Choose a prompt enhancement model in Settings → Generate → Ollama.');openSetup('prompt');return;}
+    if(input.enhance&&!health?.ollama){setError(health?.capabilities?.prompt.detail||'Choose a prompt enhancement model in Settings → Services.');openSetup('prompt');return;}
     if (reason) { setError(reason); openSetup(generationIssue(health, input.mode, input.sourceId,input.pipelineId)?.target); return; }
     if (submissionLock.current) return; submissionLock.current = true; setError(""); setSubmitting(true);
     const epoch = workspaceEpoch.current;
@@ -361,18 +362,18 @@ export default function Studio({ children }: { children: ReactNode }) {
     </aside>
     <main className={`workspace ${view === 'about' ? 'about-view' : view === 'envision' ? hasCreations ? 'session-view' : 'landing-view' : library ? 'library-view' : 'page-view'}`}>
       {children}
+      {!resettingSession&&(onboarding||route?.view==='settings'&&route.section==='welcome')&&<SetupWizard health={health} jobs={jobs} checking={checkingHealth} onRefresh={async()=>{await Promise.all([refreshHealth(true),refresh()]);}} enhance={request.enhance} onEnhancementChange={enhance=>patch({enhance})} onFinished={finishWelcome}/>}
       {deleting && <DeleteConfirmation key={JSON.stringify(deleting)} target={deleting} onClose={() => setDeleting(undefined)} onDeleted={onDeleted}/>}
-      {route?.view === 'settings' ? <PageShell showBack={false} title={route.section === 'generate' ? 'Settings' : route.section === 'welcome' ? 'Welcome to Frok' : ({pipelines:'Pipelines', recipes:'Recipes'} as const)[route.section]} fallback={route.section === 'generate' ? '/' : '/settings'} className="settings-route" busy={resettingSession}><Setup key={route.section} section={route.section} enhance={request.enhance} onEnhancementChange={enhance => patch({enhance})} resetting={resettingSession} onResetting={resetPending} onNavigate={path => router.push(path)} checkingHealth={checkingHealth} health={health} jobs={jobs} onRefresh={() => { void refreshHealth(true); void refresh(); }}/></PageShell>
+      {route?.view === 'settings' ? <PageShell showBack={false} title="Settings" fallback="/" className="settings-route" busy={resettingSession}><Setup key={route.section} section={route.section==='welcome'?'services':route.section} enhance={request.enhance} onEnhancementChange={enhance=>patch({enhance})} resetting={resettingSession} onResetting={resetPending} onOnboarding={()=>setOnboarding(true)} checkingHealth={checkingHealth} health={health} jobs={jobs} onRefresh={async()=>{await Promise.all([refreshHealth(true),refresh()]);}}/></PageShell>
       : route?.view === 'queue' ? <PageShell showBack={!!route.id} title={route.id ? 'Job & runner log' : 'Queue'} fallback={route.id ? '/queue' : '/'}>{route.id ? <JobLog key={route.id} id={route.id} renderJob={renderJob}/> : <>
         <div className="queue-toolbar"><p className="muted">One job at a time · {pending.length} pending · Drag pending jobs to reorder</p><button disabled={!failed.length && !completed.length && !cancelled.length} onClick={() => setDeletingJob({})}><Trash2 size={14}/>Delete finished jobs</button></div>{running && <GpuGraph telemetry={telemetry}/>}
         <div className="job-list">{!unfinished.length && !completed.length && !cancelled.length ? <p className="empty-state muted">Your queue is empty.</p> : unfinished.length ? unfinished.map(renderJob) : <p className="queue-idle"><Check size={16}/>Nothing waiting. Finished jobs are below.</p>}</div>
         {finished.length > 0 && <details className="completed-jobs"><summary><ChevronRight size={15}/><span>Finished jobs</span><span className="completed-count">{finished.length}</span></summary><div className="job-list">{finished.map(renderJob)}</div></details>}
       </>}</PageShell>
       : route?.view === 'media' ? <PageShell title="Creation" description="Starting asset and every video render, together." fallback="/" className="media-route"><MediaPage key={route.id} id={route.id} renderNumber={route.renderNumber} legacy={route.legacy} preferences={{...request,pipelineId:request.pipelineChoices?.video}} onPreferencesChange={(change,mode='video')=>{const {pipelineId,...rest}=change;patch({...rest,...(Object.hasOwn(change,'pipelineId')?{pipelineChoices:{...request.pipelineChoices,[mode]:pipelineId},...(request.mode===mode?{pipelineId}:{})}:{})});}} storageError={storageError} health={health} jobs={jobs} submitting={submitting} onGenerate={input => submit(input, true)} onSetup={target => openSetup(target)} onQueue={openQueue} onChanged={() => void refresh()} onDelete={item => setDeleting({scope:'media',id:item.id})}/></PageShell>
-      : route?.view === 'utils' ? <PageShell title="Utilities" fallback="/settings/pipelines"><PipelineUtils/></PageShell>
+      : route?.view === 'utils' ? <PageShell title="Utilities" fallback="/settings/advanced"><PipelineUtils/></PageShell>
       : view === 'about' ? <><div className="standalone-back"><BackButton/></div><About onCreate={() => changeView('envision')} onSetup={() => router.push('/settings/welcome')}/></>
       : view === 'envision' ? <>
-        {onboarding && !health?.setupDismissed && <section className="welcome-banner"><div><strong>Welcome to your studio</strong><p>Connect a service and accept its suggested setup to start creating.</p></div><Link className="settings-button" href="/settings/welcome">Open setup guide</Link><button className="settings-text-button" onClick={() => void dismissWelcome()}>Set up later</button></section>}
         {!hasCreations && <div className="landing"><h1>Envision anything.</h1>{composer}</div>}
         {hasCreations && <><header className="session-header"><span>Envision</span><PromptJump sections={sections}/><button className="clear-history" onClick={() => setDeleting({scope:'history'})}><Trash2 size={14}/>Clear unsaved</button><button onClick={newIdea}><Plus size={15}/>New idea</button></header>{composer}</>}
       </> : library ? <header className="library-header"><div><h1>Favorites</h1><p>The things you love, saved on your machine.</p></div><nav className="filter-tabs" aria-label="Filter media">{(['all', 'image', 'video'] as const).map(kind => <Link key={kind} aria-current={filter === kind ? 'page' : undefined} className={filter === kind ? 'active' : ''} href={kind === 'all' ? '/favorites' : `/favorites/${kind}s`}>{kind === 'all' ? 'All' : kind === 'image' ? 'Images' : 'Videos'}</Link>)}</nav></header> : null}

@@ -8,7 +8,7 @@ import { pipeline } from 'node:stream/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import { z } from 'zod';
 import { libraryDatabase, libraryDirectory } from './library';
-import { pipelineDirectory } from './db';
+import { pipelineDirectory, getValue } from './db';
 import { dataDir } from './paths';
 import { activeOperations, beginOperation, endOperation } from './registry';
 import { assertAppRequest, HttpError, privateResponse } from './request-security';
@@ -16,8 +16,9 @@ import { readJson } from './request-body';
 import { exportPreferencesSchema, type ExportPreferences, type LibraryExport } from './export-preferences';
 import { writeArchive, type ArchiveEntry } from './tar';
 import appPackage from '../../package.json';
+import { retentionDefaults } from '../../desktop/preferences.mjs';
 
-const lifetime=24*60*60*1000;
+const lifetime=retentionDefaults.exportHours*60*60*1000;
 const exportsDirectory=()=>path.join(/* turbopackIgnore: true */libraryDirectory(),'exports');
 const json=(value:unknown)=>JSON.stringify(value,null,2)+'\n';
 const excludedDirectories=new Set(['models','runtimes','node_modules','.git','downloads','cache','caches']);
@@ -134,30 +135,26 @@ export async function createLibraryExport(preferences:ExportPreferences,signal:A
     if(pipelineStat) {
       await regularDirectory(pipelines);
       for(const kind of ['image','video','reference','upscale'])await walk(path.join(/* turbopackIgnore: true */pipelines,kind),'pipelines/'+kind,true);
-      for(const name of ['VPIPE-LICENSE','LICENSE','NOTICE'])await walk(path.join(/* turbopackIgnore: true */pipelines,name),'pipelines/'+name,true);
+    for(const name of ['VPIPE-LICENSE','VPIPE-NOTICE','LICENSE','NOTICE'])await walk(path.join(/* turbopackIgnore: true */pipelines,name),'pipelines/'+name,true);
     }else warnings.push('The configured pipeline folder was not found; no pipeline files were included.');
     if(skipped.length)warnings.push('Some model, runtime, cache or linked files were excluded. See manifest.json for the list.');
-    await document('preferences.json',json({version:1,localStorage:preferences}));
+    await document('preferences.json',json({version:1,localStorage:{...preferences,...getValue('interfacePreferences',{})}}));
     await document('README.txt',[
       'Frok library backup — format version 1','',
       'Extract this .tar.gz with your archive utility. Media are ordinary files in library/media.',
       'library.json contains all media metadata, prompts, favorites, jobs and saved service settings.',
       'library/frok.sqlite is a consistent SQLite backup. library/jobs contains retained job files and logs.',
-      'preferences.json contains recipes and generation/audio preferences from the exporting window.',
+      'preferences.json contains recipes and generation/audio preferences from the workspace. These are also saved in library/frok.sqlite.',
       'pipelines contains your pipeline definitions. retained-data, when present, contains older content also covered by Delete all my stuff.',
       'manifest.json lists exclusions. Models, runners, environment credentials and symlink targets are not bundled.','',
       'Manual recovery (there is no in-app Import button yet):',
       '1. Keep an untouched copy of this archive. Quit Frok completely, including its tray process.',
       '2. Move the current library folder aside, then put this archive’s library folder in its place.',
-      '   Default desktop location: ~/frok/data/library; web development: <project>/.data/library.',
+      '   Default location for desktop and browser development: ~/frok/data/library.',
       '   Do not merge old SQLite WAL/SHM files with the restored database.',
       '3. Restore custom pipeline definitions to your configured pipeline directory as needed; preserve existing files.',
       '4. Start Frok. Check connection paths on this machine. Reinstall models separately if needed.',
-      '5. Restore recipes and preferences from preferences.json. After Frok has opened, its Developer Tools console can use:',
-      '   const p = /* paste the contents of preferences.json here */;',
-      '   for (const [key, value] of Object.entries(p.localStorage)) localStorage.setItem(key, value);',
-      '   location.reload();',
-      '   Use only your own trusted backup. Do not execute text from prompts or pipeline files.',
+      '5. Recipes and generation/audio preferences restore with the database; no Electron profile is required.',
       'Queued jobs remain queued in the restored library. Finish or cancel pending work before restoring if you do not want it to run.',
       '', 'Confirm your downloaded archive opens successfully before deleting your data.',
     ].join('\n')+'\n');
@@ -180,7 +177,7 @@ export async function handleLibraryExport(request:Request,id?:string) {
   assertAppRequest(request);
   if(!id) {
     if(request.method!=='POST')throw new HttpError(405,'Method not allowed.');
-    const body=z.object({preferences:exportPreferencesSchema}).strict().parse(await readJson(request,1_000_000));
+    const body=z.object({preferences:exportPreferencesSchema.default({})}).strict().parse(await readJson(request,1_000_000));
     return privateResponse(Response.json(await createLibraryExport(body.preferences,request.signal)));
   }
   z.string().uuid().parse(id);

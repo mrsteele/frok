@@ -6,7 +6,7 @@ import { buildPipeline as build, renderVpipe as render, type RenderInput } from 
 
 // Tests exercise the same registered factory definitions selected by the UI.
 // No compatibility graph builder or installed model is used by this fixture.
-export function factoryPipeline(kind:PipelineKind, runner:'vpipe'|'comfyui'|'local'='vpipe', imageModel?:string):PipelineSnapshot {
+export function factoryPipeline(kind:PipelineKind, runner:'vpipe'|'comfyui'=kind==='upscale'?'comfyui':'vpipe', imageModel?:string):PipelineSnapshot {
   const name=kind==='image'?runner==='vpipe'?'krea-2-turbo':imageModel==='z-image-turbo'?'z-image-turbo':'sdxl-turbo'
     :kind==='video'?runner==='vpipe'?'minimax-h3-turbo':'minimax-h3'
     :kind==='reference'?runner==='vpipe'?'minimax-h3-reference':'minimax-h3-reference-comfy':'realesrgan';

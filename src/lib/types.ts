@@ -18,7 +18,7 @@ export type Media = {
   seed: number; favorite: boolean; sourceId?: string; createdAt: string;
   jobId?: string; origin: "generated" | "upload" | "upscale" | "poster";
   referenceOnly?: boolean;
-  runner?: Runner; imageModel?: ImageModelId; upscaler?: Upscaler; quality?: string; batchIndex?: number; videoStyle?: VideoStyle;
+  runner?: Runner; imageModel?: ImageModelId; upscaler?: Upscaler; upscalePipeline?: {id:string;name:string;revision:string}; quality?: string; batchIndex?: number; videoStyle?: VideoStyle;
   rootId?: string; assetNumber?: number; generation?: Generation; promptTrace?: PromptTrace; runnerSeconds?: number; elapsedSeconds?: number;
 };
 export type Generation = {
@@ -52,7 +52,7 @@ export type Settings = { promptModelSetting?: string|null; pipelineDirectory?: s
 export type Check = { id: string; name: string; ready: boolean; detail: string };
 export type ImageHealth = { setupTask?: string; model: ImageModelId; runner: Runner; connected: boolean; ready: boolean; detail: string };
 export type ConnectionFields = {values:import('./runner-locations').RunnerLocations & {ollamaUrl:string};defaults:import('./runner-locations').RunnerLocations & {ollamaUrl:string}};
-export type Health = { promptModelSetting?: string|null; connectionFields?: ConnectionFields; pipelineLibrary?: import('./pipelines/location').PipelineLibrary; runnerDefaults?: import('./runner-locations').RunnerLocations; ollamaManaged?: boolean; pipelines?: PipelineStatus[]; pipelineSelections?: PipelineSelections; pipelineErrors?: string[]; connections?: Record<ConnectionId,ConnectionStatus>; modelSelections?: ModelSelections; capabilities?: Record<Capability,CapabilityStatus>; recommendedPromptModel?: string; image?: ImageHealth; upscaler?: Upscaler; checks: Check[]; runner: Runner; worker: boolean; ollama: boolean; ollamaModel?: string; ollamaModels?: string[]; ollamaUrl?: string; ollamaConnected: boolean; ollamaInstalled: boolean; platform: string; memoryGB: number; diskGB: number; workdir: string; comfyUrl?: string; comfyDir?: string; setupDismissed: boolean; videoAdapters: Adapters; referenceAdapters: Adapters; upscalerReady: boolean; upscalerSupported: boolean; models: Record<string, boolean> };
+export type Health = { promptModelSetting?: string|null; connectionFields?: ConnectionFields; pipelineLibrary?: import('./pipelines/location').PipelineLibrary; runnerDefaults?: import('./runner-locations').RunnerLocations; pipelines?: PipelineStatus[]; pipelineSelections?: PipelineSelections; pipelineErrors?: string[]; connections?: Record<ConnectionId,ConnectionStatus>; modelSelections?: ModelSelections; capabilities?: Record<Capability,CapabilityStatus>; recommendedPromptModel?: string; image?: ImageHealth; upscaler?: Upscaler; checks: Check[]; runner: Runner; worker: boolean; ollama: boolean; ollamaModel?: string; ollamaModels?: string[]; ollamaUrl?: string; ollamaConnected: boolean; platform: string; memoryGB: number; diskGB: number; workdir: string; comfyUrl?: string; comfyDir?: string; setupDismissed: boolean; videoAdapters: Adapters; referenceAdapters: Adapters; upscalerReady: boolean; upscalerSupported: boolean; models: Record<string, boolean> };
 export const mediaUrl = (id: string) => `/api/media/${id}`;
 
 export type GpuSample = { at: number; busy: number | null };

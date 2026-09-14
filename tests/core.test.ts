@@ -2,7 +2,8 @@ import { createLibraryFixture } from './fixtures/library';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { spawn, type ChildProcess } from 'node:child_process';
+import { execFile, spawn, type ChildProcess } from 'node:child_process';
+import { promisify } from 'node:util';
 import { once } from 'node:events';
 import { setTimeout as delay } from 'node:timers/promises';
 import http from 'node:http';
@@ -12,16 +13,25 @@ import { writeReferencePack } from './fixtures/reference-pack';
 import type { Generation, Job, Media } from '../src/lib/types';
 import { withRunnerLocations } from '../src/lib/runner-locations';
 import { animationRequest } from '../src/lib/media-family';
+import { resolveMediaTool } from '../src/lib/media-tools';
+import type { Graph } from '../src/lib/comfyui';
 
 const testDir=path.join(process.cwd(),'.data',`test-${process.pid}`);
 process.env.FROK_DATA_DIR=testDir;
 process.env.VPIPE_WORKDIR=path.join(testDir,'vpipe');
-process.env.REALESRGAN_BIN=path.join(process.cwd(),'tests/fixtures/upscaler.mjs');
-process.env.REALESRGAN_MODEL_DIR=path.join(testDir,'upscale-models');
-process.env.OLLAMA_MODEL='synthetic:writer';process.env.VPIPE_IMAGE_MODEL='krea/Krea-2-Turbo';process.env.OLLAMA_BIN=path.join(process.cwd(),'tests/fixtures/vpipe.mjs');process.env.FROK_COMFYUI_PRIVATE='0';
+const comfyDir=path.join(testDir,'comfy');
+const comfyRoots={input:path.join(comfyDir,'input'),output:path.join(comfyDir,'output')};
+process.env.COMFYUI_DIR=comfyDir;
+process.env.OLLAMA_MODEL='synthetic:writer';process.env.VPIPE_IMAGE_MODEL='krea/Krea-2-Turbo';process.env.FROK_COMFYUI_PRIVATE='0';
 process.env.VPIPE_BIN=path.join(process.cwd(),'tests/fixtures/vpipe.mjs');
 const imageBytes=await sharp({create:{width:80,height:80,channels:3,background:'#228844'}}).png().toBuffer();
 const motionCalls: {messages:{role:string;content:string}[];keep_alive:number}[]=[];
+const uuidPattern='[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}';
+const upscaleNamespace=new RegExp(`^frok/local/${uuidPattern}/${uuidPattern}$`);
+const upscaleUploads:{filename:string;subfolder:string;size:number}[]=[];
+const upscaleSubmissions:{promptId:string;clientId:string;namespace:string;graph:Graph;filename:string;historyRead:boolean;historyDeleted:boolean}[]=[];
+const mappingRequests:{area:string;subfolder:string}[]=[];
+const runFixture=promisify(execFile);
 let submittedGraph:unknown,uploaded=false,comfyFail=false;
 const comfyServer=http.createServer(async(req,res)=>{
   const route=req.url||'';let raw=Buffer.alloc(0);for await(const chunk of req)raw=Buffer.concat([raw,chunk]);
@@ -37,11 +47,59 @@ const comfyServer=http.createServer(async(req,res)=>{
     if(input.messages.some((m:{content:string})=>m.content.includes('force-motion-fallback'))){res.statusCode=503;return res.end('{}');}
     return res.end(JSON.stringify({message:{content:'<think>Internal planning</think>A blue paper boat twirls playfully on the pond, then settles into a gentle drift.'}}));
   }
-  if(route==='/upload/image'){uploaded=true;return res.end(JSON.stringify({name:'reference.png',subfolder:'frok'}));}
-  if(route==='/object_info')return res.end(JSON.stringify(Object.fromEntries(['CheckpointLoaderSimple','CLIPTextEncode','EmptyLatentImage','KSampler','VAEDecode','SaveImage','UNETLoader','CLIPLoader','VAELoader','MiniMaxH3ImageToVideo','RandomNoise','BasicGuider','KSamplerSelect','BasicScheduler','SamplerCustomAdvanced','VAEDecodeAudio','CreateVideo','SaveVideo','LoadImage','MiniMaxH3ReferenceToVideo'].map(n=>[n,{}]))));
-  if(route==='/prompt'){submittedGraph=JSON.parse(raw.toString()).prompt;return res.end(JSON.stringify({prompt_id:'frok-test',node_errors:{}}));}
-  if(route.startsWith('/history/'))return res.end(JSON.stringify({'frok-test':comfyFail?{status:{status_str:'error',messages:['Intentional ComfyUI failure']}}:{status:{completed:true,status_str:'success'},outputs:{'7':{images:[{filename:'generated.png',type:'output'}]}}}}));
-  if(route.startsWith('/view?')){res.setHeader('Content-Type','image/png');return res.end(imageBytes);}
+  if(route==='/upload/image'){
+    uploaded=true;
+    const form=await new Response(new Uint8Array(raw),{headers:{'Content-Type':req.headers['content-type']!}}).formData();
+    const file=form.get('image');assert.ok(file instanceof File);
+    if(file.name.endsWith('.mp4')){
+      const subfolder=String(form.get('subfolder'));assert.match(subfolder,upscaleNamespace);assert.match(file.name,new RegExp(`^${uuidPattern}\\.mp4$`));
+      assert.equal(form.get('type'),'input');assert.equal(form.get('overwrite'),'false');
+      await fs.mkdir(path.join(comfyRoots.input,subfolder),{recursive:true});
+      await fs.writeFile(path.join(comfyRoots.input,subfolder,file.name),new Uint8Array(await file.arrayBuffer()));
+      upscaleUploads.push({filename:file.name,subfolder,size:file.size});
+      return res.end(JSON.stringify({name:file.name,subfolder,type:'input'}));
+    }
+    return res.end(JSON.stringify({name:'reference.png',subfolder:'frok'}));
+  }
+  if(route==='/object_info')return res.end(JSON.stringify(Object.fromEntries(['CheckpointLoaderSimple','CLIPTextEncode','EmptyLatentImage','KSampler','VAEDecode','SaveImage','UNETLoader','CLIPLoader','VAELoader','MiniMaxH3ImageToVideo','RandomNoise','BasicGuider','KSamplerSelect','BasicScheduler','SamplerCustomAdvanced','VAEDecodeAudio','CreateVideo','SaveVideo','LoadImage','MiniMaxH3ReferenceToVideo','LoadVideo','GetVideoComponents','UpscaleModelLoader','ImageUpscaleWithModel','ImageScale'].map(n=>[n,{}]))));
+  if(route==='/prompt'){
+    const input=JSON.parse(raw.toString()) as {prompt:Graph;prompt_id:string;client_id:string};submittedGraph=input.prompt;
+    if(input.prompt['load-video']?.class_type==='LoadVideo'){
+      const graph=input.prompt,source=String(graph['load-video'].inputs.file),namespace=path.posix.dirname(source),filename='render_00001.mp4';
+      assert.match(namespace,upscaleNamespace);assert.match(input.prompt_id,new RegExp(`^${uuidPattern}$`));
+      assert.equal(input.client_id,`frok-local-${namespace.split('/').slice(2).join('-')}`);
+      assert.equal(graph.upscale.class_type,'ImageUpscaleWithModel');assert.equal(graph.resize.class_type,'ImageScale');
+      assert.equal(graph['save-video'].class_type,'SaveVideo');assert.equal(graph['save-video'].inputs.filename_prefix,`${namespace}/render`);
+      assert.ok(upscaleUploads.some(file=>`${file.subfolder}/${file.filename}`===source));
+      await fs.mkdir(path.join(comfyRoots.output,namespace),{recursive:true});
+      // Only FFmpeg scales synthetic fixture frames. The worker restores the original audio.
+      await runFixture(resolveMediaTool('ffmpeg'),['-v','error','-y','-i',path.join(comfyRoots.input,source),'-map','0:v:0','-an','-vf',`scale=${graph.resize.inputs.width}:${graph.resize.inputs.height}:flags=lanczos`,'-c:v','libx264','-preset','ultrafast','-pix_fmt','yuv420p',path.join(comfyRoots.output,namespace,filename)],{timeout:10_000});
+      upscaleSubmissions.push({promptId:input.prompt_id,clientId:input.client_id,namespace,graph,filename,historyRead:false,historyDeleted:false});
+      return res.end(JSON.stringify({prompt_id:input.prompt_id,node_errors:{}}));
+    }
+    return res.end(JSON.stringify({prompt_id:'frok-test',node_errors:{}}));
+  }
+  if(route.startsWith('/history/')){
+    const entry=upscaleSubmissions.find(item=>item.promptId===route.slice('/history/'.length)&&!item.historyDeleted);
+    if(entry){entry.historyRead=true;return res.end(JSON.stringify({[entry.promptId]:{status:{completed:true,status_str:'success'},outputs:{'save-video':{videos:[{filename:entry.filename,subfolder:entry.namespace,type:'output'}]}}}}));}
+    return res.end(JSON.stringify({'frok-test':comfyFail?{status:{status_str:'error',messages:['Intentional ComfyUI failure']}}:{status:{completed:true,status_str:'success'},outputs:{'7':{images:[{filename:'generated.png',type:'output'}]}}}}));
+  }
+  if(route==='/history'&&req.method==='POST'){
+    const ids=JSON.parse(raw.toString()).delete as string[];
+    for(const entry of upscaleSubmissions)if(ids.includes(entry.promptId))entry.historyDeleted=true;
+    return res.end('{}');
+  }
+  if(route.startsWith('/view?')){
+    const query=new URL(route,'http://localhost').searchParams,filename=query.get('filename')!;
+    if(filename==='mapping.txt'||filename.endsWith('.mp4')){
+      const area=query.get('type'),subfolder=query.get('subfolder')!;
+      assert.ok(area==='input'||area==='output');assert.ok(subfolder.startsWith('frok/'));assert.ok(!subfolder.split('/').includes('..'));assert.equal(path.basename(filename),filename);
+      if(filename==='mapping.txt')mappingRequests.push({area,subfolder});
+      res.setHeader('Content-Type',filename==='mapping.txt'?'text/plain':'video/mp4');
+      return res.end(await fs.readFile(path.join(comfyRoots[area],subfolder,filename)));
+    }
+    res.setHeader('Content-Type','image/png');return res.end(imageBytes);
+  }
   if(route==='/queue')return res.end(JSON.stringify({queue_running:[],queue_pending:[]}));
   res.end('{}');
 });
@@ -55,6 +113,7 @@ const store=await import('../src/lib/db');
 const routes=await import('../src/app/api/[[...segments]]/route');
 const {generationSchema,dimensions,frameCount,hdDimensions}=await import('../src/lib/validation');
 const {buildPipeline,factoryPipeline}=await import('./fixtures/pipeline');
+const {dependencies}=await import('../src/lib/pipelines/dependencies');
 const {buildComfyGraph,renderComfy}=await import('../src/lib/comfyui');
 const {health:readHealth}=await import('../src/lib/setup');
 const {generationBlocker}=await import('../src/lib/readiness');
@@ -70,8 +129,13 @@ async function enqueue(request:Generation){const response=await call('POST','job
 async function complete(job:Job){await waitFor(()=>['completed','failed','cancelled'].includes(store.getJob(job.id)!.status),25000);const result=store.getJob(job.id)!;assert.equal(result.status,'completed',result.error);return result;}
 async function upload(purpose='image'){const form=new FormData();form.set('purpose',purpose);form.set('image',new Blob([new Uint8Array(await sharp({create:{width:850,height:1100,channels:3,background:'#334466'}}).png().toBuffer())],{type:'image/png'}),'test.png');const response=await call('POST','upload',form);assert.equal(response.status,201);return (await response.json()).media as Media;}
 before(async()=>{
-  await fs.mkdir(process.env.REALESRGAN_MODEL_DIR!,{recursive:true});
-  for(const extension of ['bin','param'])await fs.writeFile(path.join(process.env.REALESRGAN_MODEL_DIR!,`realesrgan-x4plus.${extension}`),'synthetic-model');
+  for(const directory of Object.values(comfyRoots))await fs.mkdir(directory,{recursive:true});
+  const dependency=dependencies(factoryPipeline('upscale','comfyui')).find(item=>item.reference==='upscale_models/RealESRGAN_x4plus.pth')!;
+  assert.ok(dependency.size);
+  const modelFile=path.join(comfyDir,'models',dependency.reference);await fs.mkdir(path.dirname(modelFile),{recursive:true});
+  const model=await fs.open(modelFile,'w');
+  // Sparse synthetic marker satisfies declared size checks; no AI weights are loaded.
+  try{await model.writeFile('Synthetic ComfyUI upscale model fixture');await model.truncate(dependency.size);}finally{await model.close();}
   await fs.mkdir(process.env.VPIPE_WORKDIR!,{recursive:true});
   const referencePack=await writeReferencePack(process.env.VPIPE_WORKDIR!);
   await fs.cp(referencePack,path.join(process.env.VPIPE_WORKDIR!,'models/local/MiniMax-H3-FL2VA-8bit'),{recursive:true});
@@ -79,9 +143,10 @@ before(async()=>{
   for(const component of ['transformer','text_encoder','vae'])await writeLora(path.join(baseModel,component,'model.safetensors'));
   await fs.mkdir(path.join(baseModel,'tokenizer'),{recursive:true});await fs.writeFile(path.join(baseModel,'tokenizer/tokenizer.json'),'{}');await fs.writeFile(path.join(baseModel,'model_index.json'),'{}');
   await writeLora(path.join(process.env.VPIPE_WORKDIR!,'models/mgwr/M87/m87_lora_v1.safetensors'));
-  store.setValue('connections',{vpipe:true,comfyui:false,ollama:true});
-  store.setValue('modelSelections',{image:'krea-2-turbo',video:'vpipe',reference:'vpipe',prompt:'synthetic:writer',upscale:'realesrgan'});
-  store.setValue('pipelineSelections',Object.fromEntries(['image','video','reference','upscale'].map(kind=>[kind,factoryPipeline(kind as import('../src/lib/pipelines/schema').PipelineKind,kind==='upscale'?'local':'vpipe').metadata.id])));
+  store.setValue('runnerLocations',{comfyDir,comfyUrl:process.env.COMFYUI_URL!});
+  store.setValue('connections',{vpipe:true,comfyui:true,ollama:true});
+  store.setValue('modelSelections',{image:'krea-2-turbo',video:'vpipe',reference:'vpipe',prompt:'synthetic:writer',upscale:null});
+  store.setValue('pipelineSelections',Object.fromEntries(['image','video','reference','upscale'].map(kind=>[kind,factoryPipeline(kind as import('../src/lib/pipelines/schema').PipelineKind,kind==='upscale'?'comfyui':'vpipe').metadata.id])));
   await writeReferenceTurbo(process.env.VPIPE_WORKDIR!);
   await writeLora(path.join(process.env.VPIPE_WORKDIR!,'models/larryvrh/MiniMax-H3-Turbo-Lora/minimax_h3_turbo_v4_step600_ema.safetensors'));
   worker=spawn(process.execPath,['--import','tsx','src/worker/index.ts'],{cwd:process.cwd(),env:process.env,stdio:['ignore','pipe','pipe']});
@@ -188,7 +253,7 @@ test('failed final video validation keeps the output with its job and leaves no 
   assert.deepEqual((await fs.readdir(fixture.mediaDir)).sort(),before);
   assert.ok((await fs.stat(path.join(fixture.jobsDir,job.id,'0','finished.mp4'))).size>0);
 });
-test('text to video trims to six seconds, retains audio, and saves a video root without a poster',async()=>{
+test('text to video trims to six seconds and ComfyUI upscale retains audio and the video root',async()=>{
   const job=await enqueue({...base,mode:'video',aspect:'16:9',count:1});await complete(job);
   const result=store.listMedia().find(m=>m.jobId===job.id&&m.kind==='video')!;assert.ok(result);assert.equal(result.width,854);assert.equal(result.height,480);assert.ok(Math.abs(result.duration!-6)<.1);assert.ok(result.favorite);assert.equal(result.sourceId,undefined);assert.equal(result.rootId,result.id);assert.equal(store.listMedia().filter(m=>m.jobId===job.id).length,1);
   const {ffprobe}=await import('../src/lib/config');const {runProcess}=await import('../src/lib/process');const metadata=JSON.parse(await runProcess(ffprobe(),['-v','error','-show_streams','-of','json',path.join(fixture.directory,'media',result.filename)]));assert.ok(metadata.streams.some((s:{codec_type:string})=>s.codec_type==='audio'));
@@ -196,7 +261,24 @@ test('text to video trims to six seconds, retains audio, and saves a video root 
   const suffix=await call('GET',`media/${result.id}`,undefined,{Range:'bytes=-12'});assert.equal((await suffix.arrayBuffer()).byteLength,12);
   assert.equal((await call('GET',`media/${result.id}`,undefined,{Range:'bytes=999999999-'})).status,416);
   const head=await call('HEAD',`media/${result.id}`);assert.equal(head.status,200);assert.ok(Number(head.headers.get('content-length'))>0);
-  const hd=await enqueue({...base,mode:'upscale',sourceId:result.id,count:1});await complete(hd);const upscaled=store.listMedia().find(m=>m.jobId===hd.id)!;assert.equal(upscaled.width,1282);assert.equal(upscaled.height,720);assert.equal(upscaled.quality,'HD 720p · Real-ESRGAN');assert.equal((await call('POST','jobs',{...base,mode:'upscale',sourceId:upscaled.id,count:1})).status,400);const hdMeta=JSON.parse(await runProcess(ffprobe(),['-v','error','-show_streams','-show_format','-of','json',path.join(fixture.directory,'media',upscaled.filename)]));assert.ok(hdMeta.streams.some((s:{codec_type:string})=>s.codec_type==='audio'));assert.ok(Math.abs(Number(hdMeta.format.duration)-6)<.1);assert.ok(store.getMedia(result.id)?.favorite);
+  const hd=await enqueue({...base,mode:'upscale',sourceId:result.id,count:1});await complete(hd);
+  assert.equal(hd.runner,'comfyui');assert.equal(hd.request.pipeline?.metadata.id,'comfyui:realesrgan');
+  const entry=upscaleSubmissions.find(item=>item.namespace.split('/')[2]===hd.id)!;assert.ok(entry);
+  const videoUpload=upscaleUploads.find(item=>item.subfolder===entry.namespace)!;assert.ok(videoUpload);
+  assert.notEqual(videoUpload.filename,result.filename);assert.equal(videoUpload.size,(await fs.stat(path.join(fixture.mediaDir,result.filename))).size);
+  assert.equal(entry.graph['load-video'].inputs.file,`${entry.namespace}/${videoUpload.filename}`);
+  assert.equal(entry.graph.model.inputs.model_name,'RealESRGAN_x4plus.pth');
+  assert.deepEqual(entry.graph.upscale.inputs,{upscale_model:['model',0],image:['components',0]});
+  assert.deepEqual([entry.graph.resize.inputs.width,entry.graph.resize.inputs.height],[1282,720]);
+  assert.deepEqual(entry.graph['create-video'].inputs,{images:['resize',0],audio:['components',1],fps:['components',2]});
+  assert.deepEqual(mappingRequests.filter(item=>item.subfolder.startsWith(`${entry.namespace}/`)).map(item=>item.area).sort(),['input','output']);
+  assert.ok(entry.historyRead);assert.ok(entry.historyDeleted);
+  for(const directory of Object.values(comfyRoots))await assert.rejects(fs.access(path.join(directory,entry.namespace)),{code:'ENOENT'});
+  assert.ok(!(await fs.readdir(path.join(fixture.jobsDir,hd.id,'0'))).some(name=>name.startsWith('comfy-cleanup-')));
+  const upscaled=store.listMedia().find(m=>m.jobId===hd.id)!;assert.equal(upscaled.width,1282);assert.equal(upscaled.height,720);assert.equal(upscaled.quality,'HD 720p · Real-ESRGAN');
+  assert.equal(upscaled.runner,'comfyui');assert.deepEqual(upscaled.upscalePipeline,{id:hd.request.pipeline!.metadata.id,name:'Real-ESRGAN',revision:hd.request.pipeline!.revision});
+  assert.equal((await call('POST','jobs',{...base,mode:'upscale',sourceId:upscaled.id,count:1})).status,400);
+  const hdMeta=JSON.parse(await runProcess(ffprobe(),['-v','error','-show_streams','-show_format','-of','json',path.join(fixture.directory,'media',upscaled.filename)]));assert.ok(hdMeta.streams.some((s:{codec_type:string})=>s.codec_type==='audio'));assert.ok(Math.abs(Number(hdMeta.format.duration)-6)<.1);assert.ok(store.getMedia(result.id)?.favorite);
   const family=await (await call('GET',`media/${upscaled.id}/family`)).json();
   assert.equal(family.root.id,result.id);assert.equal(family.renders.length,1);assert.equal(family.renders[0].media.id,result.id);assert.equal(family.renders[0].hd.id,upscaled.id);
   await call('PATCH',`media/${upscaled.id}`,{favorite:false});assert.equal(store.getMedia(result.id)?.favorite,false);assert.equal(store.getMedia(upscaled.id)?.favorite,false);

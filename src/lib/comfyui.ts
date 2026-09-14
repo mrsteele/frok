@@ -1,5 +1,6 @@
 import { legacyDefaults } from './preferences';
 import { bindPipeline } from './pipelines/bindings';
+import { resolveComfyDevices } from './pipelines/comfy-devices';
 import fs from "node:fs/promises";
 import { accessSync, constants, statSync } from 'node:fs';
 import path from "node:path";
@@ -40,6 +41,7 @@ function comfyClient(endpoint = settings().comfyUrl) {
 export async function comfyFetch(route:string,init:RequestInit={}) { assertComfyPrivateBackend(); return comfyClient().fetch(route, init); }
 export function buildComfyGraph(input:Omit<RenderInput,"signal"|"log">,source?:string,references:string[]=[],prefix = `frok/${randomUUID()}/render`):Graph {
   if(input.request.pipeline)return bindPipeline(input.request.pipeline,input,prefix,source,references) as Graph;
+  if(input.request.mode==='upscale')throw Error('Choose an upscaling workflow in Settings → Generation.');
   const {request:r,prompt,width,height,seed}=input;
   if(r.mode==='image' && r.imageModel==='krea-2-turbo')throw new Error('Krea 2 Turbo requires Vpipe.');
   if(r.mode==='image' && r.imageModel==='z-image-turbo')return {
@@ -100,11 +102,11 @@ export function comfyIsolationIssue(): string | undefined {
   if (!isLocalService(settings().comfyUrl) && process.env.FROK_COMFYUI_PRIVATE !== '1') return 'Connect to ComfyUI on this computer. Remote services require a protected backend configuration.';
   for (const area of ['input', 'output'] as const) {
     const directory = comfyDirectory(area);
-    if (!directory || directory !== directory.trim() || !path.isAbsolute(directory)) return `Choose the ComfyUI folder containing its ${area} directory in Settings → Generate.`;
+    if (!directory || directory !== directory.trim() || !path.isAbsolute(directory)) return `Choose the ComfyUI folder containing its ${area} directory in Settings → Services.`;
     try {
       if (!statSync(/* turbopackIgnore: true */ directory).isDirectory()) throw new Error('Not a directory.');
       accessSync(/* turbopackIgnore: true */ directory, constants.R_OK | constants.W_OK | constants.X_OK);
-    } catch { return `ComfyUI’s ${area} folder is missing or not writable. Start ComfyUI, then check its folder in Settings → Generate.`; }
+    } catch { return `ComfyUI’s ${area} folder is missing or not writable. Start ComfyUI, then check its folder in Settings → Services.`; }
   }
 }
 export function assertComfyPrivateBackend() {
@@ -146,7 +148,7 @@ async function verifyCleanupMappings(client: ReturnType<typeof comfyClient>, roo
       if (await response.text() !== marker) throw new Error('ComfyUI mapping mismatch.');
     } catch {
       signal.throwIfAborted();
-      throw new Error(`The selected ComfyUI folder does not match the service’s ${area} directory. Choose its base folder in Settings → Generate. No prompt or asset was sent.`);
+      throw new Error(`The selected ComfyUI folder does not match the service’s ${area} directory. Choose its base folder in Settings → Services. No prompt or asset was sent.`);
     } finally { await removeNamespace(root, subfolder); }
   }
 }
@@ -273,10 +275,11 @@ export async function renderComfy(input:RenderInput) {
     const source = input.source ? await upload(input.source) : undefined;
     const refs: string[] = []; for (const file of input.references) refs.push(await upload(file));
     const graph = buildComfyGraph(input, source, refs, `${namespace}/render`);
-    await fs.writeFile(path.join(directory, 'comfy-workflow.json'), JSON.stringify(graph, null, 2), {mode: 0o600});
     const info = await (await client.fetch('/object_info', {signal: input.signal})).json();
     const missing = [...new Set(Object.values(graph).map(n => n.class_type))].filter(type => !info[type]);
-    if (missing.length) throw new Error(`Update ComfyUI: missing core nodes ${missing.join(', ')}.`);
+    if (missing.length) throw new Error(`Install or update these ComfyUI nodes: ${missing.join(', ')}.`);
+    if(input.request.pipeline)resolveComfyDevices(graph,input.request.pipeline.metadata,info);
+    await fs.writeFile(path.join(directory, 'comfy-workflow.json'), JSON.stringify(graph, null, 2), {mode: 0o600});
     record.submission = 'pending'; record.areas.push('output'); await writeReceipt(receipt, record);
     const result = await (await client.fetch('/prompt', {...post({prompt: graph, prompt_id: record.promptId, client_id: record.clientId}), signal: input.signal})).json();
     if (!uuid.test(result.prompt_id) || Object.keys(result.node_errors || {}).length) throw new Error('ComfyUI rejected the workflow or returned an invalid job ID.');
@@ -289,13 +292,17 @@ export async function renderComfy(input:RenderInput) {
       if (terminal(h)) {
         record.submission = 'terminal'; await writeReceipt(receipt, record);
         if (h.status.status_str === 'error') throw new Error('ComfyUI could not complete this workflow.');
-        const outputs = Object.values(h.outputs || {}) as Record<string, unknown[]>[];
+        // LoadVideo also reports a preview of its input. Only read actual save
+        // nodes, otherwise that preview can be mistaken for the finished video.
+        const outputNodes=Object.entries(graph).filter(([,node])=>['SaveImage','SaveVideo'].includes(node.class_type)).map(([id])=>id);
+        const outputs = outputNodes.flatMap(id=>h.outputs?.[id]?[h.outputs[id]]:[]) as Record<string, unknown[]>[];
         const candidates = outputs.flatMap(o => [...(o.images || []), ...(o.gifs || []), ...(o.videos || [])]).map(file => ownFile(file, namespace, 'output'));
         const file = candidates.find(f => input.request.mode === 'image' ? /\.(png|jpe?g|webp)$/i.test(f.filename) : /\.(mp4|webm|mov)$/i.test(f.filename));
         if (!file) throw new Error('ComfyUI completed without a saved output of the requested type.');
         const response = await client.fetch(`/view?${new URLSearchParams(file)}`, {signal: input.signal});
         const {Readable} = await import('node:stream'); const {pipeline} = await import('node:stream/promises'); const {createWriteStream} = await import('node:fs');
         await pipeline(Readable.fromWeb(response.body as never), createWriteStream(input.output, {mode: 0o600}), {signal: input.signal});
+        input.onRuntime?.((Date.now()-start)/1000);
         return;
       }
       input.log('ComfyUI is processing the workflow…\n');

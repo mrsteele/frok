@@ -46,7 +46,6 @@
     }
   ],
   "npmRebuild": false,
-  "publish": null,
   "mac": {
     "target": [
       "dmg",
@@ -56,7 +55,7 @@
     "hardenedRuntime": false,
     "notarize": false,
     "category": "public.app-category.graphics-design",
-    "icon": "desktop/icon.png"
+    "icon": "desktop/icon-mac.png"
   },
   "win": {
     "target": [

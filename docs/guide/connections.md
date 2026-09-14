@@ -1,14 +1,16 @@
 # Connect your runners
 
-**Settings → Generate** establishes connections. **Settings → Pipelines** chooses what each connection will generate. You can mix runners: an image pipeline and a video pipeline do not have to use the same service.
+**Settings → Services** establishes connections. **Settings → Generation** chooses what each connection will generate. You can mix runners: an image pipeline and a video pipeline do not have to use the same service.
 
 Connection fields stay blank at their defaults, with the effective default shown as a placeholder. Enter an override only when your installation differs. Saving and checking a location refreshes readiness; it does not move models.
+
+Frok keeps everyday setup in **Services** and **Generation**. **Recipes** holds reusable video prompts. **Advanced** contains workflow folders, API tokens, background-task preferences, export, and library deletion.
 
 ## Vpipe
 
 Use the same model workspace as Vpipe Manager or your Vpipe CLI. For models under `/Volumes/AI/vpipe/models`, enter `/Volumes/AI/vpipe`. Leave the input empty for `~/vpipe`.
 
-The check verifies Frok can use the runner and its workspace. It can then recognize files already prepared there. Accepting the first-connection setup offer selects the starter Krea and MiniMax workflows and queues any missing preparation. Existing selections are retained.
+The check verifies Frok can use the runner and its workspace. It can then recognize files already prepared there. Choose the Krea, MiniMax, or custom workflows you want in **Generation**. The wizard queues preparation only for the workflows you select when you choose **Download & finish**.
 
 Vpipe's bundled native profile targets Apple Silicon Macs. Check the runner's own OS and hardware requirements before installing models. Frok does not make an incompatible backend portable merely by packaging the interface for another OS.
 
@@ -19,6 +21,8 @@ Start ComfyUI, then enter its local service address and base folder. The folder 
 Frok checks the service and the input/output folder mapping. A reachable address with the wrong base directory is not a working file connection. It also checks whether the nodes required by a selected workflow are installed on that service.
 
 Use an **API-format workflow** for Frok pipelines, not a visual editor export. See the [ComfyUI example](../examples/comfyui.md).
+
+Workflow selectors show the service each workflow needs. Follow the selected workflow's readiness action for missing nodes or models. See [upscaling setup](../tutorials/upscaling.md#choose-an-ai-upscaler) for the bundled upscalers' requirements.
 
 ## Ollama
 
@@ -34,16 +38,16 @@ Finish or cancel queued work before changing runner locations. Use **Save & chec
 
 The active library owns these settings. Browser development and desktop development use different libraries by default, so a connection saved in one does not automatically configure the other. [Workspace details →](../desktop.md)
 
-## Generation preferences and API tokens
+## Advanced preferences and API tokens
 
-Below the connection cards, **Generation preferences** controls live image previews, render timeout, finished-job retention and whether Frok starts its separate Ollama runtime. Finished job records, logs and working files are automatically deleted after 3 hours by default; change the number of hours or turn off automatic deletion to keep them. Saved media is kept. Turning previews off reduces extra decoding and memory use. Timeout changes apply when the next render starts. Save your changes; Ollama startup changes also need a full quit and reopen.
+In **Settings → Advanced**, **Background tasks & tools** controls live image previews, render timeout, finished-job retention and whether Frok starts its separate Ollama runtime. Change the [job retention period](./queue.md#automatic-job-cleanup), or turn off automatic deletion to keep finished job records, logs and working files. Saved media is kept. Turning previews off reduces extra decoding and memory use. Timeout changes apply when the next render starts. Save your changes; Ollama startup changes also need a full quit and reopen.
 
 In the desktop app, **API tokens** stores Hugging Face and ComfyUI credentials securely. Accept a gated model's license before downloading it, save the token, and quit and reopen Frok. Tokens stay outside library backups and are kept when you reset your library. No environment file is needed.
 
 ## Video tools
 
-Frok includes **FFmpeg and FFprobe** to finish videos, preserve audio, inspect metadata and prepare frames for AI upscaling. They work immediately in the desktop installer, including offline. You do not need to install them separately.
+Frok includes **FFmpeg and FFprobe** to finish videos, preserve audio and inspect metadata. They work immediately in the desktop installer, including offline. You do not need to install them separately. AI generation and upscaling use the service required by your selected workflow.
 
 Vpipe, ComfyUI, Ollama and AI models remain independent installations. Including these small media utilities does not install or require a particular AI runner.
 
-For an advanced override, enter a folder containing both commands in **Settings → Generate → Generation preferences → Video tools folder**. Leave it blank to use Frok's included tools. Overrides need `libx264` and AAC encoding support. Save and refresh connections; no restart is needed. Finish or cancel queued work before changing the folder.
+For an advanced override, enter a folder containing both commands in **Settings → Advanced → Background tasks & tools → Video tools folder**. Leave it blank to use Frok's included tools. Overrides need `libx264` and AAC encoding support. Save and refresh connections; no restart is needed. Finish or cancel queued work before changing the folder.

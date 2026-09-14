@@ -18,7 +18,7 @@ export function zipFiles(files:UtilityFile[]) {
 }
 const bundleInput=z.object({
   name:z.string().trim().min(1).max(80),
-  kind:z.enum(['image','video','reference']),
+  kind:z.enum(['image','video','reference','upscale']),
   runner:z.enum(['vpipe','comfyui']),
   graph:z.record(z.string(),z.unknown()),
 }).strict();
@@ -70,7 +70,7 @@ export async function buildPipelineBundle(input:unknown) {
     `${value.name} — Frok pipeline folder`,
     `Extract this archive into your configured pipeline location (default: ~/frok/pipelines).`,
     `It creates ${folder}/. Keep run.${extension}, prepare.${extension} and meta.json together.`,
-    'Review the files, then refresh Settings → Pipelines and select the new pipeline.',
+    'Review the files, then refresh Settings → Generation and select the new pipeline.',
     'This utility does not execute workflows, download models or modify the pipeline catalog.',
     '',
     unresolved.length?'Needs review before use:\n'+unresolved.map(s=>'- '+s).join('\n'):'Known inputs and dependencies were mapped. Review the workflow before preparing it.',

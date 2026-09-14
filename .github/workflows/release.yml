@@ -23,7 +23,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v7
         with:
-          node-version: '24.15.0'
+          node-version-file: .node-version
       - run: node scripts/check-source.mjs
       - name: Verify semantic version and lockfile
         id: version
@@ -47,14 +47,22 @@ jobs:
     timeout-minutes: 45
     env:
       NEXT_TELEMETRY_DISABLED: '1'
+      FROK_SIGN_RELEASE: ${{ startsWith(matrix.platform, 'mac-') && '1' || '0' }}
+      CSC_LINK: ${{ startsWith(matrix.platform, 'mac-') && secrets.MAC_CSC_LINK || '' }}
+      CSC_KEY_PASSWORD: ${{ startsWith(matrix.platform, 'mac-') && secrets.MAC_CSC_KEY_PASSWORD || '' }}
+      APPLE_ID: ${{ startsWith(matrix.platform, 'mac-') && secrets.APPLE_ID || '' }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ startsWith(matrix.platform, 'mac-') && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
+      APPLE_TEAM_ID: ${{ startsWith(matrix.platform, 'mac-') && secrets.APPLE_TEAM_ID || '' }}
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: actions/setup-node@v7
         with:
-          node-version: '24.15.0'
+          node-version-file: .node-version
           cache: npm
+      - name: Validate release signing before building
+        run: node --input-type=module -e "import {signingConfiguration} from './scripts/desktop-signing.mjs'; signingConfiguration({});"
       - run: npm ci
       - run: npm --prefix docs ci
       - name: Media build tools (Linux)
@@ -80,13 +88,6 @@ jobs:
         run: node --test tests/media-tool-distribution.test.mjs
       - name: Build platform installer
         run: npm run package
-        env:
-          FROK_SIGN_RELEASE: ${{ startsWith(matrix.platform, 'mac-') && vars.FROK_SIGN_MACOS == 'true' && '1' || '0' }}
-          CSC_LINK: ${{ startsWith(matrix.platform, 'mac-') && secrets.MAC_CSC_LINK || '' }}
-          CSC_KEY_PASSWORD: ${{ startsWith(matrix.platform, 'mac-') && secrets.MAC_CSC_KEY_PASSWORD || '' }}
-          APPLE_ID: ${{ startsWith(matrix.platform, 'mac-') && secrets.APPLE_ID || '' }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ startsWith(matrix.platform, 'mac-') && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
-          APPLE_TEAM_ID: ${{ startsWith(matrix.platform, 'mac-') && secrets.APPLE_TEAM_ID || '' }}
       - name: Check packaged backend (no inference)
         run: npm run smoke:desktop
       - uses: actions/upload-artifact@v7
@@ -100,6 +101,9 @@ jobs:
             release/*.zip
             release/*.exe
             release/*.AppImage
+            release/*.blockmap
+            release/*.yml
+            !release/builder-*.yml
 
   release:
     needs: [version, build]
@@ -107,11 +111,19 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+      - run: npm ci --ignore-scripts
       - uses: actions/download-artifact@v8
         with:
           pattern: frok-*
-          path: artifacts
-          merge-multiple: true
+          path: downloaded-artifacts
+      - name: Combine architecture downloads and verify update manifests
+        run: node scripts/release-artifacts.mjs downloaded-artifacts artifacts
       - name: Attach installers to a draft release
         env:
           GH_TOKEN: ${{ github.token }}

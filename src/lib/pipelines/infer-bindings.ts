@@ -79,6 +79,17 @@ export function inferBindings(snapshot:PipelineSnapshot):string[] {
     const positive=new Map<string,{node:string;field:string}>(),negative=new Set<string>();
     for(const [id,node] of Object.entries(nodes)) {
       const {class_type:type,inputs}=node;
+      if(snapshot.kind==='upscale'){
+        if(type==='LoadVideo'){
+          if(m.videoSource)throw Error('Use one LoadVideo input for an upscaling workflow.');
+          m.videoSource={node:id,field:'file'};
+          inputs.file='input.mp4';
+          (graph[id] as {inputs:Record<string,unknown>}).inputs.file='input.mp4';
+        }
+        if(type==='SeedVR2VideoUpscaler')bind('seed',id,'seed');
+        if(/^SeedVR2Load(DiT|VAE)Model$/.test(type))bind('device',id,'device');
+        if(type==='ImageScale')for(const key of ['width','height'] as const)bind(key,id,key);
+      }
       if(['KSampler','KSamplerAdvanced','SamplerCustom','BasicGuider','CFGGuider'].includes(type)) {
         for(const b of promptInputs(inputs.positive??inputs.conditioning))positive.set(`${b.node}:${b.field}`,b);
         for(const b of promptInputs(inputs.negative))negative.add(`${b.node}:${b.field}`);
@@ -101,10 +112,10 @@ export function inferBindings(snapshot:PipelineSnapshot):string[] {
       bind('prompt',b.node,b.field);
     }
   }
-  if(!m.bindings.width?.length||!m.bindings.height?.length)notes.push('Dimensions could not be mapped. Add width/height bindings in meta.json to honor Frok’s size controls.');
-  if(snapshot.kind!=='image'&&!m.bindings.frames?.length&&!m.bindings.duration?.length)notes.push('Video length could not be mapped. Add duration or frames bindings and verify fps, frameStride and frameOffset in meta.json.');
+  if(snapshot.kind!=='upscale'&&(!m.bindings.width?.length||!m.bindings.height?.length))notes.push('Dimensions could not be mapped. Add width/height bindings in meta.json to honor Frok’s size controls.');
+  if(snapshot.kind!=='image'&&snapshot.kind!=='upscale'&&!m.bindings.frames?.length&&!m.bindings.duration?.length)notes.push('Video length could not be mapped. Add duration or frames bindings and verify fps, frameStride and frameOffset in meta.json.');
   if(snapshot.kind==='reference'&&!m.references)notes.push('The reference-image input could not be mapped. Add references in meta.json.');
-  if(snapshot.kind!=='image'&&!minimax)notes.push('Review video timing in meta.json: the draft uses MiniMax defaults (24 fps, frame stride 17, offset 5). Adjust these for other video models.');
+  if(snapshot.kind!=='image'&&snapshot.kind!=='upscale'&&!minimax)notes.push('Review video timing in meta.json: the draft uses MiniMax defaults (24 fps, frame stride 17, offset 5). Adjust these for other video models.');
   // File outputs must be portable and will be replaced by private job storage.
   for(const output of m.bindings.output||[]) {
     const node=m.runner==='vpipe'?(graph.stages as z.infer<typeof nativeGraph>['stages']).find(s=>s.id===output.node)?.config:(graph[output.node] as {inputs:Record<string,unknown>})?.inputs;

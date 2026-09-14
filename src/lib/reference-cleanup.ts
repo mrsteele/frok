@@ -1,4 +1,5 @@
 import type { Generation, Job, Media } from './types';
+import { retentionDefaults } from '../../desktop/preferences.mjs';
 
 export const mediaInputs = (item: Media) => [item.sourceId, item.rootId, item.generation?.sourceId, item.generation?.rootId, ...(item.generation?.referenceIds || [])].filter((id): id is string => !!id && id !== item.id);
 export const jobInputs = (job: Job) => {
@@ -26,8 +27,8 @@ export function referencesReleasedByDeletion(all: Media[], jobs: Job[], removed:
 }
 
 // References uploaded by an abandoned/failed submission have no job to own
-// their cleanup. Keep a day for retries; ordinary uploaded root images stay.
-export const abandonedReferenceAge = 24 * 3_600_000;
+// their cleanup. Give retries a grace period; ordinary uploaded root images stay.
+export const abandonedReferenceAge = retentionDefaults.referenceUploadHours * 3_600_000;
 export function abandonedReferences(all: Media[], jobs: Job[], now: number) {
   return unusedReferences(all, jobs).filter(item => Date.parse(item.createdAt) <= now - abandonedReferenceAge);
 }

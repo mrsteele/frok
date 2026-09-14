@@ -1,1 +1,103 @@
-{}
+{
+  "load-video": {
+    "class_type": "LoadVideo",
+    "inputs": {
+      "file": "input.mp4"
+    }
+  },
+  "components": {
+    "class_type": "GetVideoComponents",
+    "inputs": {
+      "video": [
+        "load-video",
+        0
+      ]
+    }
+  },
+  "dit": {
+    "class_type": "SeedVR2LoadDiTModel",
+    "inputs": {
+      "model": "seedvr2_ema_3b-Q4_K_M.gguf",
+      "device": "mps",
+      "blocks_to_swap": 0,
+      "swap_io_components": false,
+      "offload_device": "none",
+      "cache_model": false,
+      "attention_mode": "sdpa"
+    }
+  },
+  "vae": {
+    "class_type": "SeedVR2LoadVAEModel",
+    "inputs": {
+      "model": "ema_vae_fp16.safetensors",
+      "device": "mps",
+      "encode_tiled": true,
+      "encode_tile_size": 512,
+      "encode_tile_overlap": 64,
+      "decode_tiled": true,
+      "decode_tile_size": 512,
+      "decode_tile_overlap": 64,
+      "tile_debug": "false",
+      "offload_device": "none",
+      "cache_model": false
+    }
+  },
+  "upscale": {
+    "class_type": "SeedVR2VideoUpscaler",
+    "inputs": {
+      "image": [
+        "components",
+        0
+      ],
+      "dit": [
+        "dit",
+        0
+      ],
+      "vae": [
+        "vae",
+        0
+      ],
+      "seed": 42,
+      "resolution": 720,
+      "max_resolution": 1920,
+      "batch_size": 5,
+      "uniform_batch_size": true,
+      "temporal_overlap": 1,
+      "prepend_frames": 0,
+      "color_correction": "lab",
+      "input_noise_scale": 0,
+      "latent_noise_scale": 0,
+      "offload_device": "none",
+      "enable_debug": false
+    }
+  },
+  "create-video": {
+    "class_type": "CreateVideo",
+    "inputs": {
+      "images": [
+        "upscale",
+        0
+      ],
+      "audio": [
+        "components",
+        1
+      ],
+      "fps": [
+        "components",
+        2
+      ]
+    }
+  },
+  "save-video": {
+    "class_type": "SaveVideo",
+    "inputs": {
+      "video": [
+        "create-video",
+        0
+      ],
+      "filename_prefix": "frok/upscaled",
+      "format": "mp4",
+      "codec": "h264"
+    }
+  }
+}

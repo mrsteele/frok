@@ -57,14 +57,6 @@ export function dimensions(aspect: string, quality: string, video = false, sourc
   return { width: Math.max(16, Math.round(w/16)*16), height: Math.max(16, Math.round(h/16)*16), outputWidth:0, outputHeight:0 };
 }
 export function frameCount(seconds: number) { return Math.ceil((seconds * 24 - 5) / 17) * 17 + 5; }
-export function assertLocalMutation(request: Request) {
-  const host = new URL(request.url).hostname;
-  if (!["localhost", "127.0.0.1", "[::1]"].includes(host)) throw new Error("This app accepts local requests only.");
-  const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(request.url).origin) throw new Error("Cross-origin requests are not allowed.");
-  if (request.headers.get("sec-fetch-site") === "cross-site") throw new Error("Cross-site requests are not allowed.");
-}
-
 export function hdDimensions(width: number, height: number) {
   if (Math.min(width, height) >= 720) throw new Error('This video is already HD (720p or higher).');
   const scale = Math.min(720 / Math.min(width, height), 1920 / Math.max(width, height));

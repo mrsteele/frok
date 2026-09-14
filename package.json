@@ -12,11 +12,10 @@
     "build:brand": "node scripts/brand-assets.mjs",
     "build:docs:web": "node scripts/desktop-docs.mjs --web",
     "dev": "node scripts/run.mjs dev",
-    "build": "next build",
+    "build": "node scripts/build.mjs",
     "start": "node scripts/run.mjs start",
     "worker": "tsx src/worker/index.ts",
     "audit:library": "node --import tsx scripts/audit-library.ts",
-    "setup": "tsx scripts/setup.ts",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "node --import tsx --test --test-concurrency=4 tests/*.test.ts tests/*.test.mjs",
     "dev:desktop": "node scripts/desktop-dev.mjs",
@@ -32,6 +31,7 @@
   },
   "dependencies": {
     "dotenv": "^17.2.3",
+    "electron-updater": "6.8.9",
     "lucide-react": "^0.577.0",
     "next": "16.3.4",
     "react": "19.2.8",
@@ -46,6 +46,7 @@
     "electron": "44.3.0",
     "electron-builder": "26.15.3",
     "esbuild": "^0.28.2",
+    "js-yaml": "4.3.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },

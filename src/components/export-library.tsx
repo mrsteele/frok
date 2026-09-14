@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { flushInterfacePreferences } from '@/lib/client-preferences';
 import { Download, Loader2, X } from 'lucide-react';
-import { captureExportPreferences, type LibraryExport } from '@/lib/export-preferences';
+import { type LibraryExport } from '@/lib/export-preferences';
 
 export function ExportLibrary({disabled=false,onBusyChange}:{disabled?:boolean;onBusyChange:(busy:boolean)=>void}) {
   const [busy,setBusy]=useState(false),[error,setError]=useState(''),[result,setResult]=useState<LibraryExport>();
@@ -12,11 +13,9 @@ export function ExportLibrary({disabled=false,onBusyChange}:{disabled?:boolean;o
     const pending=new AbortController();controller.current=pending;
     setBusy(true);onBusyChange(true);setError('');setResult(undefined);
     try {
-      let preferences;
-      try{preferences=captureExportPreferences(window.localStorage);}
-      catch{throw Error('Frok could not read your saved recipes and preferences. Enable local storage before exporting a complete backup.');}
+      await flushInterfacePreferences();
       const response=await fetch('/api/library/export',{method:'POST',credentials:'same-origin',cache:'no-store',signal:pending.signal,
-        headers:{'Content-Type':'application/json','X-Frok-Request':'1'},body:JSON.stringify({preferences})});
+        headers:{'Content-Type':'application/json','X-Frok-Request':'1'},body:JSON.stringify({})});
       const backup=await response.json() as LibraryExport&{error?:string};
       if(!response.ok)throw Error(backup.error||'Could not prepare the backup.');
       pending.signal.throwIfAborted();

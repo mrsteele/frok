@@ -32,7 +32,7 @@ Metadata does not replace the native graph. It tells Frok how to pass user contr
 
 ## 3. Install and scan
 
-Extract the archive into the pipeline location shown in **Settings → Pipelines**, normally `~/frok/pipelines`. Keep the `image`, `video` or `reference` parent directory. Choose **Refresh pipelines** and resolve any catalog warnings.
+Extract the archive into the pipeline location shown in **Settings → Generation**, normally `~/frok/pipelines`. Keep the `image`, `video` or `reference` parent directory. Choose **Refresh pipelines** and resolve any catalog warnings.
 
 Select the new workflow for its capability, or use it as a generation-settings override. Prepare missing dependencies through the queue. Your old default can remain available while you compare the new workflow.
 

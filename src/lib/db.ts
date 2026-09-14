@@ -1,9 +1,8 @@
 import { legacyDefaults } from './preferences';
-import { emptyPipelines } from './pipelines/schema';
+import { emptyPipelines, currentPipelineSelections } from './pipelines/schema';
 import path from "node:path";
-import { existsSync } from 'node:fs';
 import { randomUUID } from "node:crypto";
-import { dataDir, expandPath, comfyServiceUrl } from "./config";
+import { expandPath, comfyServiceUrl } from "./config";
 import { defaultPipelinesDir } from './paths';
 import { defaultRunnerLocations, resolveRunnerLocations, comfyUsesFolder, type RunnerLocations } from './runner-locations';
 import type { Media, Job, Settings, Runner, Adapters, MediaFamily } from "./types";
@@ -23,9 +22,7 @@ export function getValue<T>(key: string, fallback: T): T {
 }
 export function setValue(key: string, value: unknown) { db.prepare("INSERT OR REPLACE INTO settings VALUES (?,?)").run(key, JSON.stringify(value)); }
 export function runnerLocations() {
-  // Keep an older installation's workspace until its owner chooses another.
-  const legacy=path.join(dataDir,'vpipe');
-  const locations=resolveRunnerLocations(getValue<Partial<RunnerLocations>>('runnerLocations',{}),existsSync(legacy)?legacy:undefined,legacyDefaults());
+  const locations=resolveRunnerLocations(getValue<Partial<RunnerLocations>>('runnerLocations',{}),undefined,legacyDefaults());
   // Validate migrated defaults too, before exposing them through settings.
   comfyServiceUrl(locations.comfyUrl);
   return locations;
@@ -63,7 +60,7 @@ export function settings(): Settings {
   const connections=getValue<Connections>('connections',Object.fromEntries(connectionIds.map(id=>[id,Object.keys(savedModelSelections).some(key=>modelConnection(key as keyof ModelSelections,savedModelSelections)===id)])) as Connections);
   const modelSelections={...savedModelSelections,prompt:savedModelSelections.prompt===''?(connections.ollama?machineOllamaConfig().model:null):savedModelSelections.prompt};
   // Legacy fields remain derived runner inputs; modelSelections controls whether each capability is enabled.
-  return { pipelineDirectory:pipelineDirectorySetting(), connections, modelSelections, promptModelSetting:savedModelSelections.prompt, pipelineSelections:getValue('pipelineSelections',emptyPipelines),
+  return { pipelineDirectory:pipelineDirectorySetting(), connections, modelSelections, promptModelSetting:savedModelSelections.prompt, pipelineSelections:currentPipelineSelections(getValue('pipelineSelections',emptyPipelines)),
     imageModel:modelSelections.image||defaultImageModel(legacyRunner),ollamaModel:modelSelections.prompt||machineOllamaConfig().model,ollamaUrl:getValue('ollamaUrl',machineOllamaConfig().url)||defaultOllamaUrl(),
     upscaler:modelSelections.upscale||'realesrgan',runner:modelSelections.video||legacyRunner,
     ...runnerLocations(),

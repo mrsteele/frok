@@ -13,6 +13,11 @@ import type { Graph } from '../comfyui';
 
 // Native loader inputs remain authoritative even when an administrator forgets
 // to add a matching dependency declaration. Unknown origins cannot be downloaded.
+export function comfyModelReference(node:Graph[string],field:string):string|undefined {
+  const folders:Record<string,string>={ckpt_name:'checkpoints',unet_name:'diffusion_models',clip_name:'text_encoders',vae_name:'vae',lora_name:'loras'};
+  const folder=folders[field]||(node.class_type==='UpscaleModelLoader'&&field==='model_name'?'upscale_models':/^SeedVR2Load(DiT|VAE)Model$/.test(node.class_type)&&field==='model'?'SEEDVR2':undefined);
+  return folder&&typeof node.inputs[field]==='string'?`${folder}/${node.inputs[field]}`:undefined;
+}
 export function dependencies(snapshot:PipelineSnapshot):Dependency[] {
   const result=[...snapshot.metadata.dependencies];
   if(snapshot.metadata.runner==='comfyui'&&snapshot.prepare){for(const value of Array.isArray(snapshot.prepare.dependencies)?snapshot.prepare.dependencies:[]){const d=dependencySchema.parse(value),index=result.findIndex(item=>item.reference===d.reference);if(index===-1)result.push(d);else result[index]={...result[index],...d};}}
@@ -22,13 +27,13 @@ export function dependencies(snapshot:PipelineSnapshot):Dependency[] {
     for(const key of ['lora','lora2'])add('lora',s.config[key]);
   }
   if(snapshot.metadata.runner==='comfyui')for(const s of Object.values(snapshot.graph as Graph)){
-    for(const [key,dir] of Object.entries({ckpt_name:'checkpoints',unet_name:'diffusion_models',clip_name:'text_encoders',vae_name:'vae',lora_name:'loras'}))if(typeof s.inputs[key]==='string')add('file',`${dir}/${s.inputs[key]}`);
+    for(const field of Object.keys(s.inputs)){const reference=comfyModelReference(s,field);if(reference)add('file',reference);}
   }
   return result;
 }
 export async function comfyFile(reference:string,create=false) {
   dependencySchema.parse({kind:'file',reference});
-  if(!settings().comfyDir)throw Error('Choose your ComfyUI folder in Settings → Generate to verify model files.');
+  if(!settings().comfyDir)throw Error('Choose your ComfyUI folder in Settings → Services to verify model files.');
   const base=path.join(expandPath(settings().comfyDir),'models');
   const root=await fs.realpath(base),file=path.join(root,reference);
   // Validate each ancestor before creating a directory or opening a partial file.

@@ -6,7 +6,7 @@ import type { Health } from '../src/lib/types';
 
 function health(overrides: Partial<Health> = {}): Health {
   return {
-    runner: 'vpipe', worker: true, ollama: false, ollamaConnected: false, ollamaInstalled: false,
+    runner: 'vpipe', worker: true, ollama: false, ollamaConnected: false,
     platform: 'darwin arm64', memoryGB: 16, diskGB: 300, workdir: '/example/work', setupDismissed: true,
     checks: [
       { id: 'worker', name: 'Queue', ready: true, detail: '' },
@@ -57,7 +57,7 @@ test('each unavailable mode points to its own download card and setup task', () 
     assert.equal(generationIssue(state, mode)?.target, mode);
     assert.equal(generationIssue(state, mode)?.task, mode);
   }
-  assert.equal(generationIssue(state, 'upscale'), undefined);
+  assert.equal(generationIssue(state, 'upscale')?.action, 'Choose a workflow');
 });
 
 test('ComfyUI readiness uses its own prepared packs and download actions', () => {
@@ -81,7 +81,7 @@ test('unknown health and a disconnected runner cannot appear ready for generatio
   state.checks.find(check => check.id === 'runner')!.ready = false;
   assert.equal(generationIssue(state, 'image')?.target, 'runner');
   assert.deepEqual(missingSetup(state).map(item => item.target), ['runner']);
-  assert.equal(generationIssue(state, 'upscale'), undefined);
+  assert.equal(generationIssue(state, 'upscale')?.action, 'Choose a workflow');
 });
 
 test('missing neural upscaler blocks HD and points at setup without blocking generation',()=>{

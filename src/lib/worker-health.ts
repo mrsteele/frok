@@ -1,7 +1,7 @@
 import { serviceValue } from './registry';
 
 // Increment when new jobs need updated request handling or workspace routing.
-export const workerProtocolVersion=7;
+export const workerProtocolVersion=8;
 export function workerStatus() {
   const running=Date.now()-serviceValue('workerHeartbeat',0)<15_000;
   const protocol=serviceValue<{pid:number;version:number}|null>('workerProtocol',null);
