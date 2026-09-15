@@ -7,20 +7,17 @@ import { pipelineDirectory, pipelineDirectorySetting, setValue } from '../db';
 import { HttpError } from '../request-security';
 import { resetPipelines } from '../../../desktop/workspace.mjs';
 import { diskCatalog } from './catalog';
-import { dependencies } from './dependencies';
 import { pipelineRunners } from './schema';
 
-export type PipelineLibrary={configured:string;path:string;defaultPath:string;counts:Record<typeof pipelineRunners[number],number>;errors:string[];warnings:string[]};
+export type PipelineLibrary={configured:string;path:string;defaultPath:string;counts:Record<typeof pipelineRunners[number],number>;errors:string[]};
 
 export async function pipelineLibraryAudit(list?:Awaited<ReturnType<typeof diskCatalog>>):Promise<PipelineLibrary> {
   list??=await diskCatalog();
-  const counts=Object.fromEntries(pipelineRunners.map(runner=>[runner,0])) as PipelineLibrary['counts'],warnings:string[]=[];
+  const counts=Object.fromEntries(pipelineRunners.map(runner=>[runner,0])) as PipelineLibrary['counts'];
   for(const entry of list.entries){
     counts[entry.metadata.runner]++;
-    if(!entry.prepare&&dependencies(entry).some(d=>d.generated||(entry.metadata.runner==='vpipe'?!d.fetch:!d.url)))
-      warnings.push(`${entry.metadata.name}: no prepare companion or complete download instructions. Install its dependencies manually or add a prepare file.`);
   }
-  return {configured:pipelineDirectorySetting(),path:pipelineDirectory(),defaultPath:defaultPipelinesDir,counts,errors:list.errors,warnings};
+  return {configured:pipelineDirectorySetting(),path:pipelineDirectory(),defaultPath:defaultPipelinesDir,counts,errors:list.errors};
 }
 
 export async function savePipelineDirectory(value:string,signal:AbortSignal) {

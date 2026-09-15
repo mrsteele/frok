@@ -10,13 +10,14 @@ import type { Health } from '../src/lib/types';
 
 function workflow(id:string,kind:PipelineKind,runner:PipelineStatus['runner'],ready=false):PipelineStatus {
   const metadata=pipelineMetadata.parse({version:1,id,name:id,runner});
-  return {...metadata,kind,supportsSource:false,maxReferences:0,ready,state:ready?'ready':'missing',detail:'',missing:[],canPrepare:!ready,revision:'test'};
+  return {...metadata,kind,supportsSource:false,maxReferences:0,ready,state:ready?'ready':'missing',detail:'',missing:[],revision:'test'};
 }
 function health():Health {
   return {
     worker:true,checks:[],connections:{vpipe:{enabled:true,available:true,detail:''},comfyui:{enabled:false,available:true,detail:''},ollama:{enabled:false,available:false,detail:''}},
     pipelines:[workflow('custom-image','image','vpipe'),workflow('custom-alternative','image','comfyui'),workflow('custom-video','video','vpipe',true),workflow('custom-reference','reference','comfyui'),workflow('custom-upscaler','upscale','comfyui')],
     pipelineSelections:{image:'custom-image',video:null,reference:null,upscale:null},
+    capabilities:Object.fromEntries(['image','video','reference','upscale','prompt'].map(kind=>[kind,{configured:kind==='image',ready:false,detail:'',connection:'vpipe'}])),
   } as unknown as Health;
 }
 function options(markup:string) {
@@ -51,13 +52,24 @@ test('disconnecting preserves the named selection; removed definitions have a di
 
 test('Settings and onboarding share the options, including unavailable services and opting out',()=>{
   const state=health();
-  const settings=renderToStaticMarkup(createElement(PipelineSettings,{health:state,jobs:[],checking:false,onRefresh:()=>{}}));
-  const wizard=renderToStaticMarkup(createElement(PipelineSettings,{health:state,jobs:[],checking:false,wizard:true,onRefresh:()=>{}}));
+  const settings=renderToStaticMarkup(createElement(PipelineSettings,{health:state,checking:false,onRefresh:()=>{}}));
+  const wizard=renderToStaticMarkup(createElement(PipelineSettings,{health:state,checking:false,wizard:true,onRefresh:()=>{}}));
   assert.deepEqual(options(settings),options(wizard));
   assert.equal(options(settings).filter(o=>o.value==='').length,4);
   assert.ok(options(settings).filter(o=>o.value==='').every(o=>!o.disabled));
   for(const id of ['custom-alternative','custom-reference','custom-upscaler'])assert.equal(options(settings).find(o=>o.value===id)?.disabled,true);
   assert.doesNotMatch(settings+wizard,/included upscaling workflows|compatible service to see its workflows/);
+});
+
+test('manual setup instructions appear only for selected workflows that need setup',()=>{
+  const state=health();
+  const markup=()=>renderToStaticMarkup(createElement(PipelineSettings,{health:state,checking:false,onRefresh:()=>{}}));
+  assert.match(markup(),/href="\/docs\/guide\/model-setup.html"/);
+  state.pipelines![0].ready=state.capabilities!.image.ready=true;
+  assert.doesNotMatch(markup(),/Setup instructions/);
+  state.pipelines![0].ready=state.capabilities!.image.ready=false;
+  state.pipelineSelections!.image=null;
+  assert.doesNotMatch(markup(),/Setup instructions/);
 });
 
 test('generation controls retain defaults and source compatibility with the shared service requirements',()=>{

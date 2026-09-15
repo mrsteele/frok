@@ -10,7 +10,7 @@ Frok keeps everyday setup in **Services** and **Generation**. **Recipes** holds 
 
 Use the same model workspace as Vpipe Manager or your Vpipe CLI. For models under `/Volumes/AI/vpipe/models`, enter `/Volumes/AI/vpipe`. Leave the input empty for `~/vpipe`.
 
-The check verifies Frok can use the runner and its workspace. It can then recognize files already prepared there. Choose the Krea, MiniMax, or custom workflows you want in **Generation**. The wizard queues preparation only for the workflows you select when you choose **Download & finish**.
+The check verifies Frok can use the runner and its workspace. It can then recognize files already prepared there. Choose the Krea, MiniMax, or custom workflows you want in **Generation**. For missing models, use **Prepare models** when offered for a built-in workflow, or follow the [setup instructions](./model-setup.md).
 
 Vpipe's bundled native profile targets Apple Silicon Macs. Check the runner's own OS and hardware requirements before installing models. Frok does not make an incompatible backend portable merely by packaging the interface for another OS.
 
@@ -28,7 +28,7 @@ Workflow selectors show the service each workflow needs. Follow the selected wor
 
 Install [Ollama](https://ollama.com/download) and run its local service, connect its local address, and refresh the installed-model list. Frok lists models compatible with text generation. Select one in the same card.
 
-**Default** resolves to Frok's configured default model, which must actually be installed and compatible. **None** disables enhancement. Selecting another model triggers a fresh check; having a different model installed is insufficient. Frok normally neither starts a second service nor copies your Ollama model library.
+**Default** resolves to Frok's configured default model, which must actually be installed and compatible. **None** disables enhancement. Selecting another model triggers a fresh check; having a different model installed is insufficient. Frok does not start a second service, download models or copy your Ollama model library.
 
 Turn **Use Prompt Enhancement** on or off with the checkbox. It shares the saved preference used by **Prompt enhancement** in generation settings, so changing either control updates the other. Ollama improves prompts; it does not generate the image or video pixels.
 
@@ -36,13 +36,13 @@ Turn **Use Prompt Enhancement** on or off with the checkbox. It shares the saved
 
 Finish or cancel queued work before changing runner locations. Use **Save & check** to validate a new location, or refresh to check an unchanged one. Failed checks retain the previous saved location. Clearing an override restores the displayed default after saving.
 
-The active library owns these settings. Browser development and desktop development use different libraries by default, so a connection saved in one does not automatically configure the other. [Workspace details →](../desktop.md)
+The active library owns these settings. Browser and desktop development share the same workspace by default. [Workspace details →](../desktop.md)
 
 ## Advanced preferences and API tokens
 
-In **Settings → Advanced**, **Background tasks & tools** controls live image previews, render timeout, finished-job retention and whether Frok starts its separate Ollama runtime. Change the [job retention period](./queue.md#automatic-job-cleanup), or turn off automatic deletion to keep finished job records, logs and working files. Saved media is kept. Turning previews off reduces extra decoding and memory use. Timeout changes apply when the next render starts. Save your changes; Ollama startup changes also need a full quit and reopen.
+In **Settings → Advanced**, **Background tasks & tools** controls live image previews, render timeout, finished-job retention and the video tools folder. Change the [job retention period](./queue.md#automatic-job-cleanup), or turn off automatic deletion to keep finished job records, logs and working files. Saved media is kept. Turning previews off reduces extra decoding and memory use. Timeout changes apply when the next render starts. Save your changes to apply them.
 
-In the desktop app, **API tokens** stores Hugging Face and ComfyUI credentials securely. Accept a gated model's license before downloading it, save the token, and quit and reopen Frok. Tokens stay outside library backups and are kept when you reset your library. No environment file is needed.
+In the desktop app, **API tokens** stores Hugging Face and ComfyUI credentials securely. Install gated models through the runner after accepting their licenses. Save any credentials needed by generation, then quit and reopen Frok. Tokens stay outside library backups and are kept when you reset your library. No environment file is needed.
 
 ## Video tools
 

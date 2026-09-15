@@ -13,7 +13,6 @@ import { ollamaConfig } from "./ollama-config";
 import { promptModelStatus } from "./ollama-status";
 import { capabilityStatus } from './capabilities';
 import { machineOllamaConfig } from './ollama-defaults';
-export const setupTasks=["ollama"] as const;
 export async function health(promptConfig = ollamaConfig(), selections=settings().modelSelections):Promise<Health> {
   const { model: ollamaModel, url: ollamaUrl } = promptConfig;
   const s=settings();const dir=workdir();
@@ -39,22 +38,4 @@ export async function health(promptConfig = ollamaConfig(), selections=settings(
       {id:"ffmpeg",name:"Video tools",ready:videoTools.ready,detail:videoTools.detail},
       {id:"ollama",name:"Prompt enhancement",ready:ollamaReady,detail:ollamaReady?ollamaModel:capabilities.prompt.detail} ]};
   return pipelineHealth(state);
-}
-export async function runSetup(task:string,signal:AbortSignal,log:(s:string)=>void,promptConfig = ollamaConfig()) {
-  if(!(setupTasks as readonly string[]).includes(task))throw new Error("Unknown setup task");
-  if(task==="ollama") {
-    const { url, model } = promptConfig;
-    log(`Installing ${model} from the configured Ollama service…\n`);
-    const response=await fetch(`${url}/api/pull`,{redirect:"error",method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model,stream:true}),signal});
-    if(!response.ok || !response.body)throw new Error("Start Ollama, then retry installing the prompt model.");
-    const reader=response.body.getReader();const decoder=new TextDecoder();let pending="";
-    const report=(line:string)=>{if(!line.trim())return;const p=JSON.parse(line);if(p.error)throw new Error(p.error);log(`${p.status}${p.total?` · ${Math.round((p.completed||0)/p.total*100)}%`:""}\n`);};
-    try {
-      while(true){const {done,value}=await reader.read();if(done)break;pending+=decoder.decode(value,{stream:true});let n;while((n=pending.indexOf("\n"))>=0){report(pending.slice(0,n));pending=pending.slice(n+1);}}
-      report(pending+decoder.decode());
-    } finally { await reader.cancel().catch(()=>{}); }
-    signal.throwIfAborted();
-    if(!(await promptModelStatus(promptConfig,signal)).ready)throw new Error(`Ollama has not made ${model} available. Retry installing the prompt model.`);
-    log(`${model} is installed and verified.\n`);return;
-  }
 }

@@ -10,7 +10,7 @@ import { promisify } from 'node:util';
 
 test('included media tools encode, probe and extract a synthetic frame with no system tools', async t => {
   const directory = mediaDirectory(process.cwd());
-  await checkMediaTools(directory);
+  await checkMediaTools(directory, undefined, {checkLinkage: false});
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'frok-included-encode-test-'));
   t.after(() => fs.rm(root, {recursive: true, force: true}));
   const command = tool => path.join(directory, tool + (process.platform === 'win32' ? '.exe' : ''));

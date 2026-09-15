@@ -1,8 +1,7 @@
 [
   [
     "image/krea-2-turbo/run.vpipeline",
-    "image/krea-2-turbo/meta.json",
-    "image/krea-2-turbo/prepare.vpipeline"
+    "image/krea-2-turbo/meta.json"
   ],
   [
     "image/sdxl-turbo/run.json",
@@ -18,13 +17,11 @@
   ],
   [
     "video/minimax-h3-turbo/run.vpipeline",
-    "video/minimax-h3-turbo/meta.json",
-    "video/minimax-h3-turbo/prepare.vpipeline"
+    "video/minimax-h3-turbo/meta.json"
   ],
   [
     "reference/minimax-h3-reference/run.vpipeline",
-    "reference/minimax-h3-reference/meta.json",
-    "reference/minimax-h3-reference/prepare.vpipeline"
+    "reference/minimax-h3-reference/meta.json"
   ],
   [
     "reference/minimax-h3-reference-comfy/run.json",
@@ -32,12 +29,10 @@
   ],
   [
     "upscale/realesrgan/run.json",
-    "upscale/realesrgan/meta.json",
-    "upscale/realesrgan/prepare.json"
+    "upscale/realesrgan/meta.json"
   ],
   [
     "upscale/seedvr2/run.json",
-    "upscale/seedvr2/meta.json",
-    "upscale/seedvr2/prepare.json"
+    "upscale/seedvr2/meta.json"
   ]
 ]

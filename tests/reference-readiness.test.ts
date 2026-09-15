@@ -14,18 +14,12 @@ import { writeReferencePack } from './fixtures/reference-pack';
 const directory=await fs.mkdtemp(path.join(process.cwd(),'.data/reference-readiness-test-'));
 const workspace=path.join(directory,'workspace');
 Object.assign(process.env,{FROK_DATA_DIR:directory,VPIPE_WORKDIR:workspace,VPIPE_REFERENCE_MODEL:'local/MiniMax-H3-Ref2VA-8bit',VPIPE_BIN:'synthetic-vpipe',FFMPEG_BIN:'synthetic-ffmpeg',FFPROBE_BIN:'synthetic-ffprobe',OLLAMA_URL:'http://127.0.0.1:19751',FROK_COMFYUI_PRIVATE:'0'});
-let prepares=0,turboPrepares=0,publish=false;
 mock.method(childProcess,'spawn',(command:string,args:string[])=>{
   assert.match(command,/^synthetic-/);
   const encoders=command==='synthetic-ffmpeg'&&args.join(' ')==='-hide_banner -encoders';
-  assert.ok(encoders||['--version','-version','--launch'].includes(args[0]));
+  assert.ok(encoders||['--version','-version'].includes(args[0]));
   const child=Object.assign(new EventEmitter(),{stdout:new PassThrough(),stderr:new PassThrough(),kill:()=>true});
   queueMicrotask(()=>void(async()=>{
-    if(args[0]==='--launch'){
-      const graph=JSON.parse(await fs.readFile(args[1],'utf8'));
-      if(graph.stages.some((s:{type:string})=>s.type==='model-quantize')){prepares++;if(publish)await writeReferencePack(workspace);}
-      else{turboPrepares++;await writeReferenceTurbo(workspace);}
-    }
     child.stdout.end(encoders?' V....D libx264 H.264\n A..... aac AAC\n':'Synthetic successful process exit');child.stderr.end();child.emit('close',0);
   })().catch(error=>child.emit('error',error)));
   return child;
@@ -42,7 +36,6 @@ const {referenceModelStatus}=await import('../src/lib/reference-model-status');
 const {generationBlocker}=await import('../src/lib/readiness');
 const {buildPipeline,factoryPipeline}=await import('./fixtures/pipeline');
 const {renderVpipe}=await import('../src/lib/vpipe');
-const {preparePipeline}=await import('../src/lib/pipelines/prepare');
 const pipeline=factoryPipeline('reference');
 const routes=await import('../src/app/api/[[...segments]]/route');
 const model=path.join(workspace,'models/local/MiniMax-H3-Ref2VA-8bit');
@@ -50,7 +43,6 @@ const referenceId='11111111-1111-4111-8111-111111111111';
 const request={mode:'reference' as const,prompt:'A blue paper boat',aspect:'1:1' as const,quality:'preview' as const,duration:6 as const,count:1,enhance:false,referenceIds:[referenceId]};
 const call=(endpoint:string)=>routes.POST(fixture.request(`http://localhost:3000/api/${endpoint}`,{method:'POST',body:JSON.stringify(request)}),{params:Promise.resolve({segments:endpoint.split('/')})});
 beforeEach(async()=>{
-  prepares=0;turboPrepares=0;publish=false;
   await fs.rm(workspace,{recursive:true,force:true});await fs.mkdir(workspace,{recursive:true});await writeReferenceTurbo(workspace);
   store.db.exec('DELETE FROM jobs; DELETE FROM settings; DELETE FROM media;');
   store.setValue('connections',{vpipe:true,comfyui:false,ollama:false});
@@ -65,7 +57,7 @@ test('stale receipt and intermediate-only output cannot report Ready or enqueue 
   await fs.mkdir(`${model}-dit/diffusion_models`,{recursive:true});
   const state=await setup.health();
   assert.equal(state.capabilities!.reference.ready,false);assert.equal(state.capabilities!.reference.ready,false);
-  assert.match(state.capabilities!.reference.detail,/needs preparation/);
+  assert.match(state.capabilities!.reference.detail,/Install the missing dependencies/);
   assert.ok(generationBlocker(state,'image'));assert.ok(generationBlocker(state,'video')); // Empty synthetic packs no longer pass on receipts alone.
   assert.equal((await call('jobs')).status,409);assert.equal(store.listJobs().length,0);
   const failed=store.createJob({kind:'generate',request,runner:'vpipe',total:1});store.updateJob(failed.id,{status:'failed'});
@@ -102,35 +94,24 @@ test('model readiness preserves trusted-path and symlink protections',async()=>{
   assert.equal((await referenceModelStatus()).ready,false);
 });
 
-test('successful process exit without a final pack clears stale readiness and fails preparation',async()=>{
-  await assert.rejects(preparePipeline(pipeline,fixture.jobsDir,new AbortController().signal,()=>{}),/Preparation did not make this pipeline ready/);
-  assert.equal(prepares,1);assert.equal((await setup.health()).capabilities!.reference.ready,false);
-});
 
-test('preparation verifies final output, and verifying an installed model skips quantization',async()=>{
-  publish=true;await preparePipeline(pipeline,fixture.jobsDir,new AbortController().signal,()=>{});
-  assert.equal(prepares,1);assert.equal((await setup.health()).capabilities!.reference.ready,true);
-  await preparePipeline(pipeline,fixture.jobsDir,new AbortController().signal,()=>{});
-  assert.equal(prepares,1);
-});
 
 test('queued references fail with actionable setup guidance before launching a renderer',async()=>{
   const jobDirectory=path.join(fixture.jobsDir,'synthetic-job','0');await fs.mkdir(jobDirectory,{recursive:true});
   await assert.rejects(renderVpipe({request,prompt:request.prompt,seed:1,width:32,height:32,output:path.join(jobDirectory,'out.mp4'),directory:jobDirectory,references:[],signal:new AbortController().signal,log:()=>{}}),/no pipeline/);
-  assert.equal(prepares,0);
   const graph=await buildPipeline({request,prompt:request.prompt,seed:1,width:32,height:32,output:'unused.mp4',directory:jobDirectory,references:['synthetic-reference.png']});
   assert.equal(graph.stages.find(s=>s.id==='model-select')!.config.hf_dir,'local/MiniMax-H3-Ref2VA-8bit');
   assert.equal(graph.stages.find(s=>s.id==='minimax-h3-model-config')!.config.lora,turboAdapters.reference.alias);
 });
 
-test('existing reference pack with missing Turbo is blocked and prepares only the adapter',async()=>{
+test('existing reference pack with missing Turbo becomes ready after external adapter installation',async()=>{
   await writeReferencePack(workspace);
   await fs.unlink(path.join(workspace,'models',turboAdapters.reference.file));
   const state=await setup.health();
-  assert.equal(state.capabilities!.reference.ready,false);assert.match(state.capabilities!.reference.detail,/needs preparation/);
+  assert.equal(state.capabilities!.reference.ready,false);assert.match(state.capabilities!.reference.detail,/Install the missing dependencies/);
   assert.equal((await call('jobs')).status,409);
-  await preparePipeline(pipeline,fixture.jobsDir,new AbortController().signal,()=>{});
-  assert.equal(prepares,0);assert.equal(turboPrepares,1);assert.equal((await setup.health()).capabilities!.reference.ready,true);
+  await writeReferenceTurbo(workspace);
+  assert.equal((await setup.health()).capabilities!.reference.ready,true);
 });
 
 test('reference preparation quantizes both components to 8-bit from the original Ref2VA partition',async()=>{
@@ -151,8 +132,7 @@ test('an installed 4-bit pack and its receipt cannot satisfy 8-bit reference rea
   registry.setServiceValue('prepared:reference',{fingerprint:JSON.stringify('local/MiniMax-H3-Ref2VA-4bit'),at:Date.now()});
   assert.equal((await setup.health()).capabilities!.reference.ready,false);
   assert.equal((await call('jobs')).status,409);
-  publish=true;await preparePipeline(pipeline,fixture.jobsDir,new AbortController().signal,()=>{});
-  assert.equal(prepares,1);
+  await writeReferencePack(workspace);
   assert.equal((await setup.health()).capabilities!.reference.ready,true);
   assert.equal((await fs.stat(model.replace('Ref2VA-8bit','Ref2VA-4bit'))).isDirectory(),true);
 });

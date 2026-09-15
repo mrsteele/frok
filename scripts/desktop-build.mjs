@@ -45,6 +45,10 @@ for (const file of groups.flat()) {
 }
 for(const name of ['VPIPE-LICENSE','VPIPE-NOTICE'])await fs.copyFile(path.join('resources/pipelines',name),path.join(output,'pipeline-templates',name));
 await fs.cp(path.join(output,'pipeline-templates'),path.join(backend,'resources/pipelines'),{recursive:true});
+// Starter scripts belong to the application, never the editable pipeline install.
+const preparations=JSON.parse(await fs.readFile('desktop/preparations.json','utf8'));
+for(const folder of preparations)await fs.copyFile(path.join('resources/pipelines',folder,'prepare.vpipeline'),path.join(backend,'resources/pipelines',folder,'prepare.vpipeline'));
+
 await fs.mkdir(path.join(backend,'desktop'),{recursive:true});
 for(const file of ['workspace.mjs','pipelines.json'])await fs.copyFile(path.join('desktop',file),path.join(backend,'desktop',file));
 await fs.copyFile('package.json',path.join(backend,'frok-package.json'));

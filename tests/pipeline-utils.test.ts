@@ -20,7 +20,7 @@ async function template(id:string){const p=(await diskCatalog()).entries.find(p=
 function unpack(result:Awaited<ReturnType<typeof buildPipelineBundle>>,kind:PipelineSnapshot['kind']):PipelineSnapshot {
   const read=(suffix:string)=>JSON.parse(result.files.find(f=>f.name.endsWith(suffix))!.content);
   const metadata=pipelineMetadata.parse(read('/meta.json')),ext=metadata.runner==='vpipe'?'vpipeline':'json';
-  return {kind,metadata,graph:read(`/run.${ext}`),prepare:read(`/prepare.${ext}`),revision:'test'};
+  return {kind,metadata,graph:read(`/run.${ext}`),revision:'test'};
 }
 const input={request:{mode:'video' as const,prompt:'A boat',aspect:'1:1',duration:6,quality:'preview' as const,count:1,enhance:false,referenceIds:[]},prompt:'A boat in motion',seed:739,width:512,height:384,output:'private/output.mp4',directory:'private',references:[]};
 
@@ -30,7 +30,7 @@ test('every bundled native workflow exports a discoverable complete folder with 
   for(const source of templates) {
     const before=structuredClone(source);
     const result=await buildPipelineBundle({name:source.metadata.name,kind:source.kind,runner:source.metadata.runner,graph:source.graph});
-    assert.equal(result.files.length,4);assert.deepEqual(result.unresolved,[],source.metadata.id);
+    assert.equal(result.files.length,3);assert.deepEqual(result.unresolved,[],source.metadata.id);
     for(const file of result.files){const target=path.join(exported,file.name);await fs.mkdir(path.dirname(target),{recursive:true});await fs.writeFile(target,file.content);}
     const p=unpack(result,source.kind);validatePipeline(p);
     assert.deepEqual(p.metadata.bindings,source.metadata.bindings,source.metadata.id);
@@ -47,10 +47,9 @@ test('Krea exports use just the base model with no hidden adapters or projector 
   assert.deepEqual(source.metadata.dependencies.map(d=>d.reference),['krea/Krea-2-Turbo']);
   const stages=source.graph.stages as any[];assert.equal(stages.find(s=>s.type==='generate-image').config.dit_dir,undefined);
   assert.ok(stages.every(s=>!s.config.lora&&!s.config.lora2));assert.doesNotMatch(JSON.stringify(source.graph),/--preview/);
-  assert.deepEqual((source.prepare!.stages as any[]).map(s=>s.type),['model-fetch']);
   const result=await buildPipelineBundle({name:'My Krea',kind:'image',runner:'vpipe',graph:source.graph});
   const p=unpack(result,'image');assert.deepEqual(p.metadata.dependencies,source.metadata.dependencies);
-  assert.deepEqual((p.prepare!.stages as any[]).map(s=>[s.type,s.config.model_path]),[['model-fetch','krea/Krea-2-Turbo']]);
+  assert.ok(result.files.every(file=>!file.name.includes('/prepare.')));
 });
 
 test('ComfyUI prompt inference follows positive conditioning after node renaming and preserves negative and LoRA strengths',async()=>{
@@ -72,15 +71,15 @@ test('unknown fused models receive explicit preparation and readiness notes with
   const result=await buildPipelineBundle({name:'Custom fusion',kind:'image',runner:'vpipe',graph:source.graph}),p=unpack(result,'image');
   assert.ok(result.unresolved.some(s=>s.includes('custom/my-fused-model')&&s.includes('download source')));
   assert.ok(result.unresolved.some(s=>s.includes('required files')));
-  assert.equal((p.prepare!.stages as any[]).length,1);assert.equal(p.metadata.dependencies.find(d=>d.reference==='custom/my-fused-model')!.fetch,undefined);
+  assert.equal(p.metadata.dependencies.find(d=>d.reference==='custom/my-fused-model')!.fetch,undefined);
 });
 
-test('MiniMax preparation is reused only when its requested adapters also match',async()=>{
+test('MiniMax export preserves only requested dependencies and never creates preparation code',async()=>{
   const source=await template('vpipe:minimax-h3-turbo');
   const model=(source.graph.stages as any[]).find(s=>s.type==='minimax-h3-model-config');delete model.config.lora;
   const result=await buildPipelineBundle({name:'No turbo',kind:'video',runner:'vpipe',graph:source.graph}),p=unpack(result,'video');
-  assert.ok(result.unresolved.some(s=>s.includes('custom fusion or quantization')));
-  assert.deepEqual(p.prepare!.stages,[],'Do not silently prepare an adapter that the uploaded workflow removed.');
+  assert.ok(p.metadata.dependencies.every(d=>d.kind!=='lora'));
+  assert.ok(result.files.every(file=>!file.name.includes('/prepare.')));
 });
 
 test('unmapped positive prompts and private file loaders are clearly flagged for manual review',async()=>{

@@ -154,17 +154,7 @@ export function PipelineLibrary({
               </ul>
             </InlineMessage>
           )}
-          {!!library.warnings.length && (
-            <InlineMessage tone="warning">
-              <strong>Preparation notes</strong>
-              <ul>
-                {library.warnings.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </InlineMessage>
-          )}
-          {!library.errors.length && !library.warnings.length && (
+          {!library.errors.length && (
             <InlineMessage tone="neutral">
               {Object.values(library.counts).some(Boolean)
                 ? 'Detected definitions look good. Choose defaults and check readiness in Generation.'

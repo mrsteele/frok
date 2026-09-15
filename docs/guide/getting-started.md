@@ -24,7 +24,7 @@ Open `http://127.0.0.1:3000`. For the Electron development window instead, run `
 
 *Use Settings to connect your tools. Documentation returns to these guides.*
 
-On first launch, Frok opens a three-step **Quick setup** modal: connect the services you have, choose optional generation workflows, and finish. Missing models are queued for preparation when you choose **Download & finish**. You can skip setup and return through **Settings → Services → Quick setup**.
+On first launch, **Quick setup** welcomes you with a short demonstration, then shows the same Services and Generation panels used in Settings. Connect your tools, choose optional workflows, and finish. Continuing never starts downloads; a built-in Vpipe starter runs only when you click **Prepare models**. You can skip setup and return through **Settings → Services → Quick setup**.
 
 In **Settings → Services**, connect only the tools you want to use:
 
@@ -42,15 +42,15 @@ Vpipe's workspace is the folder **containing** `models`, not `models` itself. Co
 
 After a connection succeeds, move to **Generation** in the wizard or Settings to choose its workflows. Connecting a service alone does not select workflows or start model downloads. [Connection details →](./connections.md)
 
-## 3. Prepare a pipeline
+## 3. Choose a ready workflow
 
 In **Settings → Generation**, choose a workflow for Images, Videos, Reference videos, or Video upscaling. The selectors list all compatible workflows from your workflow folder. A disabled option names the service it requires; connect that service in **Services**, then return to choose it. Quick setup and generation controls use the same choices.
 
-Each selected workflow reports its own readiness and preparation actions. A connected service lets you select its workflows even when their models still need downloading. [Upscaling setup →](../tutorials/upscaling.md)
+Each selected workflow reports its readiness and links to setup instructions. A connected service lets you select its workflows even when their models still need downloading. [Upscaling setup →](../tutorials/upscaling.md)
 
 - **Ready:** the required model files and supported runner requirements were detected.
-- **Missing dependencies:** use the preparation/download action and follow its job in Queue.
-- **Needs attention:** review the message; a path, node, metadata field or preparation instruction may need fixing.
+- **Missing dependencies:** use **Prepare models** when offered for a built-in Vpipe workflow, or follow the [model setup guide](./model-setup.md). Preparation runs in Queue; you can finish the wizard while it continues.
+- **Needs attention:** review the message; a path, node or metadata field may need fixing.
 
 ![Image and video pipeline selectors, each with a Ready status in the top-right corner](/screenshots/pipelines-ready.png)
 

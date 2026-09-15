@@ -17,5 +17,12 @@ async function buildDocs(web = false) {
     child.on('exit', code => code === 0 ? resolve() : reject(Error(`Documentation build exited with ${code}`)));
   });
 }
-export const buildDesktopDocs = () => buildDocs();
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await buildDocs(process.argv.includes('--web'));
+export const buildDesktopDocs = async () => {
+  await buildDocs();
+  // The welcome screen embeds the same demo through the app's local web server.
+  await buildDocs(true);
+};
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  if (process.argv.includes('--web')) await buildDocs(true);
+  else await buildDesktopDocs();
+}

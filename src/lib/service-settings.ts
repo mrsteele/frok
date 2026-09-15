@@ -39,14 +39,3 @@ export async function validateServiceSettings(input:Change,signal:AbortSignal) {
   if(JSON.stringify([latest.connections,latest.modelSelections,latest.ollamaUrl])!==JSON.stringify([current.connections,current.modelSelections,current.ollamaUrl]))throw new HttpError(409,'Settings changed while checking services. Refresh and try again.');
   return {connections,modelSelections};
 }
-
-export async function checkSetupConnection(task:string) {
-  if(task!=='ollama')throw new HttpError(400,'Choose a pipeline in Settings → Generation to prepare its dependencies.');
-  const s=settings();
-  const connection='ollama';
-  if(connection){
-    if(!s.connections[connection])throw new HttpError(409,`Configure ${connectionNames[connection]} in Settings → Services first.`);
-    const state=await health();
-    if(!state.connections?.[connection].available)throw new HttpError(409,state.connections?.[connection].detail||'Connect the service first.');
-  }
-}

@@ -7,7 +7,7 @@ import { ensureWorkspace, workspacePaths, resetPipelines } from '../desktop/work
 
 const root = path.resolve('.data/desktop-workspace-test');
 const home = path.join(root, 'home'), templates = path.join(root, 'templates');
-const group = ['image/example/run.vpipeline', 'image/example/meta.json', 'image/example/prepare.vpipeline'];
+const group = ['image/example/run.vpipeline', 'image/example/meta.json'];
 const stateDirectory = path.join(root, 'app-data');
 const options = { home, stateDirectory, templates, groups: [group], version: '0.1.0' };
 beforeEach(async () => {
@@ -37,6 +37,54 @@ test('repeat boot preserves personal pipelines, media, and configuration', async
   assert.equal(await fs.readFile(personal, 'utf8'), 'personal definition');
   assert.equal(await fs.readFile(path.join(result.data, 'example.txt'), 'utf8'), 'saved');
   assert.equal(await fs.readFile(result.envFile, 'utf8'), 'OLLAMA_URL=http://localhost:11434');
+});
+test('fresh installs and resets install only generation files from the shipped manifest', async () => {
+  const shipped = { ...options, templates: path.resolve('resources/pipelines'), groups: JSON.parse(await fs.readFile('desktop/pipelines.json', 'utf8')) };
+  const result = await ensureWorkspace(shipped);
+  const expected = [...shipped.groups.flat(), 'VPIPE-LICENSE', 'VPIPE-NOTICE'].sort();
+  async function installedFiles() {
+    const entries = await fs.readdir(result.pipelines, { recursive: true, withFileTypes: true });
+    return entries.filter(entry => entry.isFile()).map(entry => path.relative(result.pipelines, path.join(entry.parentPath, entry.name)).split(path.sep).join('/')).sort();
+  }
+  assert.ok(expected.every(file => !file.includes('prepare.')));
+  assert.deepEqual(await installedFiles(), expected);
+  await fs.writeFile(path.join(result.pipelines, 'image/krea-2-turbo/prepare.vpipeline'), 'old preparation');
+  await resetPipelines(shipped);
+  assert.deepEqual(await installedFiles(), expected);
+});
+test('upgrades retire unchanged tracked preparation files but preserve edited and manual copies', async () => {
+  const result = await ensureWorkspace(options);
+  const stateFile = path.join(stateDirectory, '.pipeline-state.json');
+  const state = JSON.parse(await fs.readFile(stateFile, 'utf8'));
+  const untouched = ['image/example/prepare.vpipeline', 'image/example.prepare.json'];
+  const edited = 'image/example/prepare.json', manual = 'image/example.prepare.vpipeline';
+  for (const name of [...untouched, edited]) {
+    state.files[name] = createHash('sha256').update('original prepare').digest('hex');
+    await fs.writeFile(path.join(result.pipelines, name), name === edited ? 'my edited prepare' : 'original prepare');
+  }
+  await fs.writeFile(path.join(result.pipelines, manual), 'my manual prepare');
+  await fs.writeFile(stateFile, JSON.stringify(state));
+  await ensureWorkspace(options);
+  for (const name of untouched) await assert.rejects(fs.access(path.join(result.pipelines, name)), { code: 'ENOENT' });
+  assert.equal(await fs.readFile(path.join(result.pipelines, edited), 'utf8'), 'my edited prepare');
+  assert.equal(await fs.readFile(path.join(result.pipelines, manual), 'utf8'), 'my manual prepare');
+  const saved = JSON.parse(await fs.readFile(stateFile, 'utf8'));
+  assert.ok(Object.keys(saved.files).every(name => !name.includes('prepare.')));
+  await ensureWorkspace(options);
+  assert.equal(await fs.readFile(path.join(result.pipelines, edited), 'utf8'), 'my edited prepare');
+});
+test('retiring a preparation file never follows a replacement symlink', { skip: process.platform === 'win32' }, async () => {
+  const result = await ensureWorkspace(options);
+  const name = 'image/example/prepare.vpipeline', target = path.join(root, 'manual.vpipeline');
+  await fs.writeFile(target, 'original prepare');
+  await fs.symlink(target, path.join(result.pipelines, name));
+  const stateFile = path.join(stateDirectory, '.pipeline-state.json');
+  const state = JSON.parse(await fs.readFile(stateFile, 'utf8'));
+  state.files[name] = createHash('sha256').update('original prepare').digest('hex');
+  await fs.writeFile(stateFile, JSON.stringify(state));
+  await ensureWorkspace(options);
+  assert.ok((await fs.lstat(path.join(result.pipelines, name))).isSymbolicLink());
+  assert.equal(await fs.readFile(target, 'utf8'), 'original prepare');
 });
 test('updates replace untouched bundled companions together', async () => {
   const result = await ensureWorkspace(options);
@@ -112,6 +160,7 @@ test('traversal, duplicate files, and unsafe workspace roots are rejected', asyn
   assert.throws(() => workspacePaths(path.parse(home).root));
   await assert.rejects(ensureWorkspace({ ...options, groups: [['../outside.json']] }), /manifest/);
   await assert.rejects(ensureWorkspace({ ...options, groups: [group, group] }), /manifest/);
+  await assert.rejects(ensureWorkspace({ ...options, groups: [[...group, 'image/example/prepare.vpipeline']] }), /manifest/);
 });
 test('symlinked pipeline folders cannot redirect installation writes', { skip: process.platform === 'win32' }, async () => {
   await fs.mkdir(path.join(home, 'pipelines'), { recursive: true });
@@ -119,7 +168,7 @@ test('symlinked pipeline folders cannot redirect installation writes', { skip: p
   await assert.rejects(ensureWorkspace(options), /regular workspace directory/);
 });
 test('flat bundled pipelines move into a folder while local edits and original hashes survive',async()=>{
-  const old=['image/example.vpipeline','image/example.meta.json','image/example.prepare.vpipeline'];
+  const old=['image/example.vpipeline','image/example.meta.json'];
   await fs.mkdir(path.join(home,'pipelines/image'),{recursive:true});
   const files={};
   for(let i=0;i<group.length;i++){

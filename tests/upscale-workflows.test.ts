@@ -196,7 +196,7 @@ test('extra video loaders and invalid or conflicting video source metadata are r
 test('dependencies discover both SeedVR2 loaders and Real-ESRGAN model_name without declarations', async () => {
   const [pipeline] = await upscalers();
   pipeline.metadata.dependencies = [];
-  delete pipeline.prepare;
+
   pipeline.graph = {
     dit: { class_type: 'SeedVR2LoadDiTModel', inputs: { model: 'fixture-dit.gguf' } },
     vae: { class_type: 'SeedVR2LoadVAEModel', inputs: { model: 'fixture-vae.safetensors' } },
@@ -213,7 +213,7 @@ test('dependencies discover both SeedVR2 loaders and Real-ESRGAN model_name with
   assert.equal(dependencies(pipeline).find(dependency => dependency.reference === expected[0])?.url, 'https://example.invalid/fixture-dit.gguf');
 });
 
-test('known missing models stay preparable even when their loader combo has no option', async () => {
+test('known missing models are reported even when their loader combo has no option', async () => {
   for (const pipeline of await upscalers()) {
     info = serviceInfo(pipeline);
     for (const node of Object.values(pipeline.graph as Graph)) {
@@ -224,23 +224,20 @@ test('known missing models stay preparable even when their loader combo has no o
     const status = await pipelineStatus(pipeline);
     assert.equal(status.ready, false);
     assert.equal(status.state, 'missing', status.detail);
-    assert.equal(status.canPrepare, true, status.detail);
     assert.deepEqual(status.missing.sort(), dependencies(pipeline).map(dependency => dependency.reference).sort());
     assert.ok(status.missing.length > 0);
   }
   assert.deepEqual(requests, Array(2).fill(`GET ${comfyUrl}/object_info`));
 });
 
-test('missing SeedVR2 custom nodes block preparation even when model downloads are known', async () => {
+test('missing SeedVR2 custom nodes block generation and explain what to install', async () => {
   const pipeline = (await upscalers()).find(p => p.metadata.id === 'comfyui:seedvr2')!;
   for (const type of ['SeedVR2LoadDiTModel', 'SeedVR2LoadVAEModel', 'SeedVR2VideoUpscaler']) {
     info = serviceInfo(pipeline);
-    assert.equal((await pipelineStatus(pipeline)).canPrepare, true);
     delete info[type];
     const status = await pipelineStatus(pipeline);
     assert.equal(status.ready, false);
     assert.equal(status.state, 'attention');
-    assert.equal(status.canPrepare, false);
     assert.ok(status.detail.includes(type), status.detail);
   }
 });
@@ -251,7 +248,7 @@ test('readiness verifies ComfyUI files and ignores the per-job video combo', asy
     // Tiny structural fixtures replace the manifest's production file sizes.
     // No real weights, sparse model files or runtime receipts are needed.
     pipeline.metadata.dependencies = dependencies(pipeline);
-    delete pipeline.prepare;
+
     for (const dependency of pipeline.metadata.dependencies) {
       const header = Buffer.from(JSON.stringify({ fixture: { dtype: 'U8', shape: [1], data_offsets: [0, 1] } }));
       const length = Buffer.alloc(8);
@@ -275,7 +272,6 @@ test('readiness verifies ComfyUI files and ignores the per-job video combo', asy
     const missing = await pipelineStatus(pipeline);
     assert.equal(missing.ready, false, 'A service combo cannot certify a missing model file.');
     assert.deepEqual(missing.missing, [dependency.reference]);
-    assert.equal(missing.canPrepare, true, missing.detail);
     assert.deepEqual(pipeline.graph, original.graph);
   }
 });
@@ -312,7 +308,6 @@ test('local runtime receipts cannot make missing ComfyUI upscale models ready', 
     const status = await pipelineStatus(pipeline);
     assert.equal(status.ready, false);
     assert.ok(status.missing.length > 0);
-    assert.equal(status.canPrepare, true, status.detail);
   }
 });
 
@@ -337,7 +332,6 @@ test('V3 typed combos work alongside legacy combos for devices and model readine
   assert.equal(graph.dit.inputs.device, 'cuda:1');
   assert.equal(graph.vae.inputs.device, 'cuda:1');
   const status = await pipelineStatus(pipeline);
-  assert.equal(status.canPrepare, true, status.detail);
   assert.equal(status.ready, false);
   assert.ok(status.missing.length > 0);
 });
@@ -376,7 +370,6 @@ test('readiness also rejects a connected service with no compatible GPU', async 
   info = serviceInfo(pipeline, ['cpu']);
   const status = await pipelineStatus(pipeline);
   assert.equal(status.ready, false);
-  assert.equal(status.canPrepare, false);
   assert.equal(status.state, 'attention');
   assert.match(status.detail, /no compatible GPU/i);
 });

@@ -63,7 +63,7 @@ async function installPipelines({ home, templates, groups, version, stateFile })
   for (const kind of kinds) await directory(path.join(/* turbopackIgnore: true */ locations.pipelines, kind));
   if (!/^[0-9A-Za-z.+-]+$/.test(version)) throw Error('Invalid application version.');
   const files = groups.flat();
-  if (new Set(files).size !== files.length || files.some(file => !/^(image|video|reference|upscale)\/[a-z0-9-]+\/(?:meta\.json|(?:run|prepare)\.(?:json|vpipeline))$/.test(file))) throw Error('Invalid bundled pipeline manifest.');
+  if (new Set(files).size !== files.length || files.some(file => !/^(image|video|reference|upscale)\/[a-z0-9-]+\/(?:meta\.json|run\.(?:json|vpipeline))$/.test(file))) throw Error('Invalid bundled pipeline manifest.');
   const saved = await read(stateFile);
   const state = parseState(saved);
   const conflicts = [];
@@ -74,7 +74,7 @@ async function installPipelines({ home, templates, groups, version, stateFile })
     for (const name of group) {
       const [kind, base, leaf] = name.split('/');
       await directory(path.join(locations.pipelines, kind, base));
-      const legacy = `${kind}/${base}${leaf === 'meta.json' ? '.meta.json' : leaf.replace('run', '').replace('prepare', '.prepare')}`;
+      const legacy = `${kind}/${base}${leaf === 'meta.json' ? '.meta.json' : leaf.replace('run', '')}`;
       const source = await read(path.join(locations.pipelines, legacy));
       if (!source) continue;
       const target = await read(path.join(locations.pipelines, name));
@@ -100,7 +100,7 @@ async function installPipelines({ home, templates, groups, version, stateFile })
       // Local edits alone need no incoming copy. Without a known baseline,
       // preserve the existing pipeline and provide the bundled files for review.
       if (entries.every(entry => entry.digest === state.files[entry.name])) continue;
-      // Keep the entire run/metadata/prepare set together. Never mix versions.
+      // Keep the generation graph and metadata together. Never mix versions.
       const revision = hash(entries.map(entry => entry.digest).join('')).slice(0, 12);
       const incoming = path.join(locations.updates, `${version}-${revision}`);
       await directory(locations.updates);
@@ -133,6 +133,21 @@ async function installPipelines({ home, templates, groups, version, stateFile })
     const notice=await read(path.join(/* turbopackIgnore: true */ templates,name));
     if(notice)await write(path.join(/* turbopackIgnore: true */ locations.pipelines,name),notice);
   }
+  // Retire only untouched preparation files tracked by older installers. Keep
+  // edited/manual copies, and stop managing them. Parent folders were checked above.
+  for (const folder of new Set(files.map(file => path.posix.dirname(file)))) {
+    for (const extension of ['json', 'vpipeline']) {
+      for (const name of [`${folder}/prepare.${extension}`, `${folder}.prepare.${extension}`]) {
+        const digest = state.files[name];
+        if (!digest) continue;
+        const file = path.join(locations.pipelines, name);
+        const stat = await fs.lstat(file).catch(error => { if (error.code !== 'ENOENT') throw error; });
+        if (stat?.isFile() && hash(await read(file)) === digest) await fs.rm(file);
+        delete state.files[name];
+      }
+    }
+  }
+  await write(stateFile, JSON.stringify(state, null, 2) + '\n');
   return { ...locations, stateFile, conflicts };
 }
 

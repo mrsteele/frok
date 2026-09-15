@@ -24,7 +24,6 @@ const registry=await import('../src/lib/registry');
 
 const routes=await import('../src/app/api/[[...segments]]/route');
 const {pipelineStatus,resolvePipeline}=await import('../src/lib/pipelines/catalog');
-const {preparePipeline}=await import('../src/lib/pipelines/prepare');
 const {buildComfyGraph}=await import('../src/lib/comfyui');
 const {buildPipeline}=await import('../src/lib/vpipe');
 const {generationBlocker,missingSetup}=await import('../src/lib/readiness');
@@ -121,24 +120,26 @@ test('images use ComfyUI independently and queued jobs and retries keep their mo
   assert.equal(job.runner,'comfyui');assert.equal(job.request.pipeline?.metadata.id,'comfyui:z-image-turbo');assert.equal(job.total,4);
   assert.equal((await call('settings','PATCH',{pipelineSelections:{image:null}})).status,200);
   assert.equal(store.getJob(job.id)!.request.pipeline?.metadata.id,'comfyui:z-image-turbo');
-  store.updateJob(job.id,{status:'failed',message:'Synthetic failure'});
+  Object.assign(job.request.pipeline!,{prepare:{stages:[{type:'shell',config:{command:'must never run'}}]}});
+  store.updateJob(job.id,{request:job.request,status:'failed',message:'Synthetic failure'});
   const retry=await call(`jobs/${job.id}/retry`,'POST',{});
   assert.equal(retry.status,201,await retry.clone().text());
   const next=(await retry.json()).job;assert.equal(next.runner,'comfyui');assert.equal(next.request.pipeline.metadata.id,'comfyui:z-image-turbo');
+  assert.ok(!('prepare' in next.request.pipeline));
+  assert.ok('prepare' in store.getJob(job.id)!.request.pipeline!,'Original history stays intact.');
   assert.equal(store.settings().runner,'vpipe');
   await call('settings','PATCH',{pipelineSelections:{image:'comfyui:z-image-turbo'}});
   const setup=await call('setup','POST',{pipelineId:'comfyui:z-image-turbo'});
-  assert.equal(setup.status,201);const download=(await setup.json()).job;
-  assert.equal(download.runner,'comfyui');assert.equal(download.request.pipeline.metadata.id,'comfyui:z-image-turbo');
+  assert.equal(setup.status,410);
 });
 
 test('Z-Image stays blocked on an unprotected remote ComfyUI',async()=>{
   process.env.FROK_COMFYUI_PRIVATE='0';
-  try{await withRunnerLocations({comfyUrl:'https://untrusted.example'},async()=>{store.setValue('pipelineSelections',{...store.settings().pipelineSelections,image:'comfyui:z-image-turbo'});const state=await health();assert.equal(state.connections!.comfyui.available,false);assert.equal(state.capabilities!.image.ready,false);assert.equal((await call('jobs','POST',request)).status,409);assert.equal((await call('setup','POST',{pipelineId:'comfyui:z-image-turbo'})).status,400);});}
+  try{await withRunnerLocations({comfyUrl:'https://untrusted.example'},async()=>{store.setValue('pipelineSelections',{...store.settings().pipelineSelections,image:'comfyui:z-image-turbo'});const state=await health();assert.equal(state.connections!.comfyui.available,false);assert.equal(state.capabilities!.image.ready,false);assert.equal((await call('jobs','POST',request)).status,409);assert.equal((await call('setup','POST',{pipelineId:'comfyui:z-image-turbo'})).status,410);});}
   finally{process.env.FROK_COMFYUI_PRIVATE='1';}
 });
 
-test('Z-Image preparation pins all dependencies and never overwrites conflicting shared files',async()=>{
+test('Z-Image installation metadata pins dependencies and read-only checks preserve conflicting files',async()=>{
   const pipeline=await resolvePipeline('image','comfyui:z-image-turbo');
   for(const file of zImageFiles){
     const dependency=pipeline.metadata.dependencies.find(item=>item.reference===`${file.directory}/${file.name}`)!;
@@ -148,7 +149,7 @@ test('Z-Image preparation pins all dependencies and never overwrites conflicting
   const conflict=[...sizes.keys()][0];sizes.set(conflict,1);
   fs.mkdirSync(path.dirname(conflict),{recursive:true});fs.writeFileSync(conflict,'x');
   try{
-    await assert.rejects(preparePipeline(pipeline,directory,new AbortController().signal,()=>{}),/existing shared files are not overwritten/);
+    assert.equal((await pipelineStatus(pipeline)).ready,false);
     assert.equal(fs.readFileSync(conflict,'utf8'),'x');
   }finally{fs.rmSync(conflict);}
 });

@@ -5,13 +5,16 @@ export function DocumentationLink({
   onError,
   page = '/documentation',
   label = 'Documentation',
+  className,
 }: {
   onError: (message: string) => void;
   page?: string;
   label?: string;
+  className?: string;
 }) {
   return (
     <a
+      className={className}
       href={`/docs${page}.html`}
       target="_blank"
       rel="noreferrer"

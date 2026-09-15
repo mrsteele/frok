@@ -6,27 +6,31 @@ import { FormField } from '@/components/ui/patterns/form-field';
 import { Button } from '@/components/ui/primitives/button';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Check, Download, Film, Image, Layers3, ScanLine } from 'lucide-react';
+import { Check, Film, Image, Layers3, RefreshCw, ScanLine, Download } from 'lucide-react';
 import type { PipelineKind } from '@/lib/pipelines/schema';
-import { generationOptions, setupWorkflows } from '@/lib/onboarding';
+import { generationOptions } from '@/lib/onboarding';
+import { DocumentationLink } from '@/components/shell/documentation-link';
 import { api } from '@/lib/client-api';
-import type { Health, Job } from '@/lib/types';
+import type { Health, Job, SetupRequest } from '@/lib/types';
+import { isPreparationJob } from '@/lib/preparation-job';
 import { WorkflowSelect } from '@/components/generation/workflow-select';
 const icons = { image: Image, video: Film, reference: Layers3, upscale: ScanLine };
 export function PipelineSettings({
   health,
-  jobs,
   checking,
   onRefresh,
   wizard = false,
   onBusyChange,
+  jobs = [],
+  onOpenJob,
 }: {
   health?: Health;
-  jobs: Job[];
   checking: boolean;
   onRefresh: () => void;
   wizard?: boolean;
   onBusyChange?: (busy: boolean) => void;
+  jobs?: Job[];
+  onOpenJob?: (id:string) => void;
 }) {
   const [busy, setBusy] = useState(''),
     [error, setError] = useState('');
@@ -46,40 +50,30 @@ export function PipelineSettings({
       setBusy('');
     }
   }
-  async function prepare(id: string) {
-    setBusy(id);
-    setError('');
-    try {
-      await api('setup', 'POST', { pipelineId: id });
-      await onRefresh();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy('');
-    }
+  async function prepare(kind:PipelineKind,id:string) {
+    if(busy)return;
+    setBusy(kind);setError('');
+    try {await api('pipelines/prepare','POST',{id});await onRefresh();}
+    catch(error){setError((error as Error).message);}
+    finally{setBusy('');}
   }
-  const workflows = setupWorkflows(health, jobs);
+
   return (
     <>
-      {!wizard && (
-        <div className="settings-section-heading">
-          <h3>Choose how you create</h3>
-          <p>Pick a default workflow for each kind of creation. Everything is optional.</p>
-        </div>
-      )}
       {health && !health.worker && (
         <InlineMessage role="status" tone="warning">
           {health.checks.find((check) => check.id === 'worker')?.detail ||
-            'Start the generation worker to download models or generate.'}
+            'Start the generation worker to generate.'}
         </InlineMessage>
       )}
       <div className="generation-choices">
         {generationOptions.map(({ kind, name, description }) => {
           const value = health?.pipelineSelections?.[kind] || '';
           const selected = health?.pipelines?.find((p) => p.kind === kind && p.id === value),
-            summary = workflows.find((item) => item.kind === kind),
             state = health?.capabilities?.[kind],
             Icon = icons[kind];
+          const job=selected?.preparation?jobs.find(job=>isPreparationJob(job)&&(job.request as SetupRequest).preparation===selected.preparation):undefined;
+          const preparing=job&&['queued','running'].includes(job.status);
           return (
             <section
               className="workflow-choice"
@@ -98,24 +92,17 @@ export function PipelineSettings({
                   tone={
                     checking || busy === kind
                       ? 'neutral'
-                      : summary?.job
-                        ? 'neutral'
-                        : state?.ready
-                          ? 'success'
-                          : value
-                            ? 'warning'
-                            : 'neutral'
+                      : state?.ready
+                        ? 'success'
+                        : value
+                          ? 'warning'
+                          : 'neutral'
                   }
                 >
                   {checking || busy === kind ? (
                     <>
                       <Spinner size={13} />
                       Checking
-                    </>
-                  ) : summary?.job ? (
-                    <>
-                      <Spinner size={13} />
-                      {summary.job.status === 'running' ? 'Preparing' : 'Queued'}
                     </>
                   ) : state?.ready ? (
                     <>
@@ -154,33 +141,29 @@ export function PipelineSettings({
               {selected?.description && (
                 <InlineMessage tone="neutral">{selected.description}</InlineMessage>
               )}
-              {value && !state?.ready && !checking && !summary?.job && (
+              {value && !state?.ready && !checking && (
                 <InlineMessage tone="warning">
                   {state?.detail || 'This workflow needs setup.'}
                 </InlineMessage>
               )}
-              {summary?.job ? (
-                <p className="settings-working">
-                  {summary.job.message}
-                  {!wizard && <Link href={'/queue/' + summary.job.id}>View preparation →</Link>}
-                </p>
-              ) : (
-                !wizard &&
-                summary?.canPrepare && (
-                  <Button
-                    disabled={!!busy || checking || !health?.worker}
-                    onClick={() => void prepare(value)}
-                    variant="secondary"
-                  >
-                    <Download size={14} />
-                    {selected?.prepareLabel || 'Download & prepare'}
-                  </Button>
-                )
+              {selected?.preparation && !state?.ready && !checking && (
+                <div className="workflow-preparation">
+                  {!preparing && <Button disabled={!!busy||!health?.worker} loading={busy===kind} onClick={()=>void prepare(kind,selected.id)} variant="secondary"><Download size={14}/>Prepare models</Button>}
+                  {job && <Link href={`/queue/${job.id}`} onClick={event=>{if(onOpenJob){event.preventDefault();onOpenJob(job.id);}}}>{job.status==='queued'?'Preparation queued':job.status==='running'?'Preparing models':job.status==='completed'?'Preparation finished':'Preparation needs attention'} · View log →</Link>}
+                  <p>Runs the bundled Vpipe starter in your model workspace. If it fails, use the setup instructions below.</p>
+                </div>
+              )}
+              {value && !state?.ready && !checking && (
+                <DocumentationLink className="settings-documentation-link" page="/guide/model-setup" label="Setup instructions" onError={setError} />
               )}
             </section>
           );
         })}
       </div>
+      <Button disabled={checking || !!busy} onClick={onRefresh} variant="ghost">
+        <RefreshCw size={14} className={checking ? 'spin' : ''} />
+        Refresh workflows
+      </Button>
       {error && (
         <InlineMessage role="alert" tone="danger">
           {error}

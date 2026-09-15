@@ -33,7 +33,10 @@ async function smoke() {
     window.webContents.on('console-message', (event) => {
       if (event.level === 'error') errors.push(event.message);
     });
-    const js = (expression) => window.webContents.executeJavaScript(expression);
+    const js = async (expression) => {
+      try { return await window.webContents.executeJavaScript(expression); }
+      catch (error) { throw Error(`UI expression failed: ${expression}\n${errors.join('\n')}\n${error.message}`); }
+    };
     async function wait(expression) {
       for (let i = 0; i < 100; i++) {
         if (await js(expression)) return;
@@ -93,6 +96,19 @@ async function smoke() {
           path.join(screenshots, `${view}-${width}.png`),
           (await window.webContents.capturePage()).toPNG(),
         );
+        if (view === 'generation') {
+          await load(view, 'missing');
+          await noOverflow(`missing models ${width}`);
+          assert.equal(await js("document.querySelector('.generation-choices').textContent.includes('Setup instructions')"), true);
+          assert.equal(await js("Array.from(document.querySelectorAll('button')).filter(button => button.textContent.includes('Prepare models')).length"), 1);
+          await fs.writeFile(
+            path.join(screenshots, `generation-missing-${width}.png`),
+            (await window.webContents.capturePage()).toPNG(),
+          );
+          await js("Array.from(document.querySelectorAll('button')).find(button=>button.textContent.includes('Prepare models')).click()");
+          await wait("document.querySelector('.workflow-preparation')?.textContent.includes('Preparation queued')");
+          assert.equal(await js("window.__uiCalls.filter(call=>call.url==='/api/pipelines/prepare').length"), 1);
+        }
       }
     }
     window.webContents.setZoomFactor(2);
@@ -131,9 +147,13 @@ async function smoke() {
         (await window.webContents.capturePage()).toPNG(),
       );
     }
-    for (const state of ['disconnected', 'offline', 'busy', 'queued']) {
+    for (const state of ['disconnected', 'offline', 'busy', 'missing']) {
       await load('onboarding', state);
       await noOverflow('onboarding ' + state);
+      assert.equal(await js("document.querySelector('.wizard-intro h2').textContent"), 'Welcome to Frok');
+      await wait("!!document.querySelector('.welcome-demo')?.contentDocument?.querySelector('.workflow-demo')");
+      await js("document.querySelector('.wizard-footer .ui-button--primary').click()");
+      await wait("!!document.querySelector('.service-picker')");
       if (state === 'busy')
         assert.equal(
           await js("document.querySelector('.wizard-footer .ui-button--primary').disabled"),
@@ -143,10 +163,10 @@ async function smoke() {
         await js("document.querySelector('.wizard-footer .ui-button--primary').click()");
         await wait("!!document.querySelector('.generation-choices')");
         await noOverflow('onboarding workflows ' + state);
-        if (state === 'queued') {
+        if (state === 'missing') {
           assert.equal(
             await js(
-              "document.querySelector('.generation-choices').textContent.includes('Queued')",
+              "document.querySelector('.generation-choices').textContent.includes('Setup instructions')",
             ),
             true,
           );
@@ -155,8 +175,15 @@ async function smoke() {
           assert.equal(
             await js("window.__uiCalls.filter(call=>call.url==='/api/setup').length"),
             0,
-            'queued downloads are not submitted again',
+            'wizard navigation never submits installation jobs',
           );
+          assert.equal(await js("window.__uiCalls.filter(call=>call.url==='/api/pipelines/prepare').length"), 0);
+          await js("Array.from(document.querySelectorAll('.wizard-footer button')).find(button=>button.textContent.includes('Back')).click()");
+          await wait("!!document.querySelector('.generation-choices')");
+          await js("Array.from(document.querySelectorAll('button')).find(button=>button.textContent.includes('Prepare models')).click()");
+          await wait("document.querySelector('.workflow-preparation')?.textContent.includes('Preparation queued')");
+          await js("document.querySelector('.workflow-preparation a').click()");
+          await wait("!document.querySelector('dialog[open]')");
         }
       }
     }

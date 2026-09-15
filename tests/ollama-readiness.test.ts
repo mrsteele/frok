@@ -24,7 +24,7 @@ process.env.VPIPE_BIN = process.execPath;
 process.env.FFMPEG_BIN = process.execPath; process.env.FFPROBE_BIN = process.execPath;
 process.chdir(testDir);
 const { ollamaConfig, defaultOllamaModel } = await import('../src/lib/ollama-config');
-const { health, runSetup } = await import('../src/lib/setup');
+const { health } = await import('../src/lib/setup');
 const { promptModelStatus } = await import('../src/lib/ollama-status');
 const { enhancePrompt } = await import('../src/lib/ollama');
 const routes = await import('../src/app/api/[[...segments]]/route');
@@ -34,7 +34,6 @@ const { setServiceValue } = await import('../src/lib/registry');
 const store = await import('../src/lib/db');
 function select(model:string){store.setValue('modelSelections',{...store.settings().modelSelections,prompt:model});}
 let installed = new Map<string, Set<string>>();
-let installCompletes = true, pullText = '{"status":"success"}';
 const calls: { path: string; url: string; body: Record<string, unknown> }[] = [];
 async function call(method: 'GET'|'POST'|'PATCH', route: string, body?: object) {
   return routes[method](fixture.request(`http://localhost:3000/api/${route}`, { method, body: body ? JSON.stringify(body) : undefined }), { params: Promise.resolve({ segments: route.split('?')[0].split('/') }) });
@@ -42,7 +41,7 @@ async function call(method: 'GET'|'POST'|'PATCH', route: string, body?: object) 
 async function status(force = true) { return (await call('GET', `health${force ? '?refresh=1' : ''}`)).json(); }
 beforeEach(() => {
   delete process.env.FROK_MANAGE_OLLAMA;
-  installed = new Map([[endpoint, new Set([original])]]); installCompletes = true; pullText = '{"status":"success"}'; calls.length = 0;
+  installed = new Map([[endpoint, new Set([original])]]); calls.length = 0;
   store.db.exec('DELETE FROM jobs; DELETE FROM settings;'); configure();store.setValue('connections',{vpipe:false,comfyui:false,ollama:true}); setServiceValue('workerHeartbeat', Date.now());
   mock.restoreAll();
   for (const method of ['spawn', 'spawnSync', 'exec', 'execSync', 'execFile', 'execFileSync', 'fork'] as const) mock.method(childProcess, method, () => { throw new Error('Processes are disabled in Ollama readiness tests'); });
@@ -55,7 +54,6 @@ beforeEach(() => {
     const models = installed.get(url.origin) || new Set<string>();
     if (url.pathname === '/api/show') return Response.json({capabilities:models.has(body.model)?['completion']:[]});
     if (url.pathname === '/api/tags') return Response.json({ models: [...models].map(name => ({ name })) });
-    if (url.pathname === '/api/pull') { if (installCompletes) { models.add(body.model); installed.set(url.origin, models); } return new Response(pullText); }
     if (url.pathname === '/api/chat') return Response.json({ message: { content: 'A detailed synthetic prompt.' } });
     assert.fail(`Unexpected request: ${url}`);
   });
@@ -123,38 +121,17 @@ test('health lists installed choices from the configured service and settings re
 test('prompt settings offer installed models in a select and clearly identify a missing saved model', async () => {
   configure(replacement); select(replacement);
   const state=await status();
-  const html=renderToStaticMarkup(createElement(PromptModelSettings,{health:state,jobs:[],checking:false,onRefresh:()=>{},onPrepare:async()=>{}}));
+  const html=renderToStaticMarkup(createElement(PromptModelSettings,{health:state,checking:false,onRefresh:()=>{}}));
   assert.match(html,/<select/); assert.match(html,/Ollama model/);
   assert.ok(html.includes(`value="${original}"`));
   assert.ok(html.includes(`value="${replacement}" disabled=""`));
   assert.match(html,/Connection or model unavailable/);
   installed.get(endpoint)!.clear();
-  const empty=renderToStaticMarkup(createElement(PromptModelSettings,{health:await status(),jobs:[],checking:false,onRefresh:()=>{},onPrepare:async()=>{}}));
+  const empty=renderToStaticMarkup(createElement(PromptModelSettings,{health:await status(),checking:false,onRefresh:()=>{}}));
   assert.match(empty,/No compatible text-generation models are installed/);
 });
 
-test('chat and queued installs use the current configuration; queued targets stay fixed', async () => {
-  const old = (await (await call('POST', 'setup', {task:'ollama'})).json()).job;
-  configure(replacement); select(replacement);
-  await enhancePrompt('Test prompt', false, new AbortController().signal);
-  assert.equal(calls.find(call => call.path === '/api/chat')!.body.model, replacement);
-  const next = (await (await call('POST', 'setup', {task:'ollama'})).json()).job;
-  assert.notEqual(next.id, old.id); assert.equal(next.request.ollama.model, replacement);
-  assert.equal((await (await call('POST', 'setup', {task:'ollama'})).json()).job.id, next.id);
-  await runSetup('ollama', new AbortController().signal, () => {}, old.request.ollama);
-  assert.equal(calls.find(call => call.path === '/api/pull')!.body.model, original);
-  assert.equal((await status()).ollama, false);
-  await runSetup('ollama', new AbortController().signal, () => {}, next.request.ollama);
-  assert.equal((await status()).ollama, true);
-});
 
-test('a pull is not complete until the target is available; final stream errors are checked', async () => {
-  configure(replacement); select(replacement); installCompletes = false;
-  await assert.rejects(runSetup('ollama', new AbortController().signal, () => {}), /not made .* available/);
-  assert.equal((await status()).ollama, false);
-  pullText = '{"error":"Download failed"}';
-  await assert.rejects(runSetup('ollama', new AbortController().signal, () => {}), /Download failed/);
-});
 
 test('editing old environment files no longer changes the active saved configuration', () => {
   const current = ollamaConfig();
@@ -165,13 +142,13 @@ test('editing old environment files no longer changes the active saved configura
   assert.equal(ollamaConfig().model, replacement);
 });
 
-test('Models shows the missing selected model and a download action without a stale Ready badge', async () => {
+test('Models shows the missing selected model and manual installation guidance without a stale Ready badge', async () => {
   configure(replacement); select(replacement); const state = await health();
-  const props = {health:state,jobs:[],checking:false,onPrepare:async()=>{},onRefresh:()=>{}};
+  const props = {health:state,checking:false,onRefresh:()=>{}};
   const html = renderToStaticMarkup(createElement(OllamaConnection, props));
   const promptRow = html.slice(html.indexOf('Prompt enhancement</h3>'), html.indexOf('</section>',html.indexOf('Prompt enhancement</h3>')));
   assert.ok(promptRow.includes(replacement));
-  assert.ok(promptRow.includes('Download prompt model')); assert.ok(!promptRow.includes('settings-ready'));
+  assert.ok(promptRow.includes('Installation guide'));assert.ok(!promptRow.includes('Download prompt model')); assert.ok(!promptRow.includes('settings-ready'));
   const checking = renderToStaticMarkup(createElement(OllamaConnection, {...props,checking:true,health:{...state,ollama:true}}));
   const checkingRow = checking.slice(checking.indexOf('Prompt enhancement</h3>'), checking.indexOf('</section>',checking.indexOf('Prompt enhancement</h3>')));
   assert.ok(checkingRow.includes('Checking')); assert.ok(!checkingRow.includes('settings-ready'));
@@ -186,8 +163,8 @@ test('saving a local connection refreshes its models, persists the address, and 
   const next=await status(false);assert.equal(next.ollama,false);assert.deepEqual(next.ollamaModels,[replacement]);
   assert.equal(next.ollamaModel,original); // Preserve the choice, but mark it unavailable.
   assert.equal((await call('PATCH','settings',{modelSelections:{prompt:original}})).status,409);
-  const chosen=await call('POST','setup/connection',{connection:'ollama',promptModel:replacement});
-  assert.equal(chosen.status,201,await chosen.clone().text());assert.deepEqual((await chosen.json()).jobs,[]);
+  const chosen=await call('PATCH','settings',{modelSelections:{prompt:replacement}});
+  assert.equal(chosen.status,200,await chosen.clone().text());
   assert.equal((await status(false)).ollama,true);
   await enhancePrompt('Synthetic prompt',false,new AbortController().signal);
   const chat=calls.find(call=>call.path==='/api/chat')!;assert.equal(chat.url,nextUrl);assert.equal(chat.body.model,replacement);
@@ -208,12 +185,12 @@ test('invalid addresses and failed connection checks leave the saved connection 
 test('empty external Ollama connections never automatically queue a starter download',async()=>{
   installed.get(endpoint)!.clear();store.setValue('modelSelections',{...store.settings().modelSelections,prompt:null});
   assert.equal((await call('PATCH','settings',{ollamaUrl:endpoint,connections:{ollama:true}})).status,200);
-  assert.equal((await call('POST','setup/connection',{connection:'ollama'})).status,409);
+  assert.equal((await call('POST','setup/connection',{connection:'ollama'})).status,410);
   assert.equal(store.listJobs().length,0);
   const state=await status();
-  const html=renderToStaticMarkup(createElement(PromptModelSettings,{health:state,jobs:[],checking:false,onRefresh:()=>{},onPrepare:async()=>{}}));
+  const html=renderToStaticMarkup(createElement(PromptModelSettings,{health:state,checking:false,onRefresh:()=>{}}));
   assert.match(html,/Install one in Ollama/);assert.doesNotMatch(html,/Download prompt model/);
-  const connection=renderToStaticMarkup(createElement(OllamaConnection,{health:state,jobs:[],checking:false,onRefresh:()=>{},onPrepare:async()=>{}}));
+  const connection=renderToStaticMarkup(createElement(OllamaConnection,{health:state,checking:false,onRefresh:()=>{}}));
   assert.match(connection,/<input type="url"/);assert.doesNotMatch(connection,/readOnly|readonly|Install runtime/);
 });
 

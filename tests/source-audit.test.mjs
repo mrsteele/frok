@@ -56,9 +56,16 @@ test('shipped pipeline bundles exclude personal and obsolete templates', async (
   const groups = JSON.parse(await fs.readFile(new URL('../desktop/pipelines.json', import.meta.url), 'utf8'));
   assert.ok(groups.length);
   for (const file of groups.flat()) {
-    assert.match(file, /^(image|video|reference|upscale)\/[a-z0-9-]+\/(meta\.json|(?:run|prepare)\.(?:json|vpipeline))$/);
+    assert.match(file, /^(image|video|reference|upscale)\/[a-z0-9-]+\/(meta\.json|run\.(?:json|vpipeline))$/);
     assert.ok(!file.includes('.local'));
     await fs.access(new URL(`../resources/pipelines/${file}`, import.meta.url));
+  }
+  const preparations=JSON.parse(await fs.readFile(new URL('../desktop/preparations.json',import.meta.url),'utf8'));
+  for(const folder of preparations){
+    assert.match(folder,/^(image|video|reference)\/[a-z0-9-]+$/);
+    assert.ok(groups.flat().includes(`${folder}/run.vpipeline`));
+    const file=JSON.parse(await fs.readFile(new URL(`../resources/pipelines/${folder}/prepare.vpipeline`,import.meta.url),'utf8'));
+    assert.ok(file.stages.length,'Every packaged starter has a native pipeline.');
   }
 });
 

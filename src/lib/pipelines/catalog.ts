@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
+import { digest, readDefinition } from './definition';
+import { preparationFor } from './builtins';
 import { settings, pipelineDirectory } from '../db';
 import { pipelineKinds, pipelineRunners, pipelineMetadata, type PipelineKind, type PipelineSnapshot, type PipelineStatus } from './schema';
 import { dependencies, dependencyReady, comfyModelReference } from './dependencies';
@@ -10,17 +11,12 @@ import { resolveComfyDevices, comfyOptions } from './comfy-devices';
 import type { Health } from '../types';
 import { connectionNames, type ConnectionStatus } from '../service-config';
 
-export const digest=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
-export async function readDefinition(file:string):Promise<Record<string,unknown>> {
-  const stat=await fs.lstat(file);if(!stat.isFile()||stat.size>2*1024*1024)throw Error('Pipeline definitions must be regular JSON files under 2 MB.');
-  const value=JSON.parse(await fs.readFile(file,'utf8'));if(!value||Array.isArray(value)||typeof value!=='object')throw Error('Expected a JSON object.');return value;
-}
+export { digest, readDefinition } from './definition';
 export function validatePipeline(snapshot:PipelineSnapshot) {
   const {metadata:m}=snapshot;
   if(!pipelineRunners.includes(m.runner))throw Error('This workflow uses a retired built-in engine. Select a service workflow in Settings → Generation.');
   if(snapshot.kind==='upscale'&&(m.runner!=='comfyui'||!m.videoSource))throw Error('Upscaling requires a ComfyUI workflow with a videoSource binding.');
   if(m.videoSource&&(snapshot.kind!=='upscale'||m.runner!=='comfyui'||m.source||m.references))throw Error('Video inputs are only supported by ComfyUI upscaling workflows.');
-  if(m.runner==='comfyui'&&snapshot.prepare&&!Array.isArray(snapshot.prepare.dependencies))throw Error('ComfyUI preparation companions must declare a dependencies array.');
   const configs=new Map<string,Record<string,unknown>>(),outputs:{node:string;field:string}[]=[];
   if(m.runner==='vpipe'){
     const graph=snapshot.graph as unknown as Pipeline;
@@ -29,7 +25,7 @@ export function validatePipeline(snapshot:PipelineSnapshot) {
     for(const stage of graph.stages){
       if(!stage.id||seen.has(stage.id)||stage.id.startsWith('frok-input-')||!stage.config)throw Error('Invalid or duplicate stage ID.');
       if(stage.iports?.some(port=>port.src&&!seen.has(port.src)))throw Error(`Forward or missing input at ${stage.id}.`);
-      if(['shell','model-fetch','model-remove','model-quantize','lora-fuse','load-image','load-video','save-file'].includes(stage.type))throw Error(`Move ${stage.type} to preparation or use a source binding.`);
+      if(['shell','model-fetch','model-remove','model-quantize','lora-fuse','load-image','load-video','save-file'].includes(stage.type))throw Error(`Run ${stage.type} in your runner outside Frok, or use a source binding.`);
       if(stage.type==='save-image')outputs.push({node:stage.id,field:'path'});
       if(stage.type==='save-video')outputs.push({node:stage.id,field:'output_url'});
       seen.add(stage.id);configs.set(stage.id,stage.config);
@@ -67,18 +63,16 @@ export async function diskCatalog(base=pipelineDirectory()) {
   catch{return {entries,errors:['The pipeline folder is missing or unreadable. Check its location or restore the defaults.']};}
   for(const kind of pipelineKinds){
     const directory=path.join(base,kind),files=await fs.readdir(directory,{withFileTypes:true}).catch(error=>{if(error.code!=='ENOENT')errors.push(`${kind}: folder is unreadable.`);return [];});
-    const definitions = files.filter(f=>f.isDirectory()&&!f.isSymbolicLink()).map(f=>({name:f.name,folder:path.join(directory,f.name),meta:'meta.json',base:'run',prep:'prepare'}));
+    const definitions = files.filter(f=>f.isDirectory()&&!f.isSymbolicLink()).map(f=>({name:f.name,folder:path.join(directory,f.name),meta:'meta.json',base:'run'}));
     // Read old flat custom workflows during upgrades; bundled workflows use folders.
-    definitions.push(...files.filter(f=>f.isFile()&&f.name.endsWith('.meta.json')).map(f=>({name:f.name,folder:directory,meta:f.name,base:f.name.slice(0,-10),prep:f.name.slice(0,-10)+'.prepare'})));
+    definitions.push(...files.filter(f=>f.isFile()&&f.name.endsWith('.meta.json')).map(f=>({name:f.name,folder:directory,meta:f.name,base:f.name.slice(0,-10)})));
     for(const file of definitions.sort((a,b)=>a.name.localeCompare(b.name)))try{
       const definition=await readDefinition(path.join(file.folder,file.meta));
       if(definition.runner==='local')throw Error('This placeholder uses a retired built-in upscaler. Restore the bundled workflows in Advanced → Workflow files, or replace it with a ComfyUI video workflow.');
       const metadata=pipelineMetadata.parse(definition);
       const extension=metadata.runner==='vpipe'?'.vpipeline':'.json';
       const graph=await readDefinition(path.join(file.folder,file.base+extension));
-      const prepare=await readDefinition(path.join(file.folder,file.prep+extension)).catch(e=>{if(e.code==='ENOENT')return undefined;throw e;});
-      if(prepare&&metadata.runner==='vpipe'&&!Array.isArray(prepare.stages))throw Error('The prepare companion must contain a stages array.');
-      const snapshot:PipelineSnapshot={metadata,kind,graph,prepare,revision:digest([metadata,graph,prepare])};
+      const snapshot:PipelineSnapshot={metadata,kind,graph,revision:digest([metadata,graph])};
       validatePipeline(snapshot);
       if(entries.some(p=>p.metadata.id===metadata.id))throw Error('Duplicate pipeline ID.');
       entries.push(snapshot);
@@ -99,34 +93,34 @@ export async function resolvePipeline(kind:PipelineKind,id?:string) {
 }
 export async function pipelineStatus(snapshot:PipelineSnapshot,connection?:ConnectionStatus):Promise<PipelineStatus> {
   const {metadata:m,kind}=snapshot;
-  const result:PipelineStatus={id:m.id,name:m.name,runner:m.runner,kind,description:m.description,default:m.default,controls:m.controls,supportsSource:!!m.source,maxReferences:m.references?.max||0,state:'missing',ready:false,detail:'',missing:[],canPrepare:false,revision:snapshot.revision};
+  const result:PipelineStatus={id:m.id,name:m.name,runner:m.runner,kind,description:m.description,default:m.default,controls:m.controls,supportsSource:!!m.source,maxReferences:m.references?.max||0,state:'missing',ready:false,detail:'',missing:[],revision:snapshot.revision};
   try{validatePipeline(snapshot);}catch(error){return {...result,state:'attention',detail:(error as Error).message};}
   // Keep catalog choices visible without probing services the user has not connected.
   if(connection&&(!connection.enabled||!connection.available))return {...result,state:'attention',detail:`Connect ${connectionNames[m.runner]} to use ${m.name}.`};
   const deps=dependencies(snapshot),missing:typeof deps=[];
   for(const d of deps)if(!await dependencyReady(snapshot,d))missing.push(d);
-  result.missing=missing.map(d=>d.reference);result.canPrepare=!!snapshot.prepare||missing.length>0&&missing.every(d=>m.runner==='vpipe'?!!d.fetch&&!d.generated:!!d.url);
+  result.missing=missing.map(d=>d.reference);
   if(m.runner==='comfyui'){
     let info;
     try{info=await (await comfyFetch('/object_info')).json();}
-    catch{return {...result,state:'attention',canPrepare:false,detail:'Connect the protected ComfyUI service to check its nodes.'};}
+    catch{return {...result,state:'attention',detail:'Connect the protected ComfyUI service to check its nodes.'};}
     const graph=structuredClone(snapshot.graph) as Graph;
     const nodes=[...new Set(Object.values(graph).map(n=>n.class_type))];if(m.source||m.references)nodes.push('LoadImage');
     const absent=nodes.filter(n=>!info[n]);
-    if(absent.length)return {...result,state:'attention',canPrepare:false,detail:`Install or update these nodes in ComfyUI, then restart it: ${absent.join(', ')}.`};
-    try{resolveComfyDevices(graph,m,info);}catch(error){return {...result,state:'attention',canPrepare:false,detail:(error as Error).message};}
+    if(absent.length)return {...result,state:'attention',detail:`Install or update these nodes in ComfyUI, then restart it: ${absent.join(', ')}.`};
+    try{resolveComfyDevices(graph,m,info);}catch(error){return {...result,state:'attention',detail:(error as Error).message};}
     for(const [id,node] of Object.entries(graph))for(const [field,value] of Object.entries(node.inputs)){
       if(m.videoSource?.node===id&&m.videoSource.field===field)continue; // Uploaded per job, never a shared input file.
       const reference=comfyModelReference(node,field);
-      if(reference&&missing.some(d=>d.reference===reference))continue; // Missing models must keep their download action.
+      if(reference&&missing.some(d=>d.reference===reference))continue; // Report missing files before checking loader options.
       const options=comfyOptions(info,node.class_type,field);
-      if(options&&!Array.isArray(value)&&!options.includes(value))return {...result,state:'attention',canPrepare:false,detail:`Refresh ComfyUI’s available models or update ${node.class_type}: ${field} is unavailable.`};
+      if(options&&!Array.isArray(value)&&!options.includes(value))return {...result,state:'attention',detail:`Refresh ComfyUI’s available models or update ${node.class_type}: ${field} is unavailable.`};
     }
   }
-  result.ready=missing.length===0;result.state=result.ready?'ready':result.canPrepare?'missing':'attention';
-  const needsVariant=missing.length>0&&missing.every(d=>d.generated)&&deps.some(d=>d.kind==='model'&&!d.generated);
-  result.prepareLabel=needsVariant?'Prepare model variant':'Download & prepare';
-  result.detail=result.ready?'All declared dependencies are installed.':result.canPrepare?needsVariant?`${m.name}: the base model is installed. Prepare this pipeline’s fused or processed model variant; existing base files will be reused.`:`${m.name} needs preparation before you can generate. Download and prepare its missing dependencies.`:`${m.name} is missing dependencies without preparation instructions. Ask the administrator to add the download sources or a prepare companion.`;return result;
+  result.ready=missing.length===0;result.state=result.ready?'ready':'missing';
+  result.detail=result.ready?'All declared dependencies are installed.':`${m.name}: Install the missing dependencies in ${connectionNames[m.runner]}: ${result.missing.join(', ')}. Then refresh workflows in Frok.`;
+  if (!result.ready) result.preparation = await preparationFor(snapshot);
+  return result;
 }
 export async function pipelineHealth(state:Health):Promise<Health> {
   const list=await catalog(),selections=settings().pipelineSelections,statuses:PipelineStatus[]=[];

@@ -4,7 +4,9 @@
 import { runtimeDefaults } from '../../desktop/preferences.mjs'
 </script>
 
-Frok's worker processes one job at a time. Image batches, video renders, upscaling and model preparation all use the queue. Closing a page does not cancel its job.
+Frok's worker processes one job at a time. Image batches, video renders, upscaling and explicitly requested built-in Vpipe starters use the queue. Closing a page does not cancel its job.
+
+Built-in preparation shows queued/running status and a runner log, with no model-download progress UI. It cannot interrupt another job or be paused for an immediate generation; let it finish or cancel it. Failure leaves the log available and can be retried, or completed using the manual setup guide.
 
 Drag a pending job by its grip to change its position. Pending jobs cannot be dragged ahead of the running job. Queue order is saved across page reloads.
 
@@ -37,6 +39,8 @@ On an asset page, use **View job & logs** below Video settings. The associated j
 - **Cancelled:** kept alongside completed jobs in **Finished jobs**. Expand the drawer to inspect logs or retry.
 
 Cancelling stops work and keeps the job record, log and any saved outputs. After the runner stops, **Delete job and logs** permanently removes the job's record, logs and working files while preserving saved media. **Delete finished jobs** does this for all completed, failed and cancelled jobs, with confirmation. [What deletion removes →](../storage.md#what-deletion-removes)
+
+Older installation jobs remain as history until normal retention removes them. The updated worker cancels pending installation jobs on startup; they cannot be restarted or retried.
 
 ## Automatic job cleanup
 

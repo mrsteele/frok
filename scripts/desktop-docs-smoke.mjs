@@ -20,6 +20,8 @@ try {
   const docs = createDocumentation({ root:path.resolve('.desktop/docs'), preload:path.resolve('desktop/docs-preload.cjs') });
   await docs.open('/guide/getting-started');
   const window = BrowserWindow.getAllWindows()[0];
+  // Keep the animation check running when another app covers this test window.
+  window.webContents.setBackgroundThrottling(false);
   async function waitFor(expression, timeoutMs=5000) {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
@@ -34,6 +36,8 @@ try {
   assert.equal(await window.webContents.executeJavaScript('typeof window.frokDesktop'), 'undefined');
   assert.equal(await window.webContents.executeJavaScript('window.frokDocs.info().then(info => info.onlineAvailable)'), false);
   assert.ok(await window.webContents.executeJavaScript('document.styleSheets.length > 0'));
+  assert.equal(await window.webContents.executeJavaScript("navigator.permissions.query({ name: 'clipboard-write' }).then(permission => permission.state)"), 'granted');
+  assert.equal(await window.webContents.executeJavaScript("navigator.permissions.query({ name: 'clipboard-read' }).then(permission => permission.state)"), 'denied');
   assert.equal(await window.webContents.executeJavaScript("fetch('http://127.0.0.1:3440/api/jobs').then(() => false, () => true)"), true);
   // Exercise the actual VitePress client router and generated search index.
   await window.webContents.executeJavaScript("document.querySelector('a[href=\"/pipelines.html\"]').click()");
@@ -51,6 +55,21 @@ try {
   });
   await window.webContents.executeJavaScript("document.querySelector('a[download]').click()");
   assert.match(await download, /\.(vpipeline|json)$/);
+  // Copy the displayed source through VitePress's real control, without changing
+  // the OS clipboard during the smoke check.
+  for (const [page, files] of [
+    ['/examples/krea', ['image/krea-2-turbo/prepare.vpipeline']],
+    ['/examples/minimax', ['video/minimax-h3-turbo/prepare.vpipeline', 'reference/minimax-h3-reference/prepare.vpipeline']],
+  ]) {
+    await docs.open(page);
+    await waitFor(`document.querySelectorAll('.language-json button.copy').length === ${files.length}`);
+    await window.webContents.executeJavaScript("Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async text => { window.copiedPipeline = text; } } })");
+    for (const [index, file] of files.entries()) {
+      await window.webContents.executeJavaScript(`document.querySelectorAll('.language-json button.copy')[${index}].click()`);
+      const copied = await window.webContents.executeJavaScript('window.copiedPipeline');
+      assert.equal(copied.trim(), (await fs.readFile(path.join('resources/pipelines', file), 'utf8')).trim());
+    }
+  }
   await docs.open('/guide/getting-started#_2-connect-a-service');
   await waitFor("document.body.innerText.includes('Offline documentation')");
   assert.ok(window.webContents.getURL().endsWith('#_2-connect-a-service'));
@@ -69,7 +88,7 @@ try {
     await waitFor("(() => { const video = document.querySelector('.workflow-demo video'); return !video.paused && video.currentTime > 0.1; })()", 35000);
     assert.equal(await window.webContents.executeJavaScript("document.querySelector('.workflow-demo video').error"), null);
   }
-  console.log('Offline Electron docs passed: navigation, CSS, local search, example download, anchors, isolated bridge, blocked network access and homepage video playback (or reduced-motion still). No generators ran.');
+  console.log('Offline Electron docs passed: navigation, CSS, local search, example download, preparation Copy controls match source files, anchors, isolated bridge, blocked network access and homepage video playback (or reduced-motion still). No generators ran.');
 } catch (error) { console.error(error); result = 1; }
 finally {
   clearTimeout(timer);

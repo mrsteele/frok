@@ -3,6 +3,7 @@ import path from 'node:path';
 import http from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { context } from 'esbuild';
+import { docsResponse } from '../desktop/docs-content.mjs';
 
 export async function startUIGallery({ port = 4178, watch = true } = {}) {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -38,6 +39,12 @@ export async function startUIGallery({ port = 4178, watch = true } = {}) {
     '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Frok UI gallery</title><link rel="stylesheet" href="/gallery.css"></head><body><div id="root"></div><script type="module" src="/gallery.js"></script></body></html>';
   const server = http.createServer(async (req, res) => {
     const route = new URL(req.url, 'http://localhost').pathname;
+    if (route.startsWith('/docs/')) {
+      const response = await docsResponse(path.join(root, 'public/docs'))(new Request('frok-docs://help' + route.slice(5), {headers:req.headers}));
+      res.writeHead(response.status, Object.fromEntries(response.headers));
+      res.end(Buffer.from(await response.arrayBuffer()));
+      return;
+    }
     if (route === '/') {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.end(html);

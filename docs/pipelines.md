@@ -4,9 +4,9 @@ Frok uses files to define how images and videos are generated and how videos are
 
 ## Location and reset
 
-Working files live in `~/frok/pipelines`, outside the application and repository. Both desktop and web-development startup install the bundled defaults there. Desktop development keeps its media/database in the development workspace while sharing this pipeline folder; an explicit `FROK_HOME` can isolate the entire desktop workspace when needed.
+Working files live in `~/frok/pipelines`, outside the application and repository. Both desktop and web-development startup install the bundled defaults there. Desktop and browser development share the installed app’s workspace by default; an explicit `FROK_HOME` can isolate development when needed.
 
-In **Settings → Advanced → Workflow files**, leave **Workflow folder** empty for the default or enter another existing folder and choose **Save & scan**. Refresh rescans files without running a generator. Choose what to use in **Settings → Generation**. Counts include valid Vpipe workflows and ComfyUI API workflows, including video upscaling graphs, regardless of which connections are enabled. Invalid files and missing preparation/download instructions are listed separately. Model readiness appears on each selected workflow in **Generation**.
+In **Settings → Advanced → Workflow files**, leave **Workflow folder** empty for the default or enter another existing folder and choose **Save & scan**. Refresh rescans files without running a generator. Choose what to use in **Settings → Generation**. Counts include valid Vpipe workflows and ComfyUI API workflows, including video upscaling graphs, regardless of which connections are enabled. Invalid workflow files are listed for review. Model readiness appears on each selected workflow in **Generation**.
 
 **Reset default pipelines** requires confirmation. It replaces every file in the default `~/frok/pipelines` directory with bundled defaults, including removing personal files placed there. A custom location selected in the input is never deleted or switched by reset. Models, generated content, service settings and queued workflow snapshots are retained. Back up edited definitions before resetting.
 
@@ -19,7 +19,6 @@ The version-controlled factory copy lives in `resources/pipelines`; personal cha
   image/
     krea-2-turbo/
       run.vpipeline
-      prepare.vpipeline
       meta.json
     z-image-turbo/
       run.json
@@ -30,18 +29,16 @@ The version-controlled factory copy lives in `resources/pipelines`; personal cha
     seedvr2/
       run.json
       meta.json
-      prepare.json
     realesrgan/
       run.json
       meta.json
-      prepare.json
 ```
 
-Each pipeline has its own folder. Vpipe uses `run.vpipeline` and optional `prepare.vpipeline`; ComfyUI uses `run.json` and optional `prepare.json`. Every folder has `meta.json`. Copy the complete folder to install a workflow. Missing metadata and invalid definitions appear in Settings.
+Each pipeline has its own folder. Vpipe uses `run.vpipeline`; ComfyUI uses `run.json`. Every folder has `meta.json`. Startup and reset install only these generation files, with license notices. If a selected workflow needs models, its setup instructions offer manual downloads separately. Copy the generation graph and metadata to install a workflow. Missing metadata and invalid definitions appear in Settings.
 
 Existing flat custom workflows remain readable during the transition. Desktop startup moves bundled flat companions into their matching folders, preserves local edits, and keeps pipeline IDs stable so saved selections still work.
 
-The bundled `resources/pipelines/upscale/seedvr2/` and `resources/pipelines/upscale/realesrgan/` folders contain ComfyUI API workflows. Each has a `run.json` graph, `meta.json` registration and `prepare.json` model-download manifest. Their working copies follow the same convention under your configured pipeline folder.
+The bundled `resources/pipelines/upscale/seedvr2/` and `resources/pipelines/upscale/realesrgan/` folders contain ComfyUI API workflows. Each has a `run.json` graph, `meta.json` registration with dependency declarations. Their working copies follow the same convention under your configured pipeline folder.
 
 Both graphs use `LoadVideo → GetVideoComponents → AI upscale → CreateVideo → SaveVideo`. The AI stage processes the source frames; `CreateVideo` receives the original frame rate and audio from `GetVideoComponents`. Keep those connections when adapting a workflow so the output retains the source timing and sound. SeedVR2 requires the [ComfyUI-SeedVR2_VideoUpscaler extension](https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler) on the connected service.
 
@@ -64,11 +61,10 @@ Name a personal pipeline folder with a `.local` suffix:
 ```text
 ~/frok/pipelines/image/my-test.local/
   run.vpipeline
-  prepare.vpipeline
   meta.json
 ```
 
-For ComfyUI, use `run.json`, `meta.json`, and optional `prepare.json`. Frok discovers `.local` folders normally. Working files outside the source repository are not tracked by it; its ignore rules also exclude personal copies under `resources/pipelines`. Older flat `*.local.*` files remain ignored too. Refresh Settings → Generation after adding a folder.
+For ComfyUI, use `run.json` and `meta.json`. Frok discovers `.local` folders normally. Working files outside the source repository are not tracked by it; its ignore rules also exclude personal copies under `resources/pipelines`. Older flat `*.local.*` files remain ignored too. Refresh Settings → Generation after adding a folder.
 
 Give copies a unique metadata `id` and recognizable `name`. The folder name does not determine the ID. Desktop installers include only explicitly listed bundled folders, never personal workflows.
 
@@ -78,9 +74,9 @@ The ignore rule applies to untracked files. If a personal pipeline was already c
 
 Put model paths, LoRAs and strengths, step counts, schedulers, shifts and attention settings directly in the native workflow. Frok supplies the prompt, seed, dimensions, duration/frame count, private inputs and private output location through explicit bindings. It does not replace a selected workflow’s sampling or adapter settings. Image live-preview output is attached when the graph exposes a compatible intermediate stream.
 
-The composer’s Generation settings and the image/video viewer offer a pipeline override. Choices are remembered for each generation mode. Only pipelines for enabled connections appear. A missing dependency blocks generation and links to preparation. Duration, aspect and resolution controls follow the selected metadata; changing quality changes resolution, not the pipeline’s sampling schedule.
+The composer’s Generation settings and the image/video viewer offer a pipeline override. Choices are remembered for each generation mode. Only pipelines for enabled connections appear. A missing dependency blocks generation and links to setup instructions. Duration, aspect and resolution controls follow the selected metadata; changing quality changes resolution, not the pipeline’s sampling schedule.
 
-New jobs store the complete workflow, metadata and prepare companion. Retrying uses that snapshot. New submissions use the current file. Changing defaults or editing a file cannot change a job already in the queue. Renaming a pipeline’s stable `id` is a new pipeline; existing default selections need to be updated.
+New jobs store the generation workflow and metadata. Retrying uses that snapshot. New submissions use the current file. Changing defaults or editing a file cannot change a job already in the queue. Renaming a pipeline’s stable `id` is a new pipeline; existing default selections need to be updated.
 
 ## Metadata example
 
@@ -117,41 +113,36 @@ Dependencies have a trusted relative `reference`, `kind` (`model`, `lora`, `file
 
 ## Preparation and verification
 
-Frok checks the files used by a pipeline, including bounded safetensor headers and payload lengths. ComfyUI workflows additionally require their node classes on the connected backend. Declared download checksums are verified during installation. Readiness is a file/dependency check, not proof that an arbitrary graph will infer successfully or fit available memory.
+Install runners and custom nodes outside Frok. For unchanged bundled Vpipe workflows, **Prepare models** queues the shipped starter when dependencies are missing. The worker launches that script once, retains its log, and checks readiness afterward. It does not generate custom preparation graphs or repair failed installations. The [setup guide](guide/model-setup.md) includes manual alternatives. Preparation files in editable workflow folders are ignored.
 
-Known downloads can be prepared directly from dependency declarations. Vpipe fusion, quantization and custom transforms belong in `prepare.vpipeline`. A ComfyUI `prepare.json` is a download manifest containing a `dependencies` array; Frok does not execute it as a ComfyUI graph. Dependencies can also be declared entirely in `meta.json`.
+Frok checks the files used by a pipeline, including declared sizes, bounded safetensor headers and payload lengths. ComfyUI workflows additionally require their node classes on the connected backend. Download URLs, SHA-256 checksums and Vpipe `fetch` metadata describe installation sources for people and external tools; Frok does not download or hash entire model files during readiness checks. Readiness does not prove that an arbitrary graph will infer successfully or fit available memory.
 
-For the selected upscaling workflow, preparation downloads its declared models into the user's configured ComfyUI models folders through the same queue as other model preparation. Matching existing files are reused. A missing node class surfaces an action to resolve it on the connected ComfyUI service; model downloads do not install extensions. Install or update the required nodes there, restart ComfyUI and refresh readiness in Frok.
+Declare requirements in `meta.json`. For an older custom ComfyUI workflow, move any dependencies that exist only in `prepare.json` into the metadata. Supported loader inputs remain authoritative, so omitting their declarations does not make a missing model ready.
 
-Missing origins and unsupported/custom preparation cannot be guessed from filenames. Settings reports them for administrator review. It does not download arbitrary look-alike models. Existing conflicting ComfyUI files are preserved; move them aside manually before repairing. A CLI exit code or old setup receipt alone cannot mark preparation complete.
-
-Preparation uses the serial queue, with logs, cancellation and retry. Repeated requests for the same pipeline revision reuse an active setup job in the queue. Before a queued setup starts, it checks whether another job has already installed the shared dependencies. A missing known adapter can be fetched without re-quantizing a verified base model. All jobs and logs belong to the same local library.
-
-Frok uses the exact model paths declared by a pipeline, so models prepared directly in Vpipe are recognized. `generated: true` identifies an artifact that requires processing, such as fusion or quantization; it does not rename the model directory. When changing a model’s preparation, use a new output name and update its run file and metadata. This preserves variants used by older jobs. Stop Frok before running direct GPU work in that workspace.
+Frok uses the exact model paths declared by a pipeline, so externally prepared models are recognized without a Frok receipt. `generated: true` can describe an artifact produced by fusion or quantization, but does not invoke processing. Use distinct output names when creating model variants and update the run file and metadata together; older queued generation jobs retain their original requirements.
 
 ## Krea defaults and Utilities
 
-The bundled workflow uses **krea/Krea-2-Turbo** with its original transformer, encoder and VAE. Its preparation file downloads the base model. Both native files also work directly in a Vpipe workspace. Startup updates untouched bundled copies in `~/frok/pipelines`; edited copies are preserved and incoming defaults are staged in `~/frok/pipeline-updates`.
+The bundled workflow uses **krea/Krea-2-Turbo** with its original transformer, encoder and VAE. If models are missing, the [example guide](examples/krea.md#if-models-are-missing) offers a manual preparation download. Both native files also work directly in a Vpipe workspace. Startup updates untouched generation files in `~/frok/pipelines`; edited copies are preserved and incoming defaults are staged in `~/frok/pipeline-updates`.
 
 **Utilities → Create a pipeline folder** accepts a native Vpipe run workflow or ComfyUI API export. Give it a name and choose Images, Videos, Reference videos or Video upscaling. The ZIP contains:
 
 ```text
 image/my-pipeline-<id>.local/
   run.vpipeline
-  prepare.vpipeline
   meta.json
   REVIEW.txt
 ```
 
 The parent folder follows the chosen service; ComfyUI files use `.json`. Extract the archive into your configured pipeline location (default `~/frok/pipelines`), review the files, then refresh **Settings → Generation** and select the new pipeline. The `.local` suffix marks a personal workflow.
 
-Supported prompt, seed, size, output and MiniMax image/reference inputs are mapped into metadata. Negative prompts, sampler settings and adapter strengths are retained. Known download instructions come from bundled/detected definitions; a bundled preparation companion can be reused when its dependencies match. ComfyUI preparation is a download manifest, not an executable workflow.
+Supported prompt, seed, size, output and MiniMax image/reference inputs are mapped into metadata. Negative prompts, sampler settings and adapter strengths are retained. Known dependency metadata is copied from bundled/detected definitions. The export contains only the run graph, metadata and REVIEW.txt; no preparation scripts are generated.
 
-Unknown downloads, custom fusion/quantization and unsupported input bindings appear in `REVIEW.txt` and on the download result. Fill in those gaps before use; malformed or unsupported definitions will be flagged by the pipeline catalog. This is a draft utility, not proof that an arbitrary workflow will run. It never executes uploads, downloads models or installs files.
+Unknown dependencies and unsupported input bindings appear in `REVIEW.txt` and on the download result. Fill in those gaps before use; malformed or unsupported definitions will be flagged by the pipeline catalog. This is a draft utility, not proof that an arbitrary workflow will run. It never executes uploads, downloads models or installs files.
 
 ## Pipeline selections and queued jobs
 
-Choose a registered pipeline for each service in **Settings → Generation**. Every generation, upscaling and preparation job saves a copy of its selected pipeline, including adapter strengths and dependency requirements. Changing a pipeline file or selection applies to new jobs; retries retain the original job's saved definition.
+Choose a registered pipeline for each service in **Settings → Generation**. Every generation and upscaling job saves a copy of its selected pipeline, including adapter strengths and dependency requirements. Changing a pipeline file or selection applies to new jobs; retries retain the original job's saved definition.
 
 The catalog reads the folders in your configured pipeline directory. It does not create extra hidden workflows from other settings. Edit the pipeline files to customize LoRAs and sampling, then refresh the catalog.
 

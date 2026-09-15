@@ -35,4 +35,4 @@ export function modelConnection(capability: Capability, models: ModelSelections)
   return models[capability] || undefined;
 }
 export type ConnectionStatus = {enabled:boolean;available:boolean;detail:string};
-export type CapabilityStatus = {configured:boolean;ready:boolean;detail:string;task?:string;connection?:ConnectionId};
+export type CapabilityStatus = {configured:boolean;ready:boolean;detail:string;connection?:ConnectionId};

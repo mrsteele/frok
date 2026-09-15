@@ -59,6 +59,8 @@ Desktop installers already include FFmpeg and FFprobe. Source development builds
 
 Build prerequisites: Xcode Command Line Tools on macOS; a C compiler, make, bash and tar on Linux; MSYS2 with MinGW64 GCC, make, tar and diffutils on Windows (run the first build in a MinGW64 shell). NASM is recommended on x64; builds fall back to C implementations when it is absent. These are developer prerequisites only. Frok never installs them on the user's system.
 
+Cached tools are checked for integrity and working codecs without invoking the compiler or Xcode utilities. New builds and packaging also inspect linked libraries on macOS. If Xcode reports an unaccepted license, review it in your terminal with `sudo xcodebuild -license` before building. Compiler checks run before any source downloads; failed source builds save configure diagnostics to `.data/desktop-build-cache/media-build-error.log`.
+
 The build uses pinned SHA-256 source archives for FFmpeg, x264, zlib and the pkgconf build tool. It disables automatic detection of optional libraries, network protocols and nonfree components. Outputs stay in ignored `.media-tools/<platform>-<arch>/`; source downloads are cached under `.data/desktop-build-cache`. No system installation is modified. `FROK_MEDIA_BUILD_JOBS` optionally controls parallel compilation (default 4).
 
 Source archives, the recipe and component licenses accompany the binaries in every installer. To update a dependency, review and update `scripts/media-sources.json`, rebuild, run synthetic media checks, and verify every release platform. Do not replace these binaries with an arbitrary prebuilt download. Runtime folder overrides and `FFMPEG_BIN`/`FFPROBE_BIN` remain available for advanced use.
@@ -96,7 +98,7 @@ Edit `public/brand/mark.svg`, then run `npm run build:brand` to regenerate the f
 
 Keep runner-specific API calls, workflow binding and cancellation inside a runner adapter. The worker should own the queue, prompt preparation, progress, output validation and publication into the library. Pipeline snapshots preserve what a queued job will run even if the source workflow is edited later.
 
-Vpipe and ComfyUI currently share the `RenderInput` contract exported from `src/lib/vpipe.ts`. When adding a third runner, move that contract into a neutral module and replace the worker's two-way dispatch with a small registry. Add connection checks, pipeline capability checks and synthetic adapter tests together. Keep credentials on the server and preserve the existing request, path and process protections. Imported pipelines and their preparation steps are trusted local code, not sandboxed plugins.
+Vpipe and ComfyUI currently share the `RenderInput` contract exported from `src/lib/vpipe.ts`. When adding a third runner, move that contract into a neutral module and replace the worker's two-way dispatch with a small registry. Add connection checks, pipeline capability checks and synthetic adapter tests together. Keep credentials on the server and preserve the existing request, path and process protections. Imported generation pipelines are trusted local code, not sandboxed plugins. Frok ignores editable preparation companions. Its only preparation execution path is the explicit list in `desktop/preparations.json`: ship those source-controlled scripts with the backend, launch them through the ordinary worker queue, and leave errors to the log and manual setup guide. Do not turn this into a general installation system.
 
 ## Before proposing a change
 

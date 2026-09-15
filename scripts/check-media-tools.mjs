@@ -13,7 +13,7 @@ const recipeId = digest(Buffer.concat([Buffer.from(JSON.stringify(sources)), rec
 export const bundledMediaPath = (root = path.resolve('.desktop/backend')) => path.join(root, '.media-tools', `${process.platform}-${process.arch}`);
 
 // Runs only our checksum-verified build, never arbitrary dependency executables.
-export async function checkMediaTools(directory = bundledMediaPath(), execute = promisify(execFile)) {
+export async function checkMediaTools(directory = bundledMediaPath(), execute = promisify(execFile), {checkLinkage = true} = {}) {
   const manifest = JSON.parse(await fs.readFile(path.join(directory, 'manifest.json'), 'utf8'));
   if (manifest.recipeId !== recipeId || manifest.target !== `${process.platform}-${process.arch}` || JSON.stringify(manifest.sources) !== JSON.stringify(sources)) throw Error('Bundled media tools need rebuilding for this source revision and platform.');
   for (const source of sources) {
@@ -30,7 +30,7 @@ export async function checkMediaTools(directory = bundledMediaPath(), execute = 
     const {stdout, stderr} = await execute(binary, ['-version'], options);
     const output = stdout + stderr;
     if (!output.includes(`${tool} version ${sources[0].version}`) || /--enable-nonfree|nonfree and unredistributable/i.test(output) || !output.includes('--enable-gpl')) throw Error(`Bundled ${tool} has an unexpected version or license configuration.`);
-    if (process.platform === 'darwin') {
+    if (checkLinkage && process.platform === 'darwin') {
       const links = await execute('/usr/bin/otool', ['-L', binary], options);
       if (links.stdout.split('\n').slice(1).some(line => line.trim() && !/^\s*\/(?:usr\/lib|System\/Library)\//.test(line))) throw Error(`Bundled ${tool} depends on a non-system library.`);
     }

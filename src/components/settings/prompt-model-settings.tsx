@@ -1,6 +1,5 @@
 'use client';
 import { Badge } from '@/components/ui/primitives/badge';
-import { FormActions } from '@/components/ui/patterns/form-actions';
 import { Spinner } from '@/components/ui/primitives/spinner';
 import { Select } from '@/components/ui/primitives/select';
 import { FormField } from '@/components/ui/patterns/form-field';
@@ -9,17 +8,16 @@ import { Button } from '@/components/ui/primitives/button';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Check, Download } from 'lucide-react';
+import { Check } from 'lucide-react';
+import { DocumentationLink } from '@/components/shell/documentation-link';
 import { api } from '@/lib/client-api';
 import { ollamaModelKey } from '@/lib/ollama-models';
-import type { Health, Job, SetupRequest } from '@/lib/types';
+import type { Health } from '@/lib/types';
 const sameModel = (a: string, b: string) => ollamaModelKey(a) === ollamaModelKey(b);
 export function PromptModelSettings({
   health,
-  jobs,
   checking,
   onRefresh,
-  onPrepare,
   embedded = false,
   anchor = true,
   enhance = false,
@@ -27,10 +25,8 @@ export function PromptModelSettings({
   onBusyChange,
 }: {
   health?: Health;
-  jobs: Job[];
   checking: boolean;
   onRefresh: () => void;
-  onPrepare: (task: string) => Promise<void>;
   embedded?: boolean;
   anchor?: boolean;
   enhance?: boolean;
@@ -56,13 +52,7 @@ export function PromptModelSettings({
     label: model,
     value: saved && sameModel(model, saved) ? saved : model,
   }));
-  const job = jobs.find(
-    (job) =>
-      job.kind === 'setup' &&
-      (job.request as SetupRequest).task === 'ollama' &&
-      ['running', 'queued'].includes(job.status),
-  );
-  const needsDownload =
+  const missingModel =
     saved !== '__off__' && (!models.length || !models.some((model) => sameModel(model, effective)));
   async function choose(model: string) {
     setValue(model);
@@ -164,36 +154,11 @@ export function PromptModelSettings({
           Refresh installed models
         </Button>
       )}
-      {job ? (
-        <p className="settings-working">
-          <Spinner size={13} />
-          {job.message} <Link href={`/queue/${job.id}`}>View job →</Link>
-        </p>
-      ) : (
-        connected &&
-        needsDownload && (
-          <FormActions align="start">
-            <InlineMessage tone="neutral">
-              Download {effective}. Enhancement becomes available once the selected model is
-              installed.
-            </InlineMessage>
-            <Button
-              disabled={pending || !health?.worker}
-              onClick={async () => {
-                setBusy(true);
-                try {
-                  await onPrepare('ollama');
-                } finally {
-                  setBusy(false);
-                }
-              }}
-              variant="secondary"
-            >
-              <Download size={13} />
-              Download prompt model
-            </Button>
-          </FormActions>
-        )
+      {connected && missingModel && (
+        <InlineMessage tone="neutral">
+          Install {effective} in Ollama, then refresh installed models.{' '}
+          <DocumentationLink className="settings-documentation-link" page="/guide/model-setup" label="Installation guide" onError={setError} />
+        </InlineMessage>
       )}
       {onEnhancementChange && (
         <FormField label={<span>Use Prompt Enhancement</span>} layout="toggle">

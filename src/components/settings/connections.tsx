@@ -5,7 +5,7 @@ import { useCallback, useEffect, useId, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Check, ChevronRight, Plug, RefreshCw } from 'lucide-react';
-import type { Health, Job } from '@/lib/types';
+import type { Health } from '@/lib/types';
 import { connectionIds, connectionNames, type ConnectionId } from '@/lib/service-config';
 import { OllamaConnection } from './ollama-connection';
 import { RunnerConnection } from './runner-connection';
@@ -16,20 +16,16 @@ const descriptions = {
 };
 export function Connections({
   health,
-  jobs,
   checking,
   onRefresh,
-  onPrepare,
   enhance,
   onEnhancementChange,
   wizard = false,
   onBusyChange,
 }: {
   health?: Health;
-  jobs: Job[];
   checking: boolean;
   onRefresh: () => void;
-  onPrepare: (task: string) => Promise<void>;
   enhance?: boolean;
   onEnhancementChange?: (enabled: boolean) => void;
   wizard?: boolean;
@@ -98,10 +94,8 @@ export function Connections({
         ) : selected === 'ollama' ? (
           <OllamaConnection
             health={health}
-            jobs={jobs}
             checking={checking}
             onRefresh={onRefresh}
-            onPrepare={onPrepare}
             enhance={enhance}
             onEnhancementChange={onEnhancementChange}
             onBusyChange={pending}

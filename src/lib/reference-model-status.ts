@@ -30,7 +30,7 @@ async function weights(directory:string, component:string) {
 
 /** Use the same trusted root as rendering, not just a previous setup receipt. */
 export async function referenceModelStatus(model=modelNames.reference):Promise<{ready:boolean;detail:string}> {
-  const retry='Use Settings → Generation → Reference video → Download & prepare to finish preparation.';
+  const retry='Install the required model files in Vpipe, then refresh workflows in Settings → Generation.';
   let directory:string;
   try {directory=await resolveVpipeModel(model);}
   catch {return {ready:false,detail:`MiniMax H3 Ref2VA is missing or inaccessible (${model}). ${retry}`};}
@@ -45,6 +45,6 @@ export async function referenceModelStatus(model=modelNames.reference):Promise<{
     return {ready:true,detail:'MiniMax H3 Ref2VA diffusion weights, prompt encoder, VAEs and tokenizer are installed.'};
   } catch(error) {
     const detail=(error as NodeJS.ErrnoException).code==='ENOENT'?'A required model file is missing.':(error as Error).message;
-    return {ready:false,detail:`MiniMax H3 Ref2VA preparation is incomplete. ${detail} ${retry}`};
+    return {ready:false,detail:`MiniMax H3 Ref2VA installation is incomplete. ${detail} ${retry}`};
   }
 }

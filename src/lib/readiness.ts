@@ -5,7 +5,7 @@ import { capabilityNames, connectionNames, type Capability } from './service-con
 
 export const modelModes = ['image', 'video', 'reference'] as const;
 export type SetupTarget = 'worker' | 'runner' | 'ffmpeg' | 'upscale' | 'prompt' | typeof modelModes[number];
-export type ReadinessIssue = { message: string; action: string; target: SetupTarget; task?: string };
+export type ReadinessIssue = { message: string; action: string; target: SetupTarget };
 
 export function promptEnhancementIssue(health:Health|undefined,enabled:boolean):ReadinessIssue|undefined {
   if(!enabled||health?.ollama)return;
@@ -13,10 +13,10 @@ export function promptEnhancementIssue(health:Health|undefined,enabled:boolean):
 }
 
 export function modelRequirement(runner: Runner, mode: typeof modelModes[number], imageModel?: ImageModelId) {
-  if(mode==='image'&&imageModel){const model=imageModels[imageModel];return {...model,action:`Download ${model.name}`};}
+  if(mode==='image'&&imageModel){const model=imageModels[imageModel];return {...model,action:'Review model setup'};}
   const name = mode === 'image' ? runner === 'vpipe' ? 'Krea 2 Turbo' : 'SDXL Turbo' : mode === 'video' ? 'MiniMax H3 video' : 'MiniMax H3 references';
   return { task: `${runner === 'comfyui' ? 'comfy-' : ''}${mode}`, name,
-    action: mode === 'image' ? runner === 'vpipe' ? 'Download Krea' : 'Download SDXL Turbo' : mode === 'video' ? 'Download video model' : 'Download reference model' };
+    action: 'Review model setup' };
 }
 
 // Only configured capabilities contribute to the setup badge.
@@ -52,7 +52,7 @@ export function generationIssue(health: Health | undefined, mode: Generation['mo
     if(!connection?.enabled||!connection.available)return {message:`Connect ${connectionNames[p.runner]} to use ${p.name}.`,action:'Configure connections',target:'runner'};
     if(mode!=='image'&&!health.checks.find(c=>c.id==='ffmpeg')?.ready)return {message:health.checks.find(c=>c.id==='ffmpeg')?.detail||'Video tools need setup.',action:'Set up video tools',target:'ffmpeg'};
     if(sourceId&&mode!=='upscale'&&!p.supportsSource)return {message:'Choose a pipeline that accepts a starting image.',action:'Choose a pipeline',target:mode};
-    if(!p.ready)return {message:p.detail,action:p.canPrepare?'Prepare pipeline':'Review pipeline',target:mode};
+    if(!p.ready)return {message:p.detail,action:'Review workflow',target:mode};
     return;
   }
   if(health.capabilities){
@@ -60,7 +60,7 @@ export function generationIssue(health: Health | undefined, mode: Generation['mo
     if(!capability.ready){
       const connection=capability.connection&&health.connections?.[capability.connection];
       const target:SetupTarget=connection&&(!connection.enabled||!connection.available)?'runner':capability.detail.startsWith('Video tools')?'ffmpeg':mode;
-      return {message:capability.detail,action:target==='runner'?'Configure connections':target==='ffmpeg'?'Check video tools':capability.configured?'Set up model':'Choose a model',target,task:capability.task};
+      return {message:capability.detail,action:target==='runner'?'Configure connections':target==='ffmpeg'?'Check video tools':capability.configured?'Set up model':'Choose a model',target};
     }
     return;
   }
@@ -69,12 +69,12 @@ export function generationIssue(health: Health | undefined, mode: Generation['mo
   if(mode==='image'&&health.image){
     const image=health.image, model=imageModels[image.model];
     if(!image.connected)return {message:image.detail||`Connect ${connectionNames[image.runner]} to use ${model.name}.`,action:'Check image generator',target:'image'};
-    if(!image.ready)return {message:image.detail||`You cannot generate images until ${model.name} is downloaded and prepared.`,action:`Download ${model.name}`,target:'image',task:image.setupTask||model.task};
+    if(!image.ready)return {message:image.detail||`You cannot generate images until ${model.name} is downloaded and prepared.`,action:'Review model setup',target:'image'};
     return;
   }
   if (!health.checks.find(c => c.id === 'runner')?.ready) return { message: `Connect ${connectionNames[health.runner]} before generating.`, action: 'Connect runner', target: 'runner' };
   const model = modelRequirement(health.runner, mode, health.image?.model);
-  if (!health.models[model.task]) return { message: `You cannot generate ${mode === 'image' ? 'images' : mode === 'reference' ? 'reference videos' : 'videos'} until ${model.name} is downloaded and prepared.`, action: model.action, target: mode, task: model.task };
+  if (!health.models[model.task]) return { message: `You cannot generate ${mode === 'image' ? 'images' : mode === 'reference' ? 'reference videos' : 'videos'} until ${model.name} is downloaded and prepared.`, action: model.action, target: mode };
 
 }
 

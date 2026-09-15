@@ -45,7 +45,7 @@ test('location edits rescan immediately, retain selections and do not alter queu
   const cleared=await call('pipelines/library','PATCH',{path:''});assert.equal(cleared.status,200);
   assert.equal(db.pipelineDirectorySetting(),'');assert.equal((await catalog()).entries.length,9);
 });
-test('invalid locations preserve the old setting; malformed files and missing preparation are reported',async()=>{
+test('invalid locations preserve the old setting; malformed generation files are reported while preparation files are ignored',async()=>{
   for(const value of ['relative/path',path.join(directory,'missing')])assert.equal((await call('pipelines/library','PATCH',{path:value})).status,400);
   assert.equal(db.pipelineDirectorySetting(),'');
   const custom=path.join(directory,'audit'),bundle=path.join(custom,'image/krea');
@@ -56,7 +56,7 @@ test('invalid locations preserve the old setting; malformed files and missing pr
   await fs.writeFile(metaFile,JSON.stringify(metadata));
   await fs.mkdir(path.join(custom,'image/broken'));await fs.writeFile(path.join(custom,'image/broken/meta.json'),'{invalid');
   const response=await call('pipelines/library','PATCH',{path:custom});assert.equal(response.status,200);
-  const audit=await response.json();assert.equal(audit.counts.vpipe,1);assert.equal(audit.errors.length,1);assert.match(audit.errors[0],/broken/);assert.equal(audit.warnings.length,1);assert.match(audit.warnings[0],/prepare companion/);
+  const audit=await response.json();assert.equal(audit.counts.vpipe,1);assert.equal(audit.errors.length,1);assert.match(audit.errors[0],/broken/);assert.ok(!('warnings' in audit));
 });
 test('reset requires confirmation and replaces only the fixed default directory',async()=>{
   const custom=path.join(directory,'custom-preserved');await fs.mkdir(custom,{recursive:true});await fs.writeFile(path.join(custom,'keep.txt'),'custom');

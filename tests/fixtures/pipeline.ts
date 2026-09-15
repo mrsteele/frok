@@ -13,8 +13,7 @@ export function factoryPipeline(kind:PipelineKind, runner:'vpipe'|'comfyui'=kind
   const folder=path.resolve('resources/pipelines',kind,name),extension=runner==='vpipe'?'.vpipeline':'.json';
   const metadata=pipelineMetadata.parse(JSON.parse(readFileSync(path.join(folder,'meta.json'),'utf8')));
   const graph=JSON.parse(readFileSync(path.join(folder,'run'+extension),'utf8'));
-  let prepare;try{prepare=JSON.parse(readFileSync(path.join(folder,'prepare'+extension),'utf8'));}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}
-  return {kind,metadata,graph,prepare,revision:createHash('sha256').update(JSON.stringify([metadata,graph,prepare])).digest('hex')};
+  return {kind,metadata,graph,revision:createHash('sha256').update(JSON.stringify([metadata,graph])).digest('hex')};
 }
 export function vpipeInput<T extends Omit<RenderInput,'signal'|'log'>>(input:T):T {
   return {...input,request:{...input.request,pipeline:input.request.pipeline||factoryPipeline(input.request.mode)}};

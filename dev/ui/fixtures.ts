@@ -6,6 +6,7 @@ import type { ExportPreferences } from '../../src/lib/export-preferences';
 
 export const scenario = new URLSearchParams(location.search).get('state') || 'connected';
 const available = !['offline', 'disconnected'].includes(scenario);
+const modelsReady = available && scenario !== 'missing';
 export const health = {
   worker: true,
   checks: [],
@@ -31,9 +32,9 @@ export const health = {
     ['image', 'video', 'reference', 'upscale', 'prompt'].map((kind) => [
       kind,
       {
-        ready: available && scenario !== 'queued',
+        ready: modelsReady,
         configured: true,
-        detail: 'Connect the example service to continue.',
+        detail: modelsReady ? 'Ready to generate.' : available ? 'Install the missing models in your runner, then refresh workflows.' : 'Connect the example service to continue.',
       },
     ]),
   ),
@@ -59,11 +60,11 @@ export const health = {
     kind,
     supportsSource: true,
     maxReferences: 4,
-    state: available ? 'ready' : 'missing',
-    ready: available,
-    detail: 'Example workflow',
-    missing: [],
-    canPrepare: !available,
+    state: modelsReady ? 'ready' : 'missing',
+    ready: modelsReady,
+    detail: modelsReady ? 'Example workflow' : 'Install the missing models in Vpipe, then refresh workflows.',
+    missing: modelsReady ? [] : ['example/model'],
+    preparation: !modelsReady && kind === 'image' ? 'image/krea-2-turbo' : undefined,
     revision: 'gallery',
   })),
   pipelineLibrary: {
@@ -72,7 +73,6 @@ export const health = {
     defaultPath: '~/frok/pipelines',
     counts: { vpipe: 4, comfyui: 0 },
     errors: [],
-    warnings: [],
   },
   platform: 'Gallery',
   memoryGB: 16,
@@ -85,36 +85,9 @@ export const health = {
   upscalerSupported: true,
   models: { ollama: available },
 } as unknown as Health;
-export const jobs: Job[] =
-  scenario === 'queued'
-    ? health.pipelines!.map<Job>((pipeline, index) => ({
-        id: `example-job-${index}`,
-        kind: 'setup',
-        status: index === 0 ? 'running' : 'queued',
-        request: {
-          task: 'pipeline',
-          pipeline: {
-            metadata: pipelineMetadata.parse({
-              version: 1,
-              id: pipeline.id,
-              name: pipeline.name,
-              runner: pipeline.runner,
-            }),
-            kind: pipeline.kind,
-            graph: {},
-            revision: 'gallery',
-          },
-        },
-        runner: 'vpipe',
-        completed: 0,
-        total: 1,
-        message: index === 0 ? 'Preparing example workflow…' : 'Waiting in the example queue',
-        createdAt: '2026-01-01T12:00:00Z',
-        updatedAt: '2026-01-01T12:00:00Z',
-      }))
-    : [];
 let preferences: ExportPreferences = {};
 let runtime = { ...runtimeDefaults };
+export const jobs: Job[] = [];
 export const calls: { url: string; method: string; body: unknown }[] = [];
 Object.assign(window, { __uiCalls: calls });
 
@@ -141,6 +114,11 @@ window.fetch = async (input, init) => {
     return Response.json({ samples: [], busy: null, detail: 'Synthetic preview' });
   if (route === 'health') return Response.json(health);
   if (route === 'jobs') return Response.json({ jobs });
+  if (route === 'pipelines/prepare') {
+    const now=new Date().toISOString();
+    const job:Job={id:'11111111-1111-4111-8111-111111111111',kind:'setup',runner:'vpipe',status:'queued',total:1,completed:0,message:'Queued',createdAt:now,updatedAt:now,request:{task:'builtin-preparation',preparation:'image/krea-2-turbo',name:'Example images workflow'}};
+    jobs.push(job);return Response.json({job}, {status:201});
+  }
   if (route === 'settings/interface') {
     if (body) preferences = { ...preferences, ...body };
     return Response.json(preferences);
@@ -161,7 +139,6 @@ window.fetch = async (input, init) => {
   }
   if (route === 'pipelines/library' || route === 'pipelines/reset')
     return Response.json(health.pipelineLibrary);
-  if (route === 'setup') return Response.json({ job: { id: 'example-job', status: 'queued' } });
   return Response.json(
     { error: 'This preview does not perform exports, deletions or generation.' },
     { status: 400 },

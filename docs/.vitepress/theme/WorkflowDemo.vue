@@ -33,9 +33,11 @@ const playing=computed(()=>active.value&&step.value===8&&!videoFailed.value)
 let timer,observer,resizeObserver,media,lastTick
 function positionPointer(){
   const area=interaction.value?.getBoundingClientRect();if(!area)return
+  // The welcome embed scales this demo; pointer coordinates stay in local pixels.
+  const scaleX=interaction.value.offsetWidth/area.width,scaleY=interaction.value.offsetHeight/area.height
   const target={prompt:promptTarget.value,generate:generateTarget.value,animate:animateTarget.value}[current.value.target]
   const rect=target?.getBoundingClientRect()
-  pointer.value=rect?{x:rect.left-area.left+(current.value.target==='prompt'?22:rect.width*.65),y:rect.top-area.top+(current.value.target==='prompt'?10:rect.height*.5)}:{x:area.width*.93,y:area.height*.62}
+  pointer.value=rect?{x:(rect.left-area.left)*scaleX+(current.value.target==='prompt'?22:rect.width*scaleX*.65),y:(rect.top-area.top)*scaleY+(current.value.target==='prompt'?10:rect.height*scaleY*.5)}:{x:interaction.value.offsetWidth*.93,y:interaction.value.offsetHeight*.62}
 }
 function syncPlayback(){
   if(!clip.value)return

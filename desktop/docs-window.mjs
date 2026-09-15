@@ -6,8 +6,13 @@ import { externalUrl } from './policy.mjs';
 export function createDocumentation({ root, preload, onlineBase }) {
   let window;
   const isolated = session.fromPartition('frok-documentation');
-  isolated.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
-  isolated.setPermissionCheckHandler(() => false);
+  // Code examples can be copied from the bundled docs. Clipboard reads and
+  // requests from other windows, frames or origins remain unavailable.
+  const canCopy = (contents, permission, details) => permission === 'clipboard-sanitized-write'
+    && !!window && !window.isDestroyed() && contents === window.webContents
+    && details.isMainFrame && isDocsUrl(details.requestingUrl) && isDocsUrl(contents.getURL());
+  isolated.setPermissionRequestHandler((contents, permission, callback, details) => callback(canCopy(contents, permission, details)));
+  isolated.setPermissionCheckHandler((contents, permission, _origin, details) => canCopy(contents, permission, details));
   isolated.webRequest.onBeforeRequest((details, callback) => callback({ cancel: !isDocsUrl(details.url) && !details.url.startsWith('data:') }));
   isolated.protocol.handle('frok-docs', docsResponse(root));
   isolated.on('will-download', (_event, item) => item.setSaveDialogOptions({ title:'Save pipeline example', defaultPath:path.join(app.getPath('downloads'), path.basename(item.getFilename())) }));

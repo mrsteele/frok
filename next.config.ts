@@ -19,6 +19,9 @@ const config: NextConfig = {
       {key:'Cross-Origin-Resource-Policy',value:'same-origin'},
       {key:'Cross-Origin-Opener-Policy',value:'same-origin'},
       {key:'Content-Security-Policy',value:"frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'"},
+    ]}, {source:'/docs/welcome-demo.html',headers:[
+      {key:'X-Frame-Options',value:'SAMEORIGIN'},
+      {key:'Content-Security-Policy',value:"frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'"},
     ]}];
   },
 };

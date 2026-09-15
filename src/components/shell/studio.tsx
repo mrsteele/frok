@@ -1,4 +1,5 @@
 'use client';
+import { isPreparationJob } from '@/lib/preparation-job';
 import { PipelineUtils } from '@/components/settings/pipeline-utils';
 import { selectedPipeline } from '@/lib/pipelines/schema';
 import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
@@ -55,7 +56,6 @@ import { About } from './about';
 import { BrandMark } from './brand-mark';
 import { SocialLinks } from './social-links';
 import { Setup } from '@/components/settings/setup';
-import { SetupWizard } from '@/components/onboarding/setup-wizard';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { mediaPath, settingsPath, studioRoute } from '@/lib/navigation';
@@ -83,7 +83,7 @@ type LibraryPage = {
 const viewPath = (view: View) => (view === 'envision' ? '/' : `/${view}`);
 const jobTitle = (job: Job) =>
   job.kind === 'setup'
-    ? `Setup · ${job.request.pipeline?.metadata.name || (job.request as { task: string }).task}`
+    ? `Setup · ${(job.request as { name?:string }).name || job.request.pipeline?.metadata.name || (job.request as { task: string }).task}`
     : (job.request as Generation).mode === 'upscale'
       ? 'Enhance video to HD'
       : (job.request as Generation).prompt ||
@@ -260,13 +260,6 @@ export default function Studio({ children }: { children: ReactNode }) {
       window.removeEventListener('focus', focus);
     };
   }, [refreshHealth]);
-  const promptSetupState = jobs
-    .filter((job) => job.kind === 'setup' && (job.request as { task: string }).task === 'ollama')
-    .map((job) => `${job.id}:${job.status}`)
-    .join(',');
-  useEffect(() => {
-    if (promptSetupState) void refreshHealth(true);
-  }, [promptSetupState, refreshHealth]);
   useEffect(() => {
     if (!health || welcomeSeen.current) return;
     welcomeSeen.current = true;
@@ -343,12 +336,6 @@ export default function Studio({ children }: { children: ReactNode }) {
     : health
       ? 'Settings · All required models are ready'
       : 'Settings · Checking setup';
-  const preparation = issue?.task
-    ? jobs.find(
-        (j) =>
-          j.kind === 'setup' && (j.request as { task: string }).task === issue.task && isActive(j),
-      )
-    : undefined;
   function openSetup(target?: SetupTarget) {
     router.push(
       target === 'prompt'
@@ -744,7 +731,7 @@ export default function Studio({ children }: { children: ReactNode }) {
         }
       }}
     >
-      {job.status === 'queued' && route?.view === 'queue' && !route.id && (
+      {(job.kind === 'generate' || isPreparationJob(job)) && job.status === 'queued' && route?.view === 'queue' && !route.id && (
         <button
           className="icon-button queue-drag-handle"
           draggable={!movingQueue}
@@ -782,7 +769,7 @@ export default function Studio({ children }: { children: ReactNode }) {
         <p>
           <span className="status-name">{job.status}</span> · {job.message}
         </p>
-        {job.status === 'running' && (
+        {job.kind === 'generate' && job.status === 'running' && (
           <>
             <Progress job={job} />
             <small>
@@ -810,11 +797,11 @@ export default function Studio({ children }: { children: ReactNode }) {
         inert={busyJobs.includes(job.id)}
         aria-busy={busyJobs.includes(job.id)}
       >
-        {job.status === 'queued' && (
+        {job.kind === 'generate' && job.status === 'queued' && (
           <>
             <button
               className="queue-quick-action"
-              disabled={movingQueue}
+              disabled={movingQueue || running?.kind === 'setup'}
               title="Run first; the current job will stop and resume afterward"
               onClick={() => void moveJob(job, 'start')}
             >
@@ -853,11 +840,11 @@ export default function Studio({ children }: { children: ReactNode }) {
           </button>
         ) : (
           <>
-            {(job.status === 'failed' || job.status === 'cancelled') && (
+            {(job.kind === 'generate' || isPreparationJob(job)) && (job.status === 'failed' || job.status === 'cancelled') && (
               <button
                 className="icon-button"
-                title="Retry remaining outputs"
-                aria-label="Retry remaining outputs"
+                title={job.kind === 'setup' ? "Retry preparation" : "Retry remaining outputs"}
+                aria-label={job.kind === 'setup' ? "Retry preparation" : "Retry remaining outputs"}
                 onClick={() => void jobAction(job, 'retry')}
               >
                 <RefreshCw size={16} />
@@ -912,14 +899,8 @@ export default function Studio({ children }: { children: ReactNode }) {
           <CircleAlert size={19} />
           <div>
             <strong>{issue.message}</strong>
-            {preparation && (
-              <p>
-                {preparation.status === 'running' ? 'Setup is in progress.' : 'Setup is queued.'}{' '}
-                You can generate when it finishes.
-              </p>
-            )}
             <button onClick={() => openSetup(issue.target)}>
-              {preparation ? 'View setup progress' : issue.action}
+              {issue.action}
               <ChevronRight size={14} />
             </button>
           </div>
@@ -1249,10 +1230,11 @@ export default function Studio({ children }: { children: ReactNode }) {
         {children}
         {!resettingSession &&
           (onboarding || (route?.view === 'settings' && route.section === 'welcome')) && (
-            <SetupWizard
-              health={health}
+            <Setup
+              wizard
               jobs={jobs}
-              checking={checkingHealth}
+              health={health}
+              checkingHealth={checkingHealth}
               onRefresh={async () => {
                 await Promise.all([refreshHealth(true), refresh()]);
               }}
@@ -1278,6 +1260,7 @@ export default function Studio({ children }: { children: ReactNode }) {
             busy={resettingSession}
           >
             <Setup
+              jobs={jobs}
               key={route.section}
               section={route.section === 'welcome' ? 'services' : route.section}
               enhance={request.enhance}
@@ -1287,7 +1270,6 @@ export default function Studio({ children }: { children: ReactNode }) {
               onOnboarding={() => setOnboarding(true)}
               checkingHealth={checkingHealth}
               health={health}
-              jobs={jobs}
               onRefresh={async () => {
                 await Promise.all([refreshHealth(true), refresh()]);
               }}

@@ -29,7 +29,7 @@ export default defineConfig({
     logo:{light:'/mark.svg',dark:'/mark-light.svg'}, siteTitle:'Frok',
     nav:[{text:'Documentation',link:'/documentation'},{text:'Get started',link:'/guide/getting-started'},{text:'GitHub',link:product.githubUrl}],
     sidebar:[
-      {text:'Start here',items:[{text:'Documentation',link:'/documentation'},{text:'Welcome',link:'/about'},{text:'Quick setup',link:'/guide/getting-started'},{text:'Connections',link:'/guide/connections'}]},
+      {text:'Start here',items:[{text:'Documentation',link:'/documentation'},{text:'Welcome',link:'/about'},{text:'Quick setup',link:'/guide/getting-started'},{text:'Connections',link:'/guide/connections'},{text:'Install models',link:'/guide/model-setup'}]},
       {text:'Create',items:[{text:'Your first creation',link:'/tutorials/first-creation'},{text:'Images & variations',link:'/guide/images'},{text:'Videos & references',link:'/guide/videos'},{text:'Build a reusable recipe',link:'/tutorials/recipes'},{text:'Compare SD & HD',link:'/tutorials/upscaling'}]},
       {text:'Your studio',items:[{text:'Library & asset links',link:'/guide/library'},{text:'Queue & progress',link:'/guide/queue'},{text:'Storage & backups',link:'/storage'},{text:'Troubleshooting',link:'/guide/troubleshooting'}]},
       {text:'Legal',items:[{text:'Legal & responsible use',link:'/legal'},{text:'Software license',link:'/license'}]},

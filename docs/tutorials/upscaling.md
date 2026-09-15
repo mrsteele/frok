@@ -15,9 +15,9 @@ In **Settings → Generation → Video upscaling**, select a workflow:
 
 For SeedVR2, install [ComfyUI-SeedVR2_VideoUpscaler](https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler#-installation) in the ComfyUI installation you connected, following its ComfyUI extension instructions, then restart ComfyUI.
 
-Use the selected workflow's preparation/download action and follow its job in **Queue**. Preparation downloads the declared models into your configured ComfyUI models folders and reuses matching files already there. Frok does not install separate upscaler runtimes, Python environments or NCNN binaries.
+Install the workflow's models in ComfyUI using the [model setup guide](../guide/model-setup.md), then choose **Refresh workflows** in Frok. Frok does not install separate upscaler runtimes, Python environments or NCNN binaries.
 
-If required nodes are missing, follow the workflow's **Needs attention** action, install or update the required nodes in ComfyUI, then restart ComfyUI and refresh readiness in Frok. Model preparation does not install custom nodes. Wait for the selected workflow to be ready before upscaling.
+If required nodes are missing, follow the workflow's **Needs attention** action, install or update the required nodes in ComfyUI, then restart ComfyUI and refresh readiness in Frok. Frok does not install models or custom nodes. Wait for the selected workflow to be ready before upscaling.
 
 Frok supplies the source video and uses the SeedVR2 workflow's device bindings to select an available MPS or CUDA GPU reported by the connected ComfyUI service.
 
@@ -36,11 +36,11 @@ The viewer keeps both video elements available and switches visibility, carrying
 
 Changing the selected upscaler allows another enhancement from the original SD video; it does not feed an already enhanced result back through a different model. The viewer shows the latest enhanced copy for that take.
 
-If preparation fails, open its queue log and check the declared model paths, downloads and available disk space. If rendering fails, check the job log and ComfyUI's node requirements. For memory errors, stop other GPU work or select a compatible workflow with lower memory requirements. There is no silent switch to a different enhancement model.
+If rendering fails, check the job log and ComfyUI's node requirements. For memory errors, stop other GPU work or select a compatible workflow with lower memory requirements. There is no silent switch to a different enhancement model.
 
 ## Run directly in ComfyUI
 
-1. Import `run.json` from the `upscale/seedvr2/` or `upscale/realesrgan/` folder into ComfyUI, with its required nodes and models installed. `meta.json` and `prepare.json` are Frok companions; import only the run graph.
+1. Import `run.json` from the `upscale/seedvr2/` or `upscale/realesrgan/` folder into ComfyUI, with its required nodes and models installed. `meta.json` registers the workflow with Frok; import only the run graph.
 2. Upload your source video or copy it into that ComfyUI installation's `input` folder, then select it in `LoadVideo`, replacing the `input.mp4` placeholder.
 3. For SeedVR2, select your GPU in both the DiT and VAE model loaders. The bundled file selects `mps` for Apple Silicon; CUDA users must choose their CUDA GPU in both loaders. Keep `offload_device` set to `none`; the bundled workflow has no CPU offloading.
 

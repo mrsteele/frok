@@ -31,6 +31,6 @@ export function currentPipelineSelections(value:PipelineSelections):PipelineSele
   const replacement=value.upscale==='local:seedvr2'?'comfyui:seedvr2':value.upscale==='local:realesrgan'?'comfyui:realesrgan':value.upscale;
   return {...value,upscale:replacement};
 }
-export type PipelineSnapshot={metadata:PipelineMetadata;kind:PipelineKind;graph:Record<string,unknown>;prepare?:Record<string,unknown>;revision:string};
-export type PipelineStatus={id:string;name:string;kind:PipelineKind;runner:PipelineMetadata['runner'];description:string;default:boolean;controls:PipelineMetadata['controls'];supportsSource:boolean;maxReferences:number;state:'ready'|'missing'|'attention';ready:boolean;detail:string;missing:string[];canPrepare:boolean;prepareLabel?:string;revision:string};
+export type PipelineSnapshot={metadata:PipelineMetadata;kind:PipelineKind;graph:Record<string,unknown>;revision:string};
+export type PipelineStatus={id:string;name:string;kind:PipelineKind;runner:PipelineMetadata['runner'];description:string;default:boolean;controls:PipelineMetadata['controls'];supportsSource:boolean;maxReferences:number;state:'ready'|'missing'|'attention';ready:boolean;detail:string;missing:string[];revision:string;preparation?:string};
 export function selectedPipeline(health:import('../types').Health|undefined,kind:PipelineKind,override?:string) {return health?.pipelines?.find(item=>item.kind===kind&&item.id===(override||health.pipelineSelections?.[kind]));}

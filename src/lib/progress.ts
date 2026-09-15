@@ -58,7 +58,7 @@ export function jobProgress(job: Job) {
     percent = 100;
     label = video ? 'Video saved' : job.message;
   } else if (job.status === 'queued') {
-    label = 'Waiting to render';
+    label = job.kind === 'setup' ? 'Waiting to prepare models' : 'Waiting to render';
   } else if (video) {
     // This also understands jobs reported by an older worker until it restarts.
     const progress = job.videoProgress ?? (/finishing|saving|video saved/i.test(job.message) ? finishingVideoProgress()

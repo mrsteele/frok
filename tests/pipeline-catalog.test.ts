@@ -19,7 +19,7 @@ fixture.test('health includes disconnected workflows without probing their servi
   const connections={vpipe:{enabled:false,available:true,detail:''},comfyui:{enabled:true,available:false,detail:''},ollama:{enabled:false,available:false,detail:''}};
   const state=await pipelineHealth({connections,capabilities:{},checks:[{id:'ffmpeg',ready:true}]} as import('../src/lib/types').Health);
   assert.deepEqual(state.pipelines!.map(p=>p.id).sort(),entries.map(p=>p.metadata.id).sort());
-  assert.ok(state.pipelines!.every(p=>!p.ready&&!p.canPrepare));
+  assert.ok(state.pipelines!.every(p=>!p.ready));
   assert.equal(state.capabilities!.image.connection,'vpipe');assert.equal(state.capabilities!.image.configured,true);assert.equal(state.capabilities!.image.ready,false);
   assert.match(state.capabilities!.upscale.detail,/Connect ComfyUI to use/);assert.equal(state.upscalerReady,false);
   assert.equal(fetch.mock.callCount(),0);
@@ -28,7 +28,7 @@ fixture.test('health includes disconnected workflows without probing their servi
 test('bundled native workflows register with colocated companions and no forward declarations',async()=>{
  const result=await diskCatalog();assert.deepEqual(result.errors,[]);assert.equal(result.entries.length,9);
  for(const pipeline of result.entries)validatePipeline(pipeline);
- const krea=result.entries.find(p=>p.metadata.id==='vpipe:krea-2-turbo')!;assert.ok(krea.prepare);assert.equal((krea.graph.stages as any[]).find(s=>s.type==='krea2-model-config').config.lora,undefined);
+ const krea=result.entries.find(p=>p.metadata.id==='vpipe:krea-2-turbo')!;assert.ok(!("prepare" in krea));assert.equal((krea.graph.stages as any[]).find(s=>s.type==='krea2-model-config').config.lora,undefined);
 });
 test('binding changes request inputs while preserving admin sampling, SOL and LoRA strengths',async()=>{
  const p=(await diskCatalog()).entries.find(p=>p.metadata.id==='vpipe:minimax-h3-turbo')!;const original=structuredClone(p);const graph=bindPipeline(p,input) as any;
@@ -55,13 +55,10 @@ fixture.test('already installed native MiniMax packs are reused without renamed 
  await fs.cp(reference,path.join(workspace,'models/local/MiniMax-H3-FL2VA-8bit'),{recursive:true});
  const tensor=await fs.readFile(path.join(reference,'vae/minimax_h3_video_vae_fp16.safetensors'));
  for(const relative of ['larryvrh/MiniMax-H3-Turbo-Lora/minimax_h3_turbo_v4_step600_ema.safetensors','lightx2v/Minimax-h3-Turbo/minimax_h3_ref2v_turbo_4step_v0.1_bf16.safetensors']){const file=path.join(workspace,'models',relative);await fs.mkdir(path.dirname(file),{recursive:true});await fs.writeFile(file,tensor);}
- const {preparePipeline}=await import('../src/lib/pipelines/prepare');
  for(const p of (await diskCatalog()).entries.filter(p=>p.metadata.runner==='vpipe'&&p.kind!=='image')){
    assert.match(p.metadata.dependencies[0].reference,/8bit$/);
    assert.equal((p.graph.stages as any[]).find(s=>s.type==='model-select').config.hf_dir,p.metadata.dependencies[0].reference);
    assert.equal((await pipelineStatus(p)).ready,true);
-   const logs:string[]=[];await preparePipeline(p,path.join(fixture.jobsDir,'must-not-be-used'),new AbortController().signal,line=>logs.push(line));
-   assert.match(logs.join(''),/already installed and verified/);
  }
 });
 fixture.test('an installed Krea base is ready without any fused model variant',async()=>{
@@ -77,14 +74,24 @@ fixture.test('resolving a pipeline copies its definition without changing admini
  const current=await resolvePipeline('video');(current.graph.stages as any[]).find(s=>s.type==='generate-video').config.steps=20;
  assert.equal(((await resolvePipeline('video')).graph.stages as any[]).find(s=>s.type==='generate-video').config.steps,6);
 });
-fixture.test('an old worker gets a restart notice before a setup job can be queued',async()=>{
- const {workerStatus,workerProtocolVersion}=await import('../src/lib/worker-health'),{queueSetup}=await import('../src/lib/connection-setup');
+fixture.test('an old worker gets a restart notice before generation',async()=>{
+ const {workerStatus,workerProtocolVersion}=await import('../src/lib/worker-health');
  const keys=['workerProtocol','workerPid','workerHeartbeat'],before=keys.map(key=>registry.serviceValue(key,null));
  try{
    registry.setServiceValue('workerPid',123);registry.setServiceValue('workerHeartbeat',Date.now());registry.setServiceValue('workerProtocol',null);
    assert.equal(workerStatus().ready,false);assert.equal(workerStatus().outdated,true);
-   const count=db.listJobs().length;assert.throws(()=>queueSetup({task:'pipeline',pipeline:undefined}),/Restart Frok/);assert.equal(db.listJobs().length,count);
    registry.setServiceValue('workerProtocol',{pid:122,version:workerProtocolVersion});assert.equal(workerStatus().outdated,true);
    registry.setServiceValue('workerProtocol',{pid:123,version:workerProtocolVersion});assert.equal(workerStatus().ready,true);
  }finally{keys.forEach((key,i)=>registry.setServiceValue(key,before[i]));}
+});
+
+fixture.test('preparation companions never enter the catalog or affect generation revisions',async()=>{
+ const base=path.join(directory,'manual-companions'),folder=path.join(base,'image','custom');
+ await fs.mkdir(folder,{recursive:true});
+ await fs.cp('resources/pipelines/image/krea-2-turbo',folder,{recursive:true});
+ const first=await diskCatalog(base);assert.deepEqual(first.errors,[]);
+ await fs.writeFile(path.join(folder,'prepare.vpipeline'),'not even JSON');
+ const second=await diskCatalog(base);assert.deepEqual(second.errors,[]);
+ assert.deepEqual(second.entries,first.entries);
+ assert.ok(!('prepare' in second.entries[0]));
 });

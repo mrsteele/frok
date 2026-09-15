@@ -15,10 +15,10 @@ export function capabilityStatus(selections:ModelSelections,connections:Record<C
     else if(['video','reference','upscale'].includes(capability)&&!videoTools)detail='Video tools need setup in Settings → Services.';
     else {
       ready=capability==='image'?!!image?.ready:capability==='prompt'?promptReady:capability==='upscale'?upscaleReady:!!models[task];
-      if(!ready)detail=capability==='image'?image?.detail||`Download and prepare ${imageModels[selections.image!].name}.`
+      if(!ready)detail=capability==='image'?image?.detail||`Install ${imageModels[selections.image!].name} in its runner, then refresh workflows.`
         :capability==='prompt'?'Choose an installed text-generation model for prompt enhancement.'
-        :`Download and prepare the selected ${capabilityNames[capability].toLowerCase()} model.`;
+        :`Install the selected ${capabilityNames[capability].toLowerCase()} model in its runner, then refresh workflows.`;
     }
-    return [capability,{configured:!!selected,ready,detail,task: selected?task:undefined,connection} satisfies CapabilityStatus];
+    return [capability,{configured:!!selected,ready,detail,connection} satisfies CapabilityStatus];
   })) as Record<Capability,CapabilityStatus>;
 }

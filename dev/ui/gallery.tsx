@@ -1,8 +1,9 @@
+import { jobs } from './fixtures';
 import './fixtures';
 import { useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Check, Plus, Trash2 } from 'lucide-react';
-import { health, jobs, scenario } from './fixtures';
+import { health, scenario } from './fixtures';
 import { Button } from '../../src/components/ui/primitives/button';
 import { IconButton } from '../../src/components/ui/primitives/icon-button';
 import { Input } from '../../src/components/ui/primitives/input';
@@ -18,7 +19,6 @@ import { InlineMessage } from '../../src/components/ui/patterns/inline-message';
 import { ConfirmationDialog } from '../../src/components/ui/patterns/confirmation-dialog';
 import { SettingsDialog } from '../../src/components/ui/patterns/settings-dialog';
 import { Setup } from '../../src/components/settings/setup';
-import { SetupWizard } from '../../src/components/onboarding/setup-wizard';
 import { InterfacePreferences } from '../../src/components/shell/interface-preferences';
 import '../../src/app/globals.css';
 import '../../src/components/ui/tokens.css';
@@ -56,7 +56,8 @@ function Gallery() {
   return (
     <main
       className="ui-gallery"
-      onClickCapture={(event) => {
+      onClick={(event) => {
+        if (event.defaultPrevented) return;
         const anchor = (event.target as Element).closest('a');
         if (!anchor) return;
         event.preventDefault();
@@ -76,7 +77,7 @@ function Gallery() {
           value={scenario}
           onChange={(event) => location.assign(`?view=${view}&state=${event.target.value}`)}
         >
-          {['connected', 'disconnected', 'offline', 'busy', 'queued', 'error'].map((state) => (
+          {['connected', 'disconnected', 'offline', 'busy', 'missing', 'error'].map((state) => (
             <option key={state}>{state}</option>
           ))}
         </Select>
@@ -211,11 +212,11 @@ function Gallery() {
       ) : view === 'onboarding' ? (
         <>
           <Button onClick={() => refresh((n) => n + 1)}>Reopen quick setup</Button>
-          <SetupWizard
+          <Setup wizard jobs={jobs}
             key={view}
             health={health}
-            jobs={jobs}
-            checking={scenario === 'busy'}
+
+            checkingHealth={scenario === 'busy'}
             onRefresh={() => refresh((n) => n + 1)}
             enhance={enhance}
             onEnhancementChange={setEnhance}
@@ -224,9 +225,9 @@ function Gallery() {
         </>
       ) : (
         <InterfacePreferences>
-          <Setup
+          <Setup jobs={jobs}
             health={health}
-            jobs={jobs}
+
             section={view}
             checkingHealth={scenario === 'busy'}
             onRefresh={() => refresh((n) => n + 1)}

@@ -1,7 +1,5 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
-import { createReadStream } from 'node:fs';
 import { dependencySchema, type Dependency, type PipelineSnapshot } from './schema';
 import { resolveModelAdapter, resolveVpipeModel } from '../model-access';
 import { tensorFile, modelTensors } from '../model-tensors';
@@ -20,7 +18,6 @@ export function comfyModelReference(node:Graph[string],field:string):string|unde
 }
 export function dependencies(snapshot:PipelineSnapshot):Dependency[] {
   const result=[...snapshot.metadata.dependencies];
-  if(snapshot.metadata.runner==='comfyui'&&snapshot.prepare){for(const value of Array.isArray(snapshot.prepare.dependencies)?snapshot.prepare.dependencies:[]){const d=dependencySchema.parse(value),index=result.findIndex(item=>item.reference===d.reference);if(index===-1)result.push(d);else result[index]={...result[index],...d};}}
   function add(kind:Dependency['kind'],reference:unknown){if(snapshot.metadata.runner==='vpipe'&&typeof reference==='string')reference=reference.replace(/^models\//,'');if(typeof reference==='string'&&reference&&!result.some(d=>d.reference===reference))result.push(dependencySchema.parse({kind,reference}));}
   if(snapshot.metadata.runner==='vpipe')for(const s of (snapshot.graph as unknown as Pipeline).stages){
     for(const key of ['hf_dir','dit_dir'])add('model',s.config[key]);
@@ -31,21 +28,19 @@ export function dependencies(snapshot:PipelineSnapshot):Dependency[] {
   }
   return result;
 }
-export async function comfyFile(reference:string,create=false) {
+export async function comfyFile(reference:string) {
   dependencySchema.parse({kind:'file',reference});
   if(!settings().comfyDir)throw Error('Choose your ComfyUI folder in Settings → Services to verify model files.');
   const base=path.join(expandPath(settings().comfyDir),'models');
   const root=await fs.realpath(base),file=path.join(root,reference);
-  // Validate each ancestor before creating a directory or opening a partial file.
+  // Only inspect model files; Frok never creates or replaces runner dependencies.
   let dir=root;
-  for(const part of reference.split('/')){dir=path.join(dir,part);const stat=await fs.lstat(dir).catch(e=>{if(e.code!=='ENOENT')throw e;return undefined;});if(stat?.isSymbolicLink())throw Error('Pipeline download paths cannot contain symlinks.');}
-  if(create)await fs.mkdir(path.dirname(file),{recursive:true});
+  for(const part of reference.split('/')){dir=path.join(dir,part);const stat=await fs.lstat(dir).catch(e=>{if(e.code!=='ENOENT')throw e;return undefined;});if(stat?.isSymbolicLink())throw Error('Model paths cannot contain symlinks.');}
   return file;
 }
-export async function verifyFile(file:string,d:Dependency,hash=false) {
+export async function verifyFile(file:string,d:Dependency) {
   const stat=await fs.stat(file);if(!stat.isFile()||!stat.size||d.size&&stat.size!==d.size)throw Error('Missing or incomplete file.');
   if(file.endsWith('.safetensors'))await tensorFile(file);
-  if(hash&&d.sha256){const sum=createHash('sha256');for await(const chunk of createReadStream(file))sum.update(chunk);if(sum.digest('hex')!==d.sha256)throw Error('Checksum mismatch.');}
 }
 async function completeModel(directory:string) {
   const tensors=await modelTensors(directory);
@@ -64,17 +59,16 @@ async function completeModel(directory:string) {
     for(const [tensor,shard]of Object.entries(index.weight_map))if(typeof shard!=='string'||!tensors.some(file=>path.basename(file.filename)===shard&&file.tensors[tensor]))throw Error('Model index references missing weights.');
   }
 }
-export async function dependencyReady(snapshot:PipelineSnapshot,d:Dependency,hash=false):Promise<boolean> {
+export async function dependencyReady(snapshot:PipelineSnapshot,d:Dependency):Promise<boolean> {
   try {
-    if(snapshot.metadata.runner==='comfyui'){await verifyFile(await comfyFile(d.reference),d,hash);return true;}
-    if(d.kind==='lora'){await verifyFile(await resolveModelAdapter(d.reference),d,hash);return true;}
+    if(snapshot.metadata.runner==='comfyui'){await verifyFile(await comfyFile(d.reference),d);return true;}
+    if(d.kind==='lora'){await verifyFile(await resolveModelAdapter(d.reference),d);return true;}
     const dir=await resolveVpipeModel(d.reference);
     if(d.layout==='minimax')return (await referenceModelStatus(d.reference)).ready;
     if(d.layout==='krea'){for(const component of ['transformer','text_encoder','vae'])await completeModel(path.join(/* turbopackIgnore: true */ dir,component));for(const component of ['tokenizer/tokenizer.json','model_index.json'])await verifyFile(path.join(/* turbopackIgnore: true */ dir,component),{...d,size:undefined,sha256:undefined});}
     else if(d.layout==='transformer'){await completeModel(dir);await verifyFile(path.join(dir,'config.json'),{...d,size:undefined,sha256:undefined});}
     else if(!d.files.length)throw Error('Declare the required files or model layout in pipeline metadata.');
-    for(const name of d.files)await verifyFile(path.join(dir,name),{...d,size:undefined,sha256:undefined},hash);
-    if(d.generated&&d.layout==='transformer')await verifyFile(path.join(dir,'frok-prepared.json'),{...d,size:undefined,sha256:undefined});
+    for(const name of d.files)await verifyFile(path.join(dir,name),{...d,size:undefined,sha256:undefined});
     return true;
   }catch{return false;}
 }

@@ -48,27 +48,24 @@ test('optional Ollama does not prevent complete setup, while missing essentials 
   assert.deepEqual(missingSetup(state).map(item => item.target), ['worker']);
 });
 
-test('each unavailable mode points to its own download card and setup task', () => {
+test('each unavailable mode points to its own model setup guidance', () => {
   const state = health({ models: {} });
   const image = generationIssue(state, 'image')!;
   assert.match(image.message, /cannot generate images until Krea 2 Turbo/);
-  assert.equal(image.action, 'Download Krea');
+  assert.equal(image.action, 'Review model setup');
   for (const mode of ['image', 'video', 'reference'] as const) {
     assert.equal(generationIssue(state, mode)?.target, mode);
-    assert.equal(generationIssue(state, mode)?.task, mode);
   }
   assert.equal(generationIssue(state, 'upscale')?.action, 'Choose a workflow');
 });
 
-test('ComfyUI readiness uses its own prepared packs and download actions', () => {
+test('ComfyUI readiness uses its own installed packs and setup guidance', () => {
   const state = health({ runner: 'comfyui' });
   assert.deepEqual(missingSetup(state).map(item => item.target), ['image', 'video', 'reference']);
   const image = generationIssue(state, 'image')!;
-  assert.equal(image.task, 'comfy-image');
   assert.equal(image.target, 'image');
-  assert.equal(image.action, 'Download SDXL Turbo');
+  assert.equal(image.action, 'Review model setup');
   for (const mode of ['image', 'video', 'reference'] as const) {
-    assert.equal(generationIssue(state, mode)?.task, `comfy-${mode}`);
     state.models[`comfy-${mode}`] = true;
     assert.equal(generationIssue(state, mode), undefined);
   }

@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Start with the warning beside the action you want to use, then open its setup or queue link. Frok checks each capability independently: images can be ready while video preparation is still incomplete.
+Start with the warning beside the action you want to use, then open its setup or queue link. Frok checks each capability independently: images can be ready while video models are missing.
 
 ## I cannot generate anything
 
@@ -14,7 +14,7 @@ Check the **model workspace**, not just the pipeline folder. Vpipe's workspace m
 
 A model with a similar name or different quantization may not satisfy the workflow's exact file requirements. Compare the reported missing path with `run` and `meta.json`. Preparation can require an encoder, VAE or LoRA in addition to a transformer. Old setup receipts alone do not make a pipeline Ready.
 
-If a custom graph has no known source for a missing file, add the correct dependency/preparation instructions. Do not substitute an arbitrary same-named file. [Pipeline preparation →](../pipelines.md#preparation-and-verification)
+If a custom graph has no known source for a missing file, add the correct dependency declarations and follow the author’s installation instructions. Do not substitute an arbitrary same-named file. [Manual model setup →](./model-setup.md)
 
 ## Ollama connects, but enhancement is unavailable
 
@@ -28,7 +28,7 @@ Use an API-format export, with node IDs and `class_type`/`inputs`. A visual edit
 
 ## Video generation works, but upscaling needs attention
 
-Check **Settings → Generation → Video upscaling**. Disabled workflows name the service they require. Connect it in **Services**, select the workflow, then follow its readiness action for missing nodes or models. Preparation logs are available in Queue. See [upscaling setup](../tutorials/upscaling.md) for the bundled workflows' requirements.
+Check **Settings → Generation → Video upscaling**. Disabled workflows name the service they require. Connect it in **Services**, select the workflow, then follow its readiness action for missing nodes or models. Model installation is handled outside Frok. See [upscaling setup](../tutorials/upscaling.md) for the bundled workflows' requirements.
 
 ## Vpipe says a stage is unknown or forward-declared
 

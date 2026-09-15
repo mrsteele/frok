@@ -34,9 +34,8 @@
 @media(max-width:600px){.media-viewer{max-width:calc(100vw - 12px);border-radius:15px;padding:0}.viewer-content{padding:14px 16px 20px}.viewer-stage>img,.viewer-stage>video{max-height:54dvh}.viewer-composer textarea{font-size:14px;padding:14px 15px 4px}.viewer-render{font-size:11px;padding:9px 12px}.viewer-mode-options{max-width:72vw}.slide-arrow{width:32px;height:34px;top:calc(50% - 17px)}.slide-arrow.previous{left:8px}.slide-arrow.next{right:8px}.viewer-actions>button,.viewer-actions>a,.viewer-download>summary{padding:9px 13px;font-size:11px}.viewer-slides{gap:9px}.viewer-details dl{grid-template-columns:75px 1fr}}
 
 /* Settings: compact rows, progressive disclosure, and one clear status. */
-.settings-ready, .settings-working, .settings-pending { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; white-space: nowrap; }
+.settings-ready, .settings-pending { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; white-space: nowrap; }
 .settings-ready { color: var(--ready); }
-.settings-working { color: #b5b5b5; }
 .settings-pending { color: var(--warning); }
 .settings-text-button { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; padding: 0; color: #bbb; margin-top: 0; text-decoration: underline; text-underline-offset: 3px; }
 .settings-text-button.connection-defaults { margin-top: 12px; }

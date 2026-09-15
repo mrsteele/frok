@@ -11,12 +11,11 @@ For an image workflow, the archive looks like this:
 ```text
 image/my-workflow-<id>.local/
   run.vpipeline
-  prepare.vpipeline
   meta.json
   REVIEW.txt
 ```
 
-ComfyUI companions use `.json`. The utility does not execute the workflow, install it or download models. It identifies supported bindings and drafts known preparation instructions.
+ComfyUI companions use `.json`. The utility does not execute the workflow, install it or download models. It identifies supported bindings and lists required dependencies in the review file.
 
 ## 2. Review the folder
 
@@ -26,15 +25,15 @@ Check the following together:
 
 - `run`: correct model paths, adapters, strengths and sampling; no private hard-coded input or output paths.
 - `meta.json`: a unique stable `id`, accurate runner and bindings for prompt, seed, dimensions and outputs.
-- `prepare`: downloads or processing needed to create the exact files used by the run graph.
+- Runner installation: the exact model files and custom nodes must already be installed.
 
 Metadata does not replace the native graph. It tells Frok how to pass user controls into it and how to check its requirements. [Full metadata reference →](../pipelines.md#metadata-example)
 
 ## 3. Install and scan
 
-Extract the archive into the pipeline location shown in **Settings → Generation**, normally `~/frok/pipelines`. Keep the `image`, `video` or `reference` parent directory. Choose **Refresh pipelines** and resolve any catalog warnings.
+Extract the archive into the pipeline location shown in **Settings → Advanced → Workflow files**, normally `~/frok/pipelines`. Keep the `image`, `video` or `reference` parent directory. Choose **Refresh workflows** and resolve any catalog warnings.
 
-Select the new workflow for its capability, or use it as a generation-settings override. Prepare missing dependencies through the queue. Your old default can remain available while you compare the new workflow.
+Select the new workflow for its capability, or use it as a generation-settings override. Install missing dependencies in your runner, then refresh workflows in Frok. Your old default can remain available while you compare the new workflow.
 
 ## 4. Keep changes reproducible
 

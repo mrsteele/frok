@@ -94,7 +94,7 @@ export function PipelineUtils() {
           <div>
             <h3 id="pipeline-builder-title">Create a pipeline folder</h3>
             <p>
-              Turn a workflow into a Frok pipeline. Download its run file, preparation companion and
+              Turn a workflow into a Frok pipeline. Download its run file and
               metadata together in one ZIP.
             </p>
           </div>

@@ -1,14 +1,17 @@
+import { queuePreparation } from '@/lib/pipelines/prepare';
+import { builtinPreparation } from '@/lib/pipelines/builtins';
+import { isPreparationJob } from '@/lib/preparation-job';
 import { normalizeInterfacePreferences } from '@/lib/interface-preferences';
 import type { ExportPreferences } from '@/lib/export-preferences';
 import { deleteJobs } from '@/lib/job-deletion';
 import { buildPipelineBundle, zipFiles } from '@/lib/pipelines/utils';
 import { runtimeOptions, runtimeStatus } from '@/lib/preferences';
 import { pipelineLibraryAudit, savePipelineDirectory, resetDefaultPipelines } from '@/lib/pipelines/location';
-import { catalog, resolvePipeline, pipelineStatus } from '@/lib/pipelines/catalog';
+import { catalog } from '@/lib/pipelines/catalog';
 import { workerStatus } from '@/lib/worker-health';
 import { queueBusy } from '@/lib/worker-queue';
 import { snapshotRequest, checkPipelineRequest, validatePipelineSelections } from '@/lib/pipelines/selection';
-import { pipelineId, pipelineSelectionsSchema } from '@/lib/pipelines/schema';
+import { pipelineSelectionsSchema } from '@/lib/pipelines/schema';
 import fs from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { Readable } from "node:stream";
@@ -20,21 +23,20 @@ import { mediaDir, jobsDir } from "@/lib/config";
 import { listAssets, listSessionMedia, getMedia, getValue, listJobs, getJob, moveQueuedJob, createJob, updateJob, settings, setValue, mediaRoot, mediaFamily, favoriteRender } from "@/lib/db";
 import { publishMedia } from '@/lib/media-publication';
 import { generationSchema, hdDimensions } from "@/lib/validation";
-import { health, setupTasks } from "@/lib/setup";
+import { health } from "@/lib/setup";
 import type { Generation, Health, SetupRequest } from "@/lib/types";
 import { deletionPlan, deleteMedia } from '@/lib/media-delete';
 import { readImagePreview, liveImagePreviewsEnabled } from '@/lib/image-preview';
 import { telemetry } from '@/lib/telemetry';
 import { ollamaConfig } from '@/lib/ollama-config';
-import { prepareConnection, queueSetup } from '@/lib/connection-setup';
-import { validateServiceSettings, checkSetupConnection } from '@/lib/service-settings';
-import { connectionIds, connectionsSchema, modelSelectionsSchema, ollamaAddressSettingSchema, promptModelSchema } from '@/lib/service-config';
+import { validateServiceSettings } from '@/lib/service-settings';
+import { connectionsSchema, modelSelectionsSchema, ollamaAddressSettingSchema, promptModelSchema } from '@/lib/service-config';
 import { handleLibraryReset, withAppRequest, privateResponse, HttpError } from '@/lib/app-request';
 import { handleLibraryExport } from '@/lib/library-export';
 import { listPromptLibrary } from '@/lib/prompt-library';
 import { libraryStore } from '@/lib/library';
 import { readJson } from '@/lib/request-body';
-import { assertComfyPrivateBackend, checkComfyFolders } from '@/lib/comfyui';
+import { checkComfyFolders } from '@/lib/comfyui';
 import { withRunnerLocations, type RunnerLocations } from '@/lib/runner-locations';
 import { normalizeRunnerLocations, assertRunnerLocationsIdle, checkVpipeWorkspace, runnerLocationFields } from '@/lib/runner-settings';
 import { imageModels } from '@/lib/image-models';
@@ -57,6 +59,10 @@ async function route(request:Request,{params}:Context) {
   if(resource==='pipelines'&&id==='library'){
     if(method==='GET')return json(await pipelineLibraryAudit());
     if(method==='PATCH'){const input=z.object({path:z.string().max(2048)}).strict().parse(await body(request));const result=await savePipelineDirectory(input.path,request.signal);healthCaches.clear();return json(result);}
+  }
+  if(resource==='pipelines'&&id==='prepare'&&!action&&method==='POST'){
+    const input=z.object({id:z.string().min(1).max(160)}).strict().parse(await body(request));
+    return json({job:await queuePreparation(input.id,request.signal)},201);
   }
   if(resource==='pipelines'&&id==='reset'&&method==='POST'){
     z.object({confirm:z.literal('RESET DEFAULT PIPELINES')}).strict().parse(await body(request));
@@ -182,6 +188,8 @@ async function route(request:Request,{params}:Context) {
   }
   if(resource==="jobs"&&id&&method==="POST") {
     const job=getJob(id);if(!job)return json({error:"Job not found"},404);
+    if(job.kind==='setup'&&!isPreparationJob(job)&&['move','next','start','retry'].includes(action))throw new HttpError(410,'This older installation job cannot be run. Queue a built-in starter from Generation settings.');
+    if(action==='start'&&(isPreparationJob(job)||listJobs().some(item=>item.kind==='setup'&&item.status==='running')))throw new HttpError(409,'Preparation runs in queue order. Wait for it to finish or cancel it before starting another job immediately.');
     if(action==='move'||action==='next'||action==='start') {
       const worker=workerStatus();if(worker.outdated)throw new HttpError(409,worker.detail);
       const input=z.object({beforeId:z.string().min(1).nullable().optional()}).strict().parse(await readJson(request,4096));
@@ -193,21 +201,19 @@ async function route(request:Request,{params}:Context) {
       await catalog();
       const before=settings(),runtime=runtimeOptions();
       if(!["failed","cancelled"].includes(job.status))throw new Error("Only stopped or failed jobs can be retried.");
+      if(isPreparationJob(job)){const starter=await builtinPreparation((job.request as SetupRequest).preparation!);return json({job:await queuePreparation(starter.snapshot.metadata.id,request.signal)},201);}
       const r=structuredClone(job.request);
-      if(job.kind==="setup"&&(r as SetupRequest).task.startsWith("comfy-"))assertComfyPrivateBackend();
       if(job.kind==='generate'){
         const input=r as Generation;
         if(!input.pipeline)throw new HttpError(409,'This job predates pipeline selection. Choose a pipeline and start a new generation.');
+        // Older records may include a preparation companion. Keep the original
+        // generation definition and revision, without copying installation code.
+        const {metadata,kind,graph,revision}=input.pipeline;
+        input.pipeline={metadata,kind,graph,revision};
         const selections={...settings().modelSelections,...(input.ollama?{prompt:input.ollama.model}:{})};
         const state=await health(input.ollama,selections);
         if((r as Generation).enhance&&!state.ollama)return json({error:state.capabilities?.prompt.detail||'Set up the original prompt model before retrying.',setupRequired:true},409);
         if((r as Generation).pipeline){try{await checkPipelineRequest((r as Generation).pipeline!,r as Generation,state);}catch(error){throw new HttpError(409,(error as Error).message);}}
-      }
-      if(job.kind==="setup"){
-        const {pipeline,task}=r as SetupRequest;
-        if(pipeline&&!settings().connections[pipeline.metadata.runner])throw new HttpError(409,'Enable this pipeline’s connection before retrying.');
-        if(!pipeline&&!(setupTasks as readonly string[]).includes(task))throw new HttpError(400,'This setup task is no longer supported.');
-        if(task==='ollama'&&!settings().connections.ollama)throw new HttpError(409,'Enable this job’s connection before retrying.');
       }
       if(job.kind==="generate") {const input=r as Generation;if(input.mode==="image"){input.count=Math.max(1,input.count-job.completed);if(input.seed!==undefined)input.seed=(input.seed+job.completed)%2147483648;}}
       request.signal.throwIfAborted();
@@ -263,30 +269,7 @@ async function route(request:Request,{params}:Context) {
     setValue('connections',services.connections);setValue('modelSelections',services.modelSelections);
     healthCaches.clear();return json({settings:settings()});
   }
-  if(resource==='setup'&&id==='connection'&&method==='POST') {
-    const {connection,promptModel}=z.object({connection:z.enum(connectionIds),promptModel:promptModelSchema.optional()}).strict().parse(await body(request));
-    const result=await prepareConnection(connection,request.signal,promptModel);
-    healthCaches.clear();return json(result,201);
-  }
-  if(resource==="setup"&&method==="POST") {
-    const setupInput=z.object({task:z.enum(setupTasks).optional(),pipelineId:pipelineId.optional()}).strict().parse(await body(request));
-    if(setupInput.pipelineId){
-      const list=await catalog(),before=settings();
-      const found=list.entries.find(p=>p.metadata.id===setupInput.pipelineId);
-      if(!found)throw Error('Pipeline not found.');
-      const pipeline=await resolvePipeline(found.kind,setupInput.pipelineId),status=await pipelineStatus(pipeline);
-      if(!status.ready&&!status.canPrepare)throw Error(status.detail);
-      request.signal.throwIfAborted();
-      if(JSON.stringify(settings())!==JSON.stringify(before))throw new HttpError(409,'Settings changed while checking the pipeline. Please try again.');
-      return json({job:queueSetup({task:'pipeline',pipeline})},201);
-    }
-    const task=setupInput.task;if(!task)throw Error('Choose a setup task.');
-    if(task.startsWith("comfy-"))assertComfyPrivateBackend();
-    await checkSetupConnection(task);
-    const config=task==='ollama'?ollamaConfig():undefined;
-    healthCaches.clear();
-    return json({job:queueSetup({task,...(config?{ollama:config}:{})})},201);
-  }
+  if(resource==='setup'&&method==='POST')throw new HttpError(410,'Use Generation settings to queue a built-in Vpipe starter. Other model and service installation is handled outside Frok.');
   return json({error:"Not found"},404);
 }
 async function handle(request:Request,context:Context){

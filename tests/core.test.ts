@@ -149,9 +149,18 @@ before(async()=>{
   store.setValue('pipelineSelections',Object.fromEntries(['image','video','reference','upscale'].map(kind=>[kind,factoryPipeline(kind as import('../src/lib/pipelines/schema').PipelineKind,kind==='upscale'?'comfyui':'vpipe').metadata.id])));
   await writeReferenceTurbo(process.env.VPIPE_WORKDIR!);
   await writeLora(path.join(process.env.VPIPE_WORKDIR!,'models/larryvrh/MiniMax-H3-Turbo-Lora/minimax_h3_turbo_v4_step600_ema.safetensors'));
+  const retired = ['queued', 'running', 'completed'].map(status => {
+    const job=store.createJob({kind:'setup',runner:'vpipe',total:1,request:{task:'ollama'}});
+    store.updateJob(job.id,{status:status as Job['status']});
+    return job.id;
+  });
   worker=spawn(process.execPath,['--import','tsx','src/worker/index.ts'],{cwd:process.cwd(),env:process.env,stdio:['ignore','pipe','pipe']});
   worker.stdout?.on('data',b=>workerLog+=b);worker.stderr?.on('data',b=>workerLog+=b);
   await waitFor(()=>serviceValue('workerHeartbeat',0)>0);
+  assert.deepEqual(retired.map(id=>store.getJob(id)!.status),['cancelled','cancelled','completed']);
+  assert.match(store.getJob(retired[0])!.error!,/older installation job was retired/);
+  for(const id of retired)await assert.rejects(fs.stat(path.join(fixture.jobsDir,id,'runner.log')));
+
 });
 after(async()=>{
   worker?.kill('SIGTERM');if(worker?.exitCode===null)await once(worker,'exit');
@@ -341,7 +350,7 @@ test('a second worker cannot claim the same GPU queue',async()=>{
 test('blocks unprepared modes at the API, including retries, without blocking prepared modes',async()=>{
   const file=path.join(process.env.VPIPE_WORKDIR!,'models/krea/Krea-2-Turbo/tokenizer/tokenizer.json');await fs.rename(file,file+'.held');
   try {
-    const response=await call('POST','jobs',base);assert.equal(response.status,409);assert.match((await response.json()).error,/needs preparation/);
+    const response=await call('POST','jobs',base);assert.equal(response.status,409);assert.match((await response.json()).error,/Install the missing dependencies/);
     const h=await readHealth();assert.match(generationBlocker(h,'image')!,/Krea 2 Turbo/);assert.equal(generationBlocker(h,'video'),undefined);assert.equal(generationBlocker(h,'upscale'),undefined);
     const failed=store.createJob({kind:'generate',request:base,runner:'vpipe',total:2});store.updateJob(failed.id,{status:'failed'});
     assert.equal((await call('POST',`jobs/${failed.id}/retry`,{})).status,409);

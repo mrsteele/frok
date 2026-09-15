@@ -41,7 +41,8 @@ export type VideoProgressState = {
   percent: number; stagePercent?: number;
 };
 export type OllamaConfig = { url: string; model: string };
-export type SetupRequest = { pipeline?: PipelineSnapshot; task: string; ollama?: OllamaConfig; imageModel?: ImageModelId };
+// Legacy fields keep older job history readable; new jobs reference only a bundled starter.
+export type SetupRequest = { preparation?:string; name?:string; pipeline?: PipelineSnapshot; task: string; ollama?: OllamaConfig; imageModel?: ImageModelId };
 export type Job = {
   id: string; kind: "generate" | "setup"; status: "queued" | "running" | "completed" | "failed" | "cancelled";
   queuePosition?: number; pauseRequested?: boolean; accumulatedSeconds?: number;

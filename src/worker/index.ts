@@ -1,7 +1,8 @@
+import { runPreparation } from '../lib/pipelines/prepare';
+import { isPreparationJob } from '../lib/preparation-job';
 import { mediaToolsStatus } from '../lib/media-tool-status';
 import { recoverInterruptedLibraryReset } from '../lib/library-reset';
 import { cleanupExpiredJobs } from '../lib/job-deletion';
-import { preparePipeline } from '../lib/pipelines/prepare';
 import { WorkerControl } from '../../desktop/worker-control.mjs';
 import { workerProtocolVersion } from '../lib/worker-health';
 import { pipelineStatus } from '../lib/pipelines/catalog';
@@ -26,7 +27,6 @@ import { finishUpscale } from "../lib/upscale-workflow";
 import { renderVpipe } from "../lib/vpipe";
 import { renderComfy } from "../lib/comfyui";
 import { runProcess } from "../lib/process";
-import { runSetup } from "../lib/setup";
 import { sampleGpu } from '../lib/telemetry';
 import { tracksVideoStages, parseProgressLog, preparingVideoProgress, finishingVideoProgress, completedVideoProgress, videoPhaseLabel } from '../lib/progress';
 import type { Job, Generation, Media, SetupRequest } from "../lib/types";
@@ -48,11 +48,14 @@ if(isAlive(prior)||(getValue('maintenance',false)&&!getValue('libraryResetPendin
 setValue("workerPid",process.pid);setValue("workerHeartbeat",Date.now());setValue('workerProtocol',{pid:process.pid,version:workerProtocolVersion});registry.exec("COMMIT");
 await recoverInterruptedLibraryReset();
 libraryDatabase();
+for(const job of listJobs().filter(j=>j.kind==='setup'&&!isPreparationJob(j)&&['queued','running'].includes(j.status))) {
+  updateJob(job.id,{status:'cancelled',pauseRequested:false,message:'Installation jobs retired',error:'This older installation job was retired. Queue a built-in starter from Generation settings, or use manual setup.'});
+}
 for(const job of listJobs().filter(j=>j.status==="running")) {
   // The last heartbeat bounds an interrupted run; time with the app stopped is not processing time.
   const lastSeen=Math.min(Date.now(),Math.max(lastWorkerHeartbeat,Date.parse(job.updatedAt)));
   if(job.pauseRequested){resumeInterruptedJob(job.id,(job.accumulatedSeconds||0)+Math.max(0,(lastSeen-Date.parse(job.startedAt||job.updatedAt))/1000));continue;}
-  updateJob(job.id,{status:"failed",finishedAt:new Date(lastSeen).toISOString(),error:"Generation was interrupted by an app restart. Completed images were kept; retry to continue.",message:"Interrupted by restart"});
+  updateJob(job.id,{status:"failed",finishedAt:new Date(lastSeen).toISOString(),error:"Job was interrupted by an app restart. Completed outputs were kept; retry to continue.",message:"Interrupted by restart"});
 }
 let activeJobId: string|undefined;
 let stopping=false;let active:AbortController|undefined;
@@ -160,25 +163,26 @@ try {
     if(videoProgress)updateJob(job.id,{videoProgress});
     const cancel=setInterval(()=>{if((getJob(job.id)?.status==="cancelled"||getJob(job.id)?.pauseRequested)||getValue('maintenance',false))active?.abort();},500);
     const dir=path.join(jobsDir(),job.id);await fs.mkdir(dir,{recursive:true});
-    const stream=createWriteStream(path.join(dir,"runner.log"),{flags:"a"});let last=0;let pendingLog="";
+    const stream=createWriteStream(path.join(dir,"runner.log"),{flags:"a"});let pendingLog="";
     const log=(text:string)=>{
       const clean=text.replace(/hf_[A-Za-z0-9]+/g,"[redacted]");stream.write(clean);
       pendingLog=(pendingLog+clean).slice(-8000);
       const lines=pendingLog.split(/[\r\n]/);pendingLog=lines.pop()||'';
+      if(job.kind!=='generate')return;
       const parsed=parseProgressLog(lines.join('\n'),videoProgress);
       const step=job.kind==='generate'&&(job.request as Generation).mode==='upscale'?undefined:parsed.step;videoProgress=parsed.videoProgress;
-      if(step)updateJob(job.id,{step,...(videoProgress?{videoProgress,...(videoProgress.phase!=='preparing'?{message:videoPhaseLabel(videoProgress)}:{})}:{}),...(job.kind==='setup'&&step.label?{message:`${step.label} · ${step.current}%`}:{})});
-      else if(job.kind==='setup'&&Date.now()-last>800){
-        updateJob(job.id,{message:lines.filter(Boolean).at(-1)?.slice(-250)||"Preparing models…"});last=Date.now();
-      }
+      if(step)updateJob(job.id,{step,...(videoProgress?{videoProgress,...(videoProgress.phase!=='preparing'?{message:videoPhaseLabel(videoProgress)}:{})}:{})});
     };
     try {
-      if(job.kind==="setup"){const request=job.request as SetupRequest;if(request.pipeline)await preparePipeline(request.pipeline,dir,signal,log);else await runSetup(request.task,signal,log,request.ollama);}else await generate(job,signal,log,()=>{
+      if(job.kind==="setup"){
+        updateJob(job.id,{step:null,message:"Running built-in preparation…"});
+        await runPreparation(job.request as SetupRequest,dir,signal,log);
+      }else await generate(job,signal,log,()=>{
         videoProgress=finishingVideoProgress();
         updateJob(job.id,{step:null,videoProgress,message:"Finishing video and saving audio…"});
       });
       signal.throwIfAborted();
-      updateJob(job.id,{status:"completed",elapsedSeconds:(job.accumulatedSeconds||0)+(performance.now()-jobStarted)/1000,completed:job.total,...(tracksVideoStages(job)?{videoProgress:completedVideoProgress()}:{}),message:job.kind==="setup"?"Setup step complete":"All done"});
+      updateJob(job.id,{status:"completed",elapsedSeconds:(job.accumulatedSeconds||0)+(performance.now()-jobStarted)/1000,completed:job.total,...(tracksVideoStages(job)?{videoProgress:completedVideoProgress()}:{}),message:job.kind==="setup"?"Workflow ready":"All done"});
     }catch(e){
       const current=getJob(job.id),cancelled=signal.aborted||current?.status==="cancelled";
       if(current?.pauseRequested&&current.status==='running'){log('Paused; remaining outputs will resume after the selected job.\n');resumeInterruptedJob(job.id,(job.accumulatedSeconds||0)+(performance.now()-jobStarted)/1000);}

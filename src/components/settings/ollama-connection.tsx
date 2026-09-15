@@ -9,23 +9,19 @@ import { useEffect, useRef, useState } from 'react';
 import { Plug } from 'lucide-react';
 import { PromptModelSettings } from './prompt-model-settings';
 import { api } from '@/lib/client-api';
-import type { Health, Job } from '@/lib/types';
+import type { Health } from '@/lib/types';
 export function OllamaConnection({
   health,
-  jobs,
   checking,
   onRefresh,
-  onPrepare,
   enhance,
   onEnhancementChange,
   onBusyChange,
   wizard = false,
 }: {
   health?: Health;
-  jobs: Job[];
   checking: boolean;
   onRefresh: () => void;
-  onPrepare: (task: string) => Promise<void>;
   enhance?: boolean;
   onEnhancementChange?: (enabled: boolean) => void;
   onBusyChange?: (busy: boolean) => void;
@@ -190,10 +186,8 @@ export function OllamaConnection({
           embedded
           anchor={!wizard}
           health={health}
-          jobs={jobs}
           checking={pending || dirty}
           onRefresh={onRefresh}
-          onPrepare={onPrepare}
           enhance={enhance}
           onEnhancementChange={onEnhancementChange}
           onBusyChange={setModelBusy}
