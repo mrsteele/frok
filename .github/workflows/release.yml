@@ -47,12 +47,8 @@ jobs:
     timeout-minutes: 45
     env:
       NEXT_TELEMETRY_DISABLED: '1'
-      FROK_SIGN_RELEASE: ${{ startsWith(matrix.platform, 'mac-') && '1' || '0' }}
-      CSC_LINK: ${{ startsWith(matrix.platform, 'mac-') && secrets.MAC_CSC_LINK || '' }}
-      CSC_KEY_PASSWORD: ${{ startsWith(matrix.platform, 'mac-') && secrets.MAC_CSC_KEY_PASSWORD || '' }}
-      APPLE_ID: ${{ startsWith(matrix.platform, 'mac-') && secrets.APPLE_ID || '' }}
-      APPLE_APP_SPECIFIC_PASSWORD: ${{ startsWith(matrix.platform, 'mac-') && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
-      APPLE_TEAM_ID: ${{ startsWith(matrix.platform, 'mac-') && secrets.APPLE_TEAM_ID || '' }}
+      FROK_SIGN_RELEASE: '0'
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
       - uses: actions/checkout@v7
         with:
@@ -61,8 +57,6 @@ jobs:
         with:
           node-version-file: .node-version
           cache: npm
-      - name: Validate release signing before building
-        run: node --input-type=module -e "import {signingConfiguration} from './scripts/desktop-signing.mjs'; signingConfiguration({});"
       - run: npm ci
       - run: npm --prefix docs ci
       - name: Media build tools (Linux)

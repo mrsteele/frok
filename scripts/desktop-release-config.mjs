@@ -8,7 +8,7 @@ export function releaseConfiguration(base, env = process.env, platform = process
   const [owner, repo] = repository.split('/');
   config.publish = [{ provider: 'github', owner, repo, releaseType: 'release' }];
   config.electronUpdaterCompatibility = '>=2.16';
-  // Unsigned local macOS builds cannot receive verified Squirrel updates.
+  // Unsigned macOS builds cannot receive verified Squirrel updates.
   config.extraMetadata = { ...config.extraMetadata, frokUpdates: platform !== 'darwin' || env.FROK_SIGN_RELEASE === '1' };
   return config;
 }

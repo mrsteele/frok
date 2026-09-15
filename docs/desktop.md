@@ -95,13 +95,13 @@ The desktop origin is stable: port 3440 for packaged builds and 3441 for desktop
 
 The payload includes Electron, the built UI/backend/worker, the official Node.js runtime pinned in `.node-version` verified against the provider's SHA-256 checksums, and FFmpeg/FFprobe built from pinned sources. It does not require end users to install Git, npm, Node, FFmpeg or a compiler. AI runners and models remain separate setup-time dependencies. Media tools include their source archives, build recipe and license texts inside the backend resources.
 
-Build on the target platform/architecture with the Node.js version in `.node-version`. Build artifacts are ignored by Git. Native binaries and supporting libraries must be tested on a clean machine. Local unsigned Mac builds are useful for development; public distribution needs signing, notarization and license/source-distribution review, including Electron and Sharp dependencies. No signing credentials are committed.
+Build on the target platform/architecture with the Node.js version in `.node-version`. Build artifacts are ignored by Git. Native binaries and supporting libraries must be tested on a clean machine. macOS releases are unsigned and not notarized; no Apple signing credentials are required. Test first-launch approval on a clean Mac. Distribution still needs license/source-distribution review, including Electron and Sharp dependencies.
 
 The new release workflow (`.github/workflows/release.yml`) builds tagged versions on GitHub, with macOS ARM64/x64, Windows x64 and Linux x64 runners. It attaches installers and SHA-256 checksums to a draft GitHub release. See [Releasing Frok](releasing.md). `release/` is ignored temporary build output, including on the CI runner; binaries belong in GitHub Releases, not the source repository.
 
 The menu bar icon animates subtly while a job is running and shows an arrow when an app update is available. Reduced Motion uses a still activity indicator. The menu and **Settings → Advanced → Frok Desktop** show download status and **Restart to update**. A running job can finish before the restart; remaining queued jobs stay saved. Closing the window continues running Frok, so installation happens when the user chooses to restart.
 
-Installed releases download stable updates automatically. Source development and unsigned local macOS builds keep updates disabled. Public macOS distribution requires Apple signing and notarization credentials; see [releasing Frok](./releasing.md#in-app-updates). Development also uses the Frok Dock icon.
+Installed Windows and Linux releases download stable updates automatically. Unsigned macOS releases use manual updates: quit Frok and replace the app with the new download; the library and settings remain in the user workspace. Source development also keeps updates disabled. See [releasing Frok](./releasing.md#in-app-updates). Development uses the Frok Dock icon.
 
 ## Desktop boundary
 

@@ -15,7 +15,8 @@ function fixture(options = {}) {
 }
 test('development and unsupported local builds never start update requests', async () => {
   assert.match(updateAvailability({ packaged: false }), /Development/);
-  assert.match(updateAvailability({ packaged: true, releaseEnabled: false }), /local build/);
+  assert.match(updateAvailability({ packaged: true, releaseEnabled: false, platform: 'darwin' }), /unsigned macOS build uses manual updates/);
+  assert.match(updateAvailability({ packaged: true, releaseEnabled: false, platform: 'win32' }), /does not receive automatic updates/);
   assert.match(updateAvailability({ packaged: true, releaseEnabled: true, platform: 'linux', appImage: '' }), /AppImage/);
   assert.equal(updateAvailability({ packaged: true, releaseEnabled: true, platform: 'darwin' }), '');
   const f = fixture({ unavailable: 'Development' });
