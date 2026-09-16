@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { candidateFiles, checkSource, sourceIssues } from '../scripts/check-source.mjs';
 
 test('source checks reject environment and private files without returning secret values', () => {
@@ -82,4 +83,33 @@ test('an unstaged tracked deletion does not abort the source audit',async()=>{
     await fs.unlink(path.join(directory,'obsolete.ts'));
     assert.deepEqual((await checkSource(directory)).findings,[]);
   }finally{await fs.rm(directory,{recursive:true,force:true});}
+});
+
+test('documentation images are present in the source files Git will include', async () => {
+  const root = fileURLToPath(new URL('../', import.meta.url));
+  const files = await candidateFiles(root), included = new Set(files);
+  for (const filename of files.filter(file => file.startsWith('docs/') && file.endsWith('.md'))) {
+    const markdown = await fs.readFile(path.join(root, filename), 'utf8');
+    for (const [, url] of markdown.matchAll(/!\[[^\]]*\]\((\/[^\s)]+)\)/g)) {
+      const asset = `docs/public${url}`;
+      assert.ok(included.has(asset), `${filename} references ${asset}, but Git excludes it from the source checkout`);
+      assert.ok((await fs.stat(path.join(root, asset))).isFile(), `${filename} references a missing image: ${asset}`);
+    }
+  }
+});
+
+test('documentation screenshots remain includable on case-insensitive checkouts', async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'frok-docs-ignore-test-'));
+  try {
+    const options = { cwd: directory, stdio: 'ignore' };
+    execFileSync('git', ['init'], options);
+    execFileSync('git', ['config', 'core.ignorecase', 'true'], options);
+    await fs.copyFile(new URL('../.gitignore', import.meta.url), path.join(directory, '.gitignore'));
+    await fs.mkdir(path.join(directory, 'docs/public/screenshots'), { recursive: true });
+    await fs.writeFile(path.join(directory, 'docs/public/screenshots/navigation.png'), 'documentation image fixture');
+    await fs.writeFile(path.join(directory, 'Screenshot personal.png'), 'personal screenshot fixture');
+    const files = await candidateFiles(directory);
+    assert.ok(files.includes('docs/public/screenshots/navigation.png'));
+    assert.ok(!files.includes('Screenshot personal.png'));
+  } finally { await fs.rm(directory, { recursive: true, force: true }); }
 });

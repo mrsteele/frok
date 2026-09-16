@@ -91,5 +91,8 @@ desktop/tray/
 .DS_Store
 Thumbs.db
 Screenshot*
+# Documentation screenshots are published assets, including on case-insensitive Git checkouts.
+!/docs/public/screenshots/
+!/docs/public/screenshots/*.png
 *.swp
 *~
