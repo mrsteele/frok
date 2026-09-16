@@ -17,8 +17,9 @@ const presetsSchema = z.array(videoPresetSchema).max(100, 'You can save up to 10
     ids.add(item.id); names.add(item.name.toLowerCase());
   }
 });
+const originalNormalPrompt = 'The picture comes to life with basic movement, no fast camera changes or movement. Continue the action described in the image while preserving the subjects and setting.';
 export const starterVideoPresets: readonly VideoPreset[] = [
-  { id: 'normal', name: 'Normal', isDefault: true, prompt: 'The picture comes to life with basic movement, no fast camera changes or movement. Continue the action described in the image while preserving the subjects and setting.' },
+  { id: 'normal', name: 'Normal', isDefault: true, prompt: `${originalNormalPrompt} No speaking, no words.` },
   { id: 'zany', name: 'Silly', isDefault: false, prompt: 'Bring the scene to life with wildly playful movement, exaggerated reactions and unexpected visual comedy.' },
   { id: 'dance', name: 'Dance', isDefault: false, prompt: 'Bring the subjects to life with a dance that matches the mood, setting and atmosphere of the image. Choose fitting steps and a natural rhythm: relaxed swaying in a calm scene, lively footwork in an energetic one. Preserve the subjects, clothing and surroundings, and keep movement coherent with their bodies and available space.' },
 ];
@@ -32,8 +33,11 @@ export function decodeVideoPresets(raw: string | null): VideoPreset[] {
   let value: unknown;
   try { value = JSON.parse(raw); } catch { throw new Error('Saved recipes contain invalid JSON.'); }
   let presets = validateVideoPresets(value);
-  // Rename untouched starter recipes while preserving edits and custom names.
+  // Update untouched starter recipes while preserving edits and custom names.
   presets = presets.map(preset => {
+    if (preset.id === 'normal' && preset.name === 'Normal' && preset.prompt === originalNormalPrompt) {
+      return { ...preset, prompt: starterVideoPresets[0].prompt };
+    }
     const starter = starterVideoPresets.find(item => item.id === preset.id && item.prompt === preset.prompt);
     const oldName = preset.id === 'zany' ? 'Zany' : undefined;
     return starter && preset.name === oldName && !presets.some(item => item.name.toLowerCase() === starter.name.toLowerCase())

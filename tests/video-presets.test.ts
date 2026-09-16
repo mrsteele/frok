@@ -26,10 +26,15 @@ test('only missing storage seeds starters; edited and empty lists survive round 
   assert.deepEqual(motionChoices([]).map(item => item.value), ['custom']);
 });
 
-test('old starter labels update without overwriting custom recipes or colliding with names', () => {
+test('old starters update without overwriting custom recipes or colliding with names', () => {
   const current = decodeVideoPresets(null);
-  const previous = current.map(preset => ({...preset,name:preset.id === 'zany' ? 'Zany' : preset.name}));
+  assert.ok(current[0].prompt.endsWith(' No speaking, no words.'));
+  const previous = current.map(preset => ({...preset,name:preset.id === 'zany' ? 'Zany' : preset.name,prompt:preset.id === 'normal' ? preset.prompt.replace(/ No speaking, no words\.$/, '') : preset.prompt}));
   assert.deepEqual(decodeVideoPresets(JSON.stringify(previous)),current);
+  const nonDefault = [{...previous[0],isDefault:false},{...current[1],isDefault:true}];
+  assert.deepEqual(decodeVideoPresets(JSON.stringify(nonDefault)),[{...current[0],isDefault:false},nonDefault[1]]);
+  const renamed = [{...previous[0],name:'My motion'}];
+  assert.deepEqual(decodeVideoPresets(JSON.stringify(renamed)),renamed);
   const edited = [{...previous[0],prompt:'My own motion recipe'}, {...previous[1],name:'Comedy'}];
   assert.deepEqual(decodeVideoPresets(JSON.stringify(edited)),edited);
   const collision = [...previous,{...car,name:'silly'}];
