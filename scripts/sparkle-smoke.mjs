@@ -4,10 +4,16 @@ import path from 'node:path';
 import http from 'node:http';
 import { spawn, execFileSync } from 'node:child_process';
 import { generateKeyPairSync } from 'node:crypto';
+import { createRequire } from 'node:module';
 import { build } from 'esbuild';
 import { publicUpdateKey } from './update-key.mjs';
 
 if (process.platform !== 'darwin') throw Error('The Sparkle smoke test requires macOS.');
+// Electron downloads its development runtime lazily. Packaging uses a separate
+// cache and does not guarantee that node_modules/electron/dist exists on CI.
+process.env.electron_config_cache ||= path.resolve('.data/electron-cache');
+const electron = createRequire(import.meta.url)('electron');
+const electronApp = path.resolve(electron, '../../..');
 await fs.mkdir('.data', { recursive: true });
 const root = await fs.mkdtemp(path.resolve('.data/sparkle-smoke-'));
 const { privateKey } = generateKeyPairSync('ed25519');
@@ -24,7 +30,7 @@ const appcastUrl = `http://127.0.0.1:${server.address().port}/appcast.xml`;
 let child;
 try {
   const app = path.join(root, 'Frok Update Test.app'), resources = path.join(app, 'Contents/Resources');
-  await fs.cp('node_modules/electron/dist/Electron.app', app, { recursive: true, verbatimSymlinks: true });
+  await fs.cp(electronApp, app, { recursive: true, verbatimSymlinks: true });
   await fs.cp('node_modules/electron-sparkle-updater/native/vendor/Sparkle.framework', path.join(app, 'Contents/Frameworks/Sparkle.framework'), { recursive: true, verbatimSymlinks: true });
   const addon = path.join(resources, 'app.asar.unpacked/node_modules/electron-sparkle-updater/native/build/Release/sparkle_bridge.node');
   await fs.mkdir(path.dirname(addon), { recursive: true });

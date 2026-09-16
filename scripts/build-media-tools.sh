@@ -25,7 +25,9 @@ if [[ "$(uname -m)" == x86_64 ]] && ! command -v nasm >/dev/null; then
   asm=(--disable-asm)
 fi
 cd pkgconf
-./configure --prefix="$prefix" --disable-shared --enable-static
+# Autotools does not set pkgconf's Windows header linkage for a static build.
+# Without this, its CLI expects DLL imports and fails to link libpkgconf.a.
+CPPFLAGS="${CPPFLAGS:+$CPPFLAGS }-DPKGCONFIG_IS_STATIC" ./configure --prefix="$prefix" --disable-shared --enable-static
 make -j"$jobs"
 make install
 cd ../zlib
