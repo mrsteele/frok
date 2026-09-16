@@ -1,8 +1,27 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/public/mark-light.svg">
+  <img src="public/brand/mark.svg" alt="Frok logo" width="64" height="64">
+</picture>
+
 # Frok
+
+[![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue)](LICENSE) [![Downloads: GitHub Releases](https://img.shields.io/badge/downloads-GitHub_Releases-267449)](https://github.com/mrsteele/frok/releases) [![Source checks](https://github.com/mrsteele/frok/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/mrsteele/frok/actions/workflows/ci.yml)
 
 A local creative studio for images and short videos. Generate image batches, animate a frame, make videos from text or references, and keep every take together in your library.
 
 Frok connects to your installations of [Vpipe](https://vpipe.ai/), [ComfyUI](https://www.comfy.org/) and, optionally, [Ollama](https://ollama.com/) for prompt enhancement. Your library and queue live on your machine. Generation uses your chosen runners, models and hardware.
+
+## Download
+
+**[Download Frok from GitHub Releases](https://github.com/mrsteele/frok/releases).** Open a published release and choose your installer under **Assets**:
+
+- **macOS:** `.dmg` — choose `arm64` for Apple Silicon or `x64` for Intel.
+- **Windows (x64):** `.exe` installer.
+- **Linux (x64):** `.AppImage` — make the file executable before opening it.
+
+Install and open Frok, then follow [Quick setup](docs/guide/getting-started.md) to connect your generation tools. For macOS first-launch permissions, see the [installation notes](docs/releasing.md#macos-releases-without-apple-signing).
+
+If no published release is listed yet, use [Run from source](#run-from-source) below.
 
 ## Run from source
 

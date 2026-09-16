@@ -25,7 +25,9 @@ test('imports legacy credentials encrypted, never returns tokens in status, and 
   assert.doesNotMatch(JSON.stringify(store.status()), /synthetic/);
   assert.deepEqual(store.status(), { available: true, configured: { HF_TOKEN: true, COMFYUI_API_KEY: true }, restartRequired: false });
   assert.equal(store.environment().HF_TOKEN, options.environment.HF_TOKEN);
-  assert.equal(fs.statSync(file).mode & 0o777, 0o600);
+  // Check the host filesystem, independently of the simulated keychain platform.
+  // Windows stat does not distinguish POSIX owner/group/other permissions.
+  if (process.platform !== 'win32') assert.equal(fs.statSync(file).mode & 0o777, 0o600);
   const restarted = createCredentialStore({ ...options, environment: { HF_TOKEN: 'different-environment-token' } });
   assert.equal(restarted.environment().HF_TOKEN, options.environment.HF_TOKEN);
 });

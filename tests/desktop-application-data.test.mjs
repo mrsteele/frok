@@ -23,7 +23,8 @@ test('machine state moves intact while user data and job logs stay in the worksp
   fs.writeFileSync(path.join(home, 'data/library/jobs/job.log'), 'render details');
   migrateApplicationData(options);
   assert.equal(fs.readFileSync(path.join(state, 'credentials.json'), 'utf8'), '{"version":1,"tokens":{"HF_TOKEN":"synthetic-ciphertext"}}');
-  assert.equal(fs.statSync(path.join(state, 'credentials.json')).mode & 0o777, 0o600);
+  // Windows stat does not distinguish POSIX owner/group/other permissions.
+  if (process.platform !== 'win32') assert.equal(fs.statSync(path.join(state, 'credentials.json')).mode & 0o777, 0o600);
   assert.equal(fs.readFileSync(path.join(state, 'window.json'), 'utf8'), '{"width":1200,"height":900}');
   assert.equal(fs.readFileSync(path.join(logs, 'backend.log'), 'utf8'), 'startup diagnostics');
   assert.equal(fs.readFileSync(path.join(logs, 'updates.log.previous'), 'utf8'), 'older update diagnostics');
