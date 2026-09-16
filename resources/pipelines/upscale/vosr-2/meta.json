@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "id": "vpipe:vosr-2",
+  "name": "VOSR 2.0",
+  "runner": "vpipe",
+  "description": "Frame-by-frame restoration with VOSR 2.0 and DINOv2. Requires Vpipe 0.1.51+ on Apple Silicon. Retains source framing, frame rate and audio; temporal consistency can vary.",
+  "videoSource": {
+    "node": "load-video",
+    "field": "input_url"
+  },
+  "upscale": {
+    "spatialMultiple": 16
+  },
+  "bindings": {
+    "output": [
+      {
+        "node": "save-video",
+        "field": "output_url"
+      }
+    ],
+    "seed": [
+      {
+        "node": "generate-image",
+        "field": "seed"
+      }
+    ],
+    "fps": [
+      {
+        "node": "rgb-to-video",
+        "field": "fps"
+      },
+      {
+        "node": "vae-decode",
+        "field": "fps"
+      }
+    ]
+  },
+  "dependencies": [
+    {
+      "kind": "model",
+      "reference": "CSWRY/VOSR",
+      "files": [
+        "VOSR2/args.json",
+        "VOSR2/checkpoints/ema_model.safetensors",
+        "Qwen-Image-vae-2d/config.json",
+        "Qwen-Image-vae-2d/diffusion_pytorch_model.safetensors"
+      ],
+      "fetch": {
+        "model": "CSWRY/VOSR",
+        "variant": "VOSR-2.0"
+      }
+    },
+    {
+      "kind": "model",
+      "reference": "facebook/dinov2-large",
+      "files": [
+        "config.json",
+        "model.safetensors",
+        "preprocessor_config.json"
+      ],
+      "fetch": {
+        "model": "facebook/dinov2-large"
+      }
+    }
+  ],
+  "catalog": {
+    "family": "VOSR 2.0",
+    "model": "VOSR 2.0",
+    "flavor": "Video enhancement",
+    "uses": [
+      "Video upscaling"
+    ],
+    "requirements": [],
+    "access": [],
+    "documentation": "https://github.com/tgo-app-dev/vpipe",
+    "setup": "Prepare the required files in your runner, or install them manually using the model links below. You can edit your own workflow files at any time."
+  }
+}

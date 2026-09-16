@@ -1,0 +1,26 @@
+Frok workflow catalog
+
+Native workflows are adapted from tgo-app-dev/vpipe at
+6154c90904938e8b325550cbd8f22c8f8503c360 (Apache-2.0).
+See VPIPE-LICENSE and VPIPE-NOTICE, including the existing upscaler notices.
+
+LTX-2.5 templates are adapted from tgo-app-dev/vpipe-ltx-2.5 at
+e45bdc6d74ad100d48b0cd62c7bdad095ce3bbf6 (Apache-2.0).
+See LTX-LICENSE and LTX-NOTICE. The plugin is not bundled with Frok.
+
+FLUX.2 Klein, Qwen-Image, Wan 2.2 and LTX-2.3 ComfyUI templates are
+adapted from Comfy-Org/workflow_templates at
+d36e946293a3e6e24743942a2aa5819733a91727 (GPL-3.0).
+See COMFY-LICENSE. Subgraphs have been flattened into API format, input and
+output paths replaced with private job bindings, and optional alternatives
+split into named workflows. LTX-2.3 uses only the first eight-step pass;
+its prompt expansion and second upscale pass are omitted. Klein native
+examples expose text-to-image here; manual reference examples remain upstream.
+
+Frok changes: metadata, input/output bindings, named model/LoRA profiles,
+required-source checks, preparation file manifests, and job integration.
+
+Model files are not distributed with Frok. Download links, file sizes,
+SHA-256 checksums and access status were checked against Hugging Face
+repository metadata on 2026-09-15. File downloads use pinned revisions.
+Each model, LoRA and third-party plugin retains its own license and access terms.

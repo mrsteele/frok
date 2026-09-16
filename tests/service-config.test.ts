@@ -75,6 +75,17 @@ const {diskCatalog}=await import('../src/lib/pipelines/catalog');
 const {dependencies}=await import('../src/lib/pipelines/dependencies');
 const {writeReferencePack}=await import('./fixtures/reference-pack');
 const header=Buffer.from(JSON.stringify({synthetic:{dtype:'U8',shape:[1],data_offsets:[0,1]}})),length=Buffer.alloc(8);length.writeBigUInt64LE(BigInt(header.length));const tensor=Buffer.concat([length,header,Buffer.from([0])]);
+// The service matrix uses tiny files with matching fixture metadata, never model weights.
+const fixturePipelines=path.join(directory,'pipelines');
+await fs.promises.cp(path.resolve('resources/pipelines'),fixturePipelines,{recursive:true});
+for(const entry of await fs.promises.readdir(fixturePipelines,{recursive:true,withFileTypes:true})){
+ if(entry.name!=='meta.json')continue;
+ const file=path.join(entry.parentPath,entry.name),metadata=JSON.parse(await fs.promises.readFile(file,'utf8'));
+ if(metadata.runner==='comfyui'){
+  for(const dependency of metadata.dependencies){dependency.size=tensor.length;delete dependency.sha256;}
+  await fs.promises.writeFile(file,JSON.stringify(metadata));
+ }
+}
 async function installFixtures(){
  for(const pipeline of (await diskCatalog()).entries){if(pipeline.kind==='upscale'||pipeline.metadata.id==='comfyui:z-image-turbo')continue;
   for(const d of dependencies(pipeline)){
@@ -89,6 +100,7 @@ beforeEach(async()=>{
   delete process.env.FROK_MANAGE_OLLAMA;
   process.env.FROK_COMFYUI_PRIVATE='1';mappedComfyFolder=undefined;mappingMismatch=false;useDefaultEndpoints=false;serviceAddresses.length=0;
   store.db.exec('DELETE FROM settings; DELETE FROM jobs; DELETE FROM media;');offline.clear();models=['synthetic:writer','synthetic:second','synthetic:embedding'];chats.length=0;duringProbe=undefined;
+  store.setValue('pipelineDirectory',fixturePipelines);
   registry.setServiceValue('workerPid',0);
   registry.setServiceValue('workerProtocol',{pid:0,version:workerProtocolVersion});
   registry.setServiceValue('workerHeartbeat',Date.now());
@@ -205,15 +217,15 @@ test('Services and Generation keep optional capabilities separate from advanced 
   for(const name of ['Vpipe','ComfyUI','Ollama'])assert.ok(services.includes(name));
   assert.doesNotMatch(services,/Delete all my stuff|API tokens|Video tools folder|Workflow folder/);
   let html=renderToStaticMarkup(createElement(Setup,{...props,section:'generation'}));
-  for(const id of ['comfyui:sdxl-turbo','vpipe:krea-2-turbo','comfyui:z-image-turbo'])assert.match(html,new RegExp(`<option value="${id}" disabled=""`));
-  await patch({connections:{comfyui:true,ollama:true}});state=await setup.health();
+  assert.equal((html.match(/aria-haspopup="dialog"/g)||[]).length,4,'Disconnected providers remain browseable through the rich selector.');
+  await patch({connections:{comfyui:true,ollama:true},pipelineSelections:{image:'comfyui:sdxl-turbo'}});state=await setup.health();
   html=renderToStaticMarkup(createElement(Setup,{...props,health:state,section:'generation'}));
-  assert.match(html,/<option value="comfyui:sdxl-turbo"/);assert.match(html,/<option value="comfyui:z-image-turbo"/);
+  assert.match(html,/Images workflow: SDXL Turbo/);assert.match(html,/Speed/);assert.match(html,/Adherence/);
   assert.doesNotMatch(html,/Ollama model|Pipeline details|Revision |Workflow folder|API tokens/);
-  assert.match(html,/<option value="vpipe:krea-2-turbo" disabled=""/);
-  assert.doesNotMatch(html,/<option value="comfyui:sdxl-turbo" disabled=""|<option value="synthetic:embedding"/);
+  await patch({pipelineSelections:{video:'vpipe:minimax-h3-turbo'}},400);
+  assert.doesNotMatch(html,/<option value="synthetic:embedding"/);
   const ollama=renderToStaticMarkup(createElement(OllamaConnection,{...props,health:state,checking:false}));
-  assert.match(ollama,/<option value="synthetic:writer"/);
+  assert.match(ollama,/<option value="" selected="">synthetic:writer \(Default\)/);
   const advanced=renderToStaticMarkup(createElement(Setup,{...props,health:state,section:'advanced'}));
   assert.match(advanced,/Workflow folder/);assert.match(advanced,/API tokens/);assert.match(advanced,/Delete all my stuff/);
 });
@@ -349,7 +361,9 @@ test('blank connection fields persist as blanks and use the displayed device def
       const input=html.match(new RegExp(`<input[^>]*placeholder="${placeholder.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}"[^>]*>`))?.[0];
       assert.ok(input,placeholder);assert.match(input,/value=""/);assert.doesNotMatch(input,/required/);
     }
-    assert.match(html,/<option value="" selected="">Default · synthetic:writer/);
+    assert.match(html,/<option value="__off__">Not enabled<\/option>/);
+    assert.match(html,/<option value="" selected="">synthetic:writer \(Default\)/);
+    assert.doesNotMatch(html,/<option value="synthetic:writer"/);
     // Rechecking the same default must remain possible while work is queued.
     store.createJob({kind:'setup',runner:'vpipe',total:1,request:{task:'runtime'}});
     await patch({vpipeWorkdir:''});

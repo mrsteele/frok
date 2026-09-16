@@ -83,7 +83,17 @@ jobs:
       - name: Build platform installer
         run: npm run package
       - name: Check packaged backend (no inference)
-        run: npm run smoke:desktop
+        run: npm run smoke:desktop -- --packaged
+      - name: Verify native update and tamper rejection (disposable apps)
+        if: runner.os == 'macOS'
+        run: |
+          npm run smoke:updates
+          npm run smoke:updates -- --tamper
+      - name: Sign macOS update and generate architecture feed
+        if: runner.os == 'macOS'
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: node scripts/sparkle-appcast.mjs
       - uses: actions/upload-artifact@v7
         with:
           name: frok-${{ matrix.platform }}
@@ -97,6 +107,7 @@ jobs:
             release/*.AppImage
             release/*.blockmap
             release/*.yml
+            release/appcast-*.xml
             !release/builder-*.yml
 
   release:

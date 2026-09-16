@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "id": "vpipe:flux2-klein-9b",
+  "name": "FLUX.2 Klein 9B",
+  "runner": "vpipe",
+  "description": "FLUX.2 Klein \u00b7 9B \u00b7 4-bit.",
+  "bindings": {
+    "prompt": [
+      {
+        "node": "text-prompt",
+        "field": "text"
+      }
+    ],
+    "seed": [
+      {
+        "node": "generate-image",
+        "field": "seed"
+      }
+    ],
+    "width": [
+      {
+        "node": "generate-image",
+        "field": "width"
+      }
+    ],
+    "height": [
+      {
+        "node": "generate-image",
+        "field": "height"
+      }
+    ],
+    "output": [
+      {
+        "node": "save-image",
+        "field": "path"
+      }
+    ]
+  },
+  "dependencies": [
+    {
+      "kind": "model",
+      "reference": "local/FLUX.2-klein-9B-4bit",
+      "layout": "diffusers",
+      "generated": true
+    }
+  ],
+  "catalog": {
+    "family": "FLUX.2 Klein",
+    "model": "black-forest-labs/FLUX.2-klein-9B",
+    "flavor": "9B \u00b7 4-bit",
+    "uses": [
+      "Text to image"
+    ],
+    "requirements": [
+      "Apple Silicon Mac",
+      "Accept the model\u2019s Hugging Face terms before downloading"
+    ],
+    "access": [
+      {
+        "name": "black-forest-labs/FLUX.2-klein-9B",
+        "url": "https://huggingface.co/black-forest-labs/FLUX.2-klein-9B",
+        "gated": true
+      }
+    ],
+    "documentation": "https://github.com/tgo-app-dev/vpipe/blob/6154c90904938e8b325550cbd8f22c8f8503c360/docs/KLEIN.md",
+    "setup": "Prepare the model in Vpipe. This Frok entry exposes text-to-image; the linked native guide also explains manual reference editing and composition.",
+    "precision": "4-bit",
+    "experimental": true,
+    "estimates": {
+      "downloadGB": 32,
+      "installedGB": 12,
+      "preparationGB": 45,
+      "memoryGB": 16,
+      "basis": "Upstream estimate per checkpoint. The original download is retained; removing it manually reduces retained space.",
+      "source": "https://github.com/tgo-app-dev/vpipe/blob/6154c90904938e8b325550cbd8f22c8f8503c360/docs/KLEIN.md"
+    }
+  }
+}

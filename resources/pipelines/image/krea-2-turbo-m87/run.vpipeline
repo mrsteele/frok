@@ -1,0 +1,146 @@
+{
+  "id": "krea-2-turbo-m87",
+  "stages": [
+    {
+      "id": "model-select",
+      "type": "model-select",
+      "iports": [],
+      "config": {
+        "hf_dir": "krea/Krea-2-Turbo"
+      }
+    },
+    {
+      "id": "text-prompt",
+      "type": "text-prompt",
+      "iports": [],
+      "config": {
+        "text": "A red vintage car parked beside a seaside cafe, soft morning light, detailed photography"
+      }
+    },
+    {
+      "id": "krea2-model-config",
+      "type": "krea2-model-config",
+      "iports": [],
+      "config": {
+        "lora": "mgwr/M87",
+        "lora_scale": 1
+      }
+    },
+    {
+      "id": "scheduler-select",
+      "type": "scheduler-select",
+      "iports": [],
+      "config": {
+        "steps": 8,
+        "shift": 0.3
+      }
+    },
+    {
+      "id": "diffusion-conditioner",
+      "type": "diffusion-conditioner",
+      "iports": [
+        {
+          "src": "text-prompt",
+          "oport": 0
+        },
+        {
+          "src": "",
+          "oport": 0
+        },
+        {
+          "src": "model-select",
+          "oport": 0
+        },
+        {
+          "src": "",
+          "oport": 0
+        },
+        {
+          "src": "",
+          "oport": 0
+        },
+        {
+          "src": "krea2-model-config",
+          "oport": 0
+        }
+      ],
+      "config": {}
+    },
+    {
+      "id": "generate-image",
+      "type": "generate-image",
+      "iports": [
+        {
+          "src": "diffusion-conditioner",
+          "oport": 0
+        },
+        {
+          "src": "",
+          "oport": 0
+        },
+        {
+          "src": "model-select",
+          "oport": 0
+        },
+        {
+          "src": "",
+          "oport": 0
+        },
+        {
+          "src": "scheduler-select",
+          "oport": 0
+        },
+        {
+          "src": "",
+          "oport": 0
+        },
+        {
+          "src": "",
+          "oport": 0
+        },
+        {
+          "src": "krea2-model-config",
+          "oport": 0
+        }
+      ],
+      "config": {
+        "height": 1024,
+        "width": 1024,
+        "steps": 8,
+        "seed": 42,
+        "i8_gemm": true
+      }
+    },
+    {
+      "id": "vae-decode",
+      "type": "vae-decode",
+      "iports": [
+        {
+          "src": "generate-image",
+          "oport": 0
+        },
+        {
+          "src": "model-select",
+          "oport": 0
+        }
+      ],
+      "config": {}
+    },
+    {
+      "id": "save-image",
+      "type": "save-image",
+      "iports": [
+        {
+          "src": "vae-decode",
+          "oport": 0
+        }
+      ],
+      "config": {
+        "path": "krea-2-turbo.jpeg",
+        "quality": 95
+      }
+    }
+  ],
+  "subpipelines": [],
+  "description": "Generate images with Krea 2 Turbo using the original model weights."
+}

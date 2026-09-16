@@ -32,8 +32,12 @@ export async function buildPipelineBundle(input:unknown) {
     version:1,id:`${value.runner}:user-${slug}-${key}`,name:value.name,runner:value.runner,
     description:'Created with Frok Utilities. Review the companion REVIEW.txt before use.',
   })};
-  const unresolved=inferBindings(snapshot);
   const [factory,installed]=await Promise.all([diskCatalog(pipelineTemplatesDir),diskCatalog()]);
+  // Exact graph copies retain known timing/alignment semantics; altered graphs require review.
+  const original=[...factory.entries,...installed.entries].find(p=>p.kind===value.kind&&p.metadata.runner===value.runner&&digest(p.graph)===digest(value.graph));
+  const unresolved=inferBindings(snapshot);
+  if(original)for(const key of ['bindings','controls','source','references','videoSource','upscale','promptSuffix','plugins'] as const)Object.assign(snapshot.metadata,{[key]:structuredClone(original.metadata[key])});
+  if(original)unresolved.length=0;
   const known=[...factory.entries,...installed.entries].filter(p=>p.metadata.runner===value.runner).flatMap(p=>dependencies(p));
   const inferred=dependencies(snapshot);
   snapshot.metadata.dependencies=inferred.map(d=>structuredClone(known.find(k=>k.kind===d.kind&&k.reference===d.reference)||d));

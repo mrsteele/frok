@@ -30,8 +30,13 @@ await fs.cp('desktop/tray', path.join(output, 'app/tray'), { recursive: true });
 await build({ entryPoints: ['desktop/update-provider.cjs'], outfile: path.join(output, 'app/update-provider.cjs'), bundle: true, platform: 'node', format: 'cjs', external: ['electron'] });
 await fs.writeFile(path.join(output, 'app/package.json'), JSON.stringify({ name: 'frok', productName: 'Frok', version: pkg.version, description: pkg.description, author: pkg.author, license: pkg.license, type: 'module', main: 'main.mjs' }, null, 2));
 const backend = path.join(output, 'backend');
-await fs.cp('.next-desktop/standalone', backend, { recursive: true, filter: file => {
+// Keep Next's relative package links relative when moving the standalone tree.
+// fs.cp otherwise rewrites them to absolute paths into the developer checkout.
+await fs.cp('.next-desktop/standalone', backend, { recursive: true, verbatimSymlinks: true, filter: file => {
   const relative = path.relative(path.resolve('.next-desktop/standalone'), path.resolve(file));
+  // Next's filesystem traces can retain development sources. Production uses
+  // compiled route chunks and the separately bundled worker, never these folders.
+  if (['src', 'tests', 'dev', 'scripts'].includes(relative.split(path.sep)[0]) || path.basename(file) === '.DS_Store') return false;
   return !relative.split(path.sep).some(part => part.startsWith('.env') || ['.data', '.desktop', 'pipelines'].includes(part)) && !/\.(sqlite(?:-.*)?|safetensors|gguf)$/.test(file);
 } });
 await fs.cp('.next-desktop/static', path.join(backend, '.next-desktop/static'), { recursive: true });
@@ -43,11 +48,15 @@ for (const file of groups.flat()) {
   const target = path.join(output, 'pipeline-templates', file); await fs.mkdir(path.dirname(target), { recursive: true });
   await fs.copyFile(path.join(root, 'resources/pipelines', file), target);
 }
-for(const name of ['VPIPE-LICENSE','VPIPE-NOTICE'])await fs.copyFile(path.join('resources/pipelines',name),path.join(output,'pipeline-templates',name));
+for(const name of ['VPIPE-LICENSE','VPIPE-NOTICE','COMFY-LICENSE','LTX-LICENSE','LTX-NOTICE','CATALOG-NOTICE'])await fs.copyFile(path.join('resources/pipelines',name),path.join(output,'pipeline-templates',name));
 await fs.cp(path.join(output,'pipeline-templates'),path.join(backend,'resources/pipelines'),{recursive:true});
 // Starter scripts belong to the application, never the editable pipeline install.
 const preparations=JSON.parse(await fs.readFile('desktop/preparations.json','utf8'));
-for(const folder of preparations)await fs.copyFile(path.join('resources/pipelines',folder,'prepare.vpipeline'),path.join(backend,'resources/pipelines',folder,'prepare.vpipeline'));
+for(const folder of preparations) {
+  const metadata=JSON.parse(await fs.readFile(path.join('resources/pipelines',folder,'meta.json'),'utf8'));
+  const file=metadata.runner==='vpipe'?'prepare.vpipeline':'prepare.json';
+  await fs.copyFile(path.join('resources/pipelines',folder,file),path.join(backend,'resources/pipelines',folder,file));
+}
 
 await fs.mkdir(path.join(backend,'desktop'),{recursive:true});
 for(const file of ['workspace.mjs','pipelines.json'])await fs.copyFile(path.join('desktop',file),path.join(backend,'desktop',file));

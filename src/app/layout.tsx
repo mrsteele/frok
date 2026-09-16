@@ -7,6 +7,7 @@ import './globals.css';
 import '@/components/ui/tokens.css';
 import '@/components/ui/ui.css';
 import '@/components/settings/settings.css';
+import '@/components/settings/pipeline-catalog.css';
 import '@/components/onboarding/onboarding.css';
 export const metadata: Metadata = {
   title: 'Frok — Your local imagination',

@@ -123,7 +123,8 @@ test('prompt settings offer installed models in a select and clearly identify a 
   const state=await status();
   const html=renderToStaticMarkup(createElement(PromptModelSettings,{health:state,checking:false,onRefresh:()=>{}}));
   assert.match(html,/<select/); assert.match(html,/Ollama model/);
-  assert.ok(html.includes(`value="${original}"`));
+  assert.ok(html.includes(`<option value="">${original} (Default)</option>`));
+  assert.ok(!html.includes(`value="${original}"`));
   assert.ok(html.includes(`value="${replacement}" disabled=""`));
   assert.match(html,/Connection or model unavailable/);
   installed.get(endpoint)!.clear();

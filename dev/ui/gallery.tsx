@@ -24,6 +24,7 @@ import '../../src/app/globals.css';
 import '../../src/components/ui/tokens.css';
 import '../../src/components/ui/ui.css';
 import '../../src/components/settings/settings.css';
+import '../../src/components/settings/pipeline-catalog.css';
 import '../../src/components/onboarding/onboarding.css';
 import './gallery.css';
 
@@ -77,7 +78,7 @@ function Gallery() {
           value={scenario}
           onChange={(event) => location.assign(`?view=${view}&state=${event.target.value}`)}
         >
-          {['connected', 'disconnected', 'offline', 'busy', 'missing', 'error'].map((state) => (
+          {['connected', 'vpipe-only', 'comfyui-only', 'disconnected', 'offline', 'busy', 'missing', 'error'].map((state) => (
             <option key={state}>{state}</option>
           ))}
         </Select>

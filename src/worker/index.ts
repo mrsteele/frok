@@ -24,8 +24,8 @@ import { prepareGenerationPrompts } from "../lib/generation-prompt";
 import { generationSeeds } from "../lib/generation-seeds";
 import { recoverJobTimes } from "../lib/recover-job-times";
 import { finishUpscale } from "../lib/upscale-workflow";
-import { renderVpipe } from "../lib/vpipe";
-import { renderComfy } from "../lib/comfyui";
+import { providerFor } from "../lib/providers/registry";
+import { pipelinePrompt } from "../lib/pipelines/details";
 import { runProcess } from "../lib/process";
 import { sampleGpu } from '../lib/telemetry';
 import { tracksVideoStages, parseProgressLog, preparingVideoProgress, finishingVideoProgress, completedVideoProgress, videoPhaseLabel } from '../lib/progress';
@@ -118,7 +118,7 @@ async function generate(job:Job,signal:AbortSignal,log:(s:string)=>void,onFinish
     updateJob(job.id,{step:null,message:request.mode==="upscale"?`Enhancing video with ${request.pipeline!.metadata.name}…`:video?"Rendering your video…":`Creating image ${i+1} of ${count}…`});
     let runnerSeconds:number|undefined;
     {
-      const render=job.runner==="vpipe"?renderVpipe:renderComfy;
+      const render=providerFor(job.runner).render;
       const previousRunnerSeconds=getJob(job.id)?.runnerSeconds || 0;
       await render({request:request.mode==='upscale'?{...request,duration:source!.duration!}:request,prompt,seed,...target,output:raw,directory:itemDir,source:sourcePath,references:refs.map(r=>path.join(mediaDir(),r.filename)),signal,log,waitForStop:()=>!!getJob(job.id)?.pauseRequested,onRuntime:(seconds:number)=>{runnerSeconds=seconds;updateJob(job.id,{runnerSeconds:previousRunnerSeconds+seconds});}});
       signal.throwIfAborted();
@@ -142,7 +142,7 @@ async function generate(job:Job,signal:AbortSignal,log:(s:string)=>void,onFinish
     signal.throwIfAborted();
     const sourceId=source?.id;
     if(video){if(sourceId)favoriteMedia(sourceId,true);refs.filter(r=>!r.referenceOnly).forEach(r=>favoriteMedia(r.id,true));}
-    const media:Media={id,...(!video&&request.imageModel?{imageModel:request.imageModel}:{}),batchIndex:i,promptTrace,runnerSeconds,elapsedSeconds:(performance.now()-outputStarted)/1000,rootId:video?(request.mode==="upscale"?mediaRoot(source!.id)?.id:request.rootId || sourceId || id):undefined,generation:request.mode==="upscale"?source?.generation:structuredClone(request),videoStyle:request.mode==="upscale"?source?.videoStyle:videoStyle,kind:video?"video":"image",filename,prompt:request.mode==="upscale"?source!.prompt:request.prompt,enhancedPrompt:prompt,width:actualWidth,height:actualHeight,duration,seed,favorite:video,sourceId,createdAt:new Date().toISOString(),jobId:job.id,origin:request.mode==="upscale"?"upscale":"generated",runner:job.runner,upscalePipeline:request.mode==='upscale'?{id:request.pipeline!.metadata.id,name:request.pipeline!.metadata.name,revision:request.pipeline!.revision}:undefined,quality:request.mode==="upscale"?`${Math.min(actualWidth,actualHeight)>=720?'HD '+Math.min(actualWidth,actualHeight)+'p':'AI enhanced'} · ${request.pipeline!.metadata.name}`:request.quality};
+    const media:Media={id,...(!video&&request.imageModel?{imageModel:request.imageModel}:{}),batchIndex:i,promptTrace,runnerSeconds,elapsedSeconds:(performance.now()-outputStarted)/1000,rootId:video?(request.mode==="upscale"?mediaRoot(source!.id)?.id:request.rootId || sourceId || id):undefined,generation:request.mode==="upscale"?source?.generation:structuredClone(request),videoStyle:request.mode==="upscale"?source?.videoStyle:videoStyle,kind:video?"video":"image",filename,prompt:request.mode==="upscale"?source!.prompt:request.prompt,enhancedPrompt:pipelinePrompt(prompt,request.pipeline?.metadata.promptSuffix),width:actualWidth,height:actualHeight,duration,seed,favorite:video,sourceId,createdAt:new Date().toISOString(),jobId:job.id,origin:request.mode==="upscale"?"upscale":"generated",runner:job.runner,upscalePipeline:request.mode==='upscale'?{id:request.pipeline!.metadata.id,name:request.pipeline!.metadata.name,revision:request.pipeline!.revision}:undefined,quality:request.mode==="upscale"?`${Math.min(actualWidth,actualHeight)>=720?'HD '+Math.min(actualWidth,actualHeight)+'p':'AI enhanced'} · ${request.pipeline!.metadata.name}`:request.quality};
     publishMedia(media,output);updateJob(job.id,{step:null,completed:i+1,message:video?"Video saved to favorites":`${i+1} of ${count} images ready`});
     await fs.rm(raw,{force:true});
   }

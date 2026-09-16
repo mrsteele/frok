@@ -54,6 +54,16 @@ export function inferBindings(snapshot:PipelineSnapshot):string[] {
     }
     for(const id of promptNodes)if(typeof byId.get(id)?.config.text==='string')bind('prompt',id,'text');
     for(const stage of stages) {
+      if(snapshot.kind==='upscale') {
+        if(stage.type==='load-video') {
+          if(m.videoSource)throw Error('Use one load-video input for an upscaling workflow.');
+          m.videoSource={node:stage.id,field:'input_url'};
+          (graph.stages as typeof stages).find(s=>s.id===stage.id)!.config.input_url='input.mp4';
+        }
+        if(['generate-video','vae-decode','rgb-to-video'].includes(stage.type))bind('fps',stage.id,'fps');
+        if(stage.type==='image-resample')for(const key of ['width','height'] as const)bind(key,stage.id,key);
+        if(stage.type==='temporal-stack') {bind('frames',stage.id,'group_size');bind('frameBufferMB',stage.id,'max_mb');}
+      }
       if(stage.type==='save-image'||stage.type==='save-video')bind('output',stage.id,stage.type==='save-image'?'path':'output_url');
       if(stage.type==='video-ref-encoder'&&snapshot.kind==='reference') {
         m.references={target:stage.id,field:'references',max:9};
@@ -112,6 +122,7 @@ export function inferBindings(snapshot:PipelineSnapshot):string[] {
       bind('prompt',b.node,b.field);
     }
   }
+  if(snapshot.kind==='upscale'&&m.runner==='vpipe')notes.push('Review native upscaling alignment in meta.json (upscale): spatialMultiple, frameStride, frameOffset, minimumFrames and extraFrames. Frok resizes the input to the HD target and removes this padding after rendering.');
   if(snapshot.kind!=='upscale'&&(!m.bindings.width?.length||!m.bindings.height?.length))notes.push('Dimensions could not be mapped. Add width/height bindings in meta.json to honor Frok’s size controls.');
   if(snapshot.kind!=='image'&&snapshot.kind!=='upscale'&&!m.bindings.frames?.length&&!m.bindings.duration?.length)notes.push('Video length could not be mapped. Add duration or frames bindings and verify fps, frameStride and frameOffset in meta.json.');
   if(snapshot.kind==='reference'&&!m.references)notes.push('The reference-image input could not be mapped. Add references in meta.json.');

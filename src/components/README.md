@@ -44,6 +44,8 @@ Tokens live in `ui/tokens.css`, component rules in `ui/ui.css`, and feature pres
 
 Settings, onboarding and shared dialog controls use the library. Generation, assets, queue and shell retain their current visual styles for a later migration. Reuse a primitive for future work; do not create another button class.
 
+Settings and onboarding use a rich workflow button that opens the native catalog dialog. Reuse `generation/workflow-summary` for the selected model and catalog rows: keep names, access status, speed, adherence and full download size together. Unknown metrics stay unrated; size never implies runtime memory. Keep detailed requirements in the catalog instead of adding a second stats block below a selector. The generation composer's native selector retains its existing source compatibility behavior.
+
 Run `npm run dev:ui` for a standalone gallery at http://127.0.0.1:4178. It includes primitive states and the real Settings/onboarding components with synthetic services. Every API call is intercepted, and desktop actions are harmless fixtures. It does not start the app, open a library, or contact runners. Reload to reset examples; saved preview preferences are isolated from Frok.
 
 Run `npm run smoke:ui` for isolated Electron layout, keyboard, focus and interaction checks. Screenshots go into ignored `.data/ui-checks`. The normal Node test suite checks native props, field associations, status behavior and existing feature rules. No new UI framework or test dependency is required.

@@ -26,7 +26,7 @@ fixture.test('health includes disconnected workflows without probing their servi
  }finally{db.setValue('pipelineSelections',before);}
 });
 test('bundled native workflows register with colocated companions and no forward declarations',async()=>{
- const result=await diskCatalog();assert.deepEqual(result.errors,[]);assert.equal(result.entries.length,9);
+ const result=await diskCatalog();assert.deepEqual(result.errors,[]);assert.equal(result.entries.length,JSON.parse(await fs.readFile('desktop/pipelines.json','utf8')).length);
  for(const pipeline of result.entries)validatePipeline(pipeline);
  const krea=result.entries.find(p=>p.metadata.id==='vpipe:krea-2-turbo')!;assert.ok(!("prepare" in krea));assert.equal((krea.graph.stages as any[]).find(s=>s.type==='krea2-model-config').config.lora,undefined);
 });
@@ -54,8 +54,8 @@ fixture.test('already installed native MiniMax packs are reused without renamed 
  const workspace=process.env.VPIPE_WORKDIR!,reference=await writeReferencePack(workspace);
  await fs.cp(reference,path.join(workspace,'models/local/MiniMax-H3-FL2VA-8bit'),{recursive:true});
  const tensor=await fs.readFile(path.join(reference,'vae/minimax_h3_video_vae_fp16.safetensors'));
- for(const relative of ['larryvrh/MiniMax-H3-Turbo-Lora/minimax_h3_turbo_v4_step600_ema.safetensors','lightx2v/Minimax-h3-Turbo/minimax_h3_ref2v_turbo_4step_v0.1_bf16.safetensors']){const file=path.join(workspace,'models',relative);await fs.mkdir(path.dirname(file),{recursive:true});await fs.writeFile(file,tensor);}
- for(const p of (await diskCatalog()).entries.filter(p=>p.metadata.runner==='vpipe'&&p.kind!=='image')){
+ for(const relative of ['larryvrh/MiniMax-H3-Turbo-Lora/minimax_h3_turbo_v4_step600_ema.safetensors','lightx2v/Minimax-h3-Turbo/minimax_h3_ref2v_turbo_4step_v0.1_bf16.safetensors','larryvrh/MiniMax-H3-Turbo-Lora/minimax_h3_turbo_4step_ema_ckpt850.safetensors']){const file=path.join(workspace,'models',relative);await fs.mkdir(path.dirname(file),{recursive:true});await fs.writeFile(file,tensor);}
+ for(const p of (await diskCatalog()).entries.filter(p=>p.metadata.runner==='vpipe'&&p.metadata.id.startsWith('vpipe:minimax-')&&(p.kind==='video'||p.kind==='reference'))){
    assert.match(p.metadata.dependencies[0].reference,/8bit$/);
    assert.equal((p.graph.stages as any[]).find(s=>s.type==='model-select').config.hf_dir,p.metadata.dependencies[0].reference);
    assert.equal((await pipelineStatus(p)).ready,true);

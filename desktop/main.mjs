@@ -198,11 +198,14 @@ async function boot() {
     const credentials = createCredentialStore({ directory: machine.state, safeStorage, environment: { ...process.env, ...config } });
     documentation = createDocumentation({ root:development ? path.join(project, '.desktop/docs') : path.join(process.resourcesPath, 'docs'), preload:path.join(here, 'docs-preload.cjs'), onlineBase:product.websiteUrl });
     const metadata = development ? {} : JSON.parse(await fs.readFile(path.join(here, 'package.json'), 'utf8'));
-    const unavailable = updateAvailability({ packaged: !development, releaseEnabled: metadata.frokUpdates });
+    let unavailable = updateAvailability({ packaged: !development, releaseEnabled: metadata.frokUpdates });
     const updateLog = path.join(machine.logs, 'updates.log');
     if ((await fs.stat(updateLog).catch(() => undefined))?.size > 2 * 1024 * 1024) await fs.rename(updateLog, updateLog + '.previous');
     const log = Object.fromEntries(['info', 'warn', 'error', 'debug'].map(level => [level, value => { void fs.appendFile(updateLog, `${new Date().toISOString()} ${level}: ${String(value)}\n`, { mode: 0o600 }).catch(() => {}); }]));
-    updates = createUpdates({ updater: unavailable ? undefined : loadUpdater(), unavailable, log, beforeInstall: stopForUpdate, changed: state => {
+    let updater;
+    if (!unavailable) try { updater = loadUpdater({ metadata }); }
+    catch (error) { log.error(error); unavailable = 'The updater could not start. Reinstall Frok from its GitHub release. Your library stays in place.'; }
+    updates = createUpdates({ updater, unavailable, log, beforeInstall: stopForUpdate, changed: state => {
       refreshTray();
       if (!quitting) menus();
       if (window && !window.isDestroyed()) window.webContents.send('frok:update-state', state);

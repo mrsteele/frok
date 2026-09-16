@@ -46,27 +46,51 @@
     {
       "kind": "file",
       "reference": "diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors",
-      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors"
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/a98869194787969724c7425d95d0ed73ce9202af/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+      "size": 20970379616,
+      "sha256": "9255f52b6677845ad238f20dfaafa94727053694127ab7f255c048f0f9365779"
     },
     {
       "kind": "file",
       "reference": "text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
-      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors"
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/a98869194787969724c7425d95d0ed73ce9202af/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "size": 15687142551,
+      "sha256": "35a88d51044231fe332301d7a62aa81e3f2cba62febeb446e2c1e3e0ef76f2c6"
     },
     {
       "kind": "file",
       "reference": "vae/minimax_h3_video_vae_fp16.safetensors",
-      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors"
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/a98869194787969724c7425d95d0ed73ce9202af/vae/minimax_h3_video_vae_fp16.safetensors",
+      "size": 5207808496,
+      "sha256": "7c1f131492e7eddacaac9069a61b81bdd39de5cc96561e677c5eab1cdce5e522"
     },
     {
       "kind": "file",
       "reference": "vae/minimax_h3_audio_vae_fp32.safetensors",
-      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors"
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/a98869194787969724c7425d95d0ed73ce9202af/vae/minimax_h3_audio_vae_fp32.safetensors",
+      "size": 605254808,
+      "sha256": "8e505d95dd1561d47abd43d4238fd40d9bb1ae9e147ed0a4cba778d76ae4db48"
     }
   ],
   "references": {
     "target": "5",
     "field": "ref_images.ref_image_",
     "max": 9
+  },
+  "catalog": {
+    "family": "MiniMax H3",
+    "model": "MiniMax H3 REF2VA",
+    "flavor": "Original",
+    "uses": [
+      "Reference video",
+      "Audio"
+    ],
+    "requirements": [
+      "Current ComfyUI with MiniMax H3 nodes"
+    ],
+    "access": [],
+    "documentation": "https://github.com/tgo-app-dev/vpipe/blob/6154c90904938e8b325550cbd8f22c8f8503c360/docs/MINIMAX-H3.md",
+    "setup": "Prepare the required files in your runner, or install them manually using the model links below. You can edit your own workflow files at any time.",
+    "precision": "INT8 diffusion / NVFP4 text encoder"
   }
 }

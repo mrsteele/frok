@@ -42,9 +42,11 @@ The bundled `resources/pipelines/upscale/seedvr2/` and `resources/pipelines/upsc
 
 Both graphs use `LoadVideo → GetVideoComponents → AI upscale → CreateVideo → SaveVideo`. The AI stage processes the source frames; `CreateVideo` receives the original frame rate and audio from `GetVideoComponents`. Keep those connections when adapting a workflow so the output retains the source timing and sound. SeedVR2 requires the [ComfyUI-SeedVR2_VideoUpscaler extension](https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler) on the connected service.
 
-There is no bundled Vpipe upscaling workflow because native Vpipe AI upscaling has not been verified. Both bundled upscalers require ComfyUI, including when enhancing a video generated with Vpipe. Frok does not install separate SeedVR2 or Real-ESRGAN runtimes, Python environments or NCNN binaries. [Set up video upscaling →](tutorials/upscaling.md)
+The `upscale/flashvsr/` and `upscale/vosr-2/` folders provide native Vpipe workflows for Vpipe 0.1.51+ on Apple Silicon, alongside the ComfyUI options. Their queued starters fetch FlashVSR (including its companion prompt tensor) or VOSR plus DINOv2. Frok does not install separate SeedVR2 or Real-ESRGAN runtimes, Python environments or NCNN binaries. [Set up video upscaling →](tutorials/upscaling.md)
 
 Add or edit these files directly in your pipeline directory. Generation controls select registered IDs. **Utilities** downloads bundles and drafts; it cannot publish files into this pipeline directory or run uploaded code.
+
+Native upscalers bind `videoSource` to `load-video.input_url` and `fps` to their video-producing stages. Frok supplies a private video resized to the HD target, with the original frame count and rate. The optional `upscale` metadata declares spatial and temporal alignment: `spatialMultiple`, `frameStride`, `frameOffset`, `minimumFrames` and `extraFrames`. Frok pads the right/bottom edges and clones the final frame as needed, then crops and trims the result back to the requested dimensions and original frame count. FlashVSR uses 128-pixel alignment and an 8k+1 input with four extra context frames; VOSR uses 16-pixel alignment. These native run graphs rely on Frok’s input preparation.
 
 ### Bundled upscaling settings
 
@@ -52,7 +54,7 @@ SeedVR2 uses the 3B Q4 model with `batch_size: 5`, `temporal_overlap: 1` and til
 
 Real-ESRGAN uses the core `UpscaleModelLoader → ImageUpscaleWithModel → ImageScale` nodes. Frok binds `ImageScale` width and height to the job's HD target after neural enhancement. For standalone use, `ImageScale` defaults to height `720`, width `0` and no cropping, preserving the source aspect ratio.
 
-Both workflows declare `videoSource` in `meta.json` for the `LoadVideo` node's `file` input. Frok supplies the selected take through this binding. When importing `run.json` directly into ComfyUI, select your source video and, for SeedVR2, your GPU in both loaders. [Standalone import steps →](tutorials/upscaling.md#run-directly-in-comfyui)
+Both ComfyUI workflows declare `videoSource` in `meta.json` for the `LoadVideo` node's `file` input. Frok supplies the selected take through this binding. When importing `run.json` directly into ComfyUI, select your source video and, for SeedVR2, your GPU in both loaders. [Standalone import steps →](tutorials/upscaling.md#run-directly-in-comfyui)
 
 ## Personal pipelines excluded from Git
 
@@ -74,7 +76,7 @@ The ignore rule applies to untracked files. If a personal pipeline was already c
 
 Put model paths, LoRAs and strengths, step counts, schedulers, shifts and attention settings directly in the native workflow. Frok supplies the prompt, seed, dimensions, duration/frame count, private inputs and private output location through explicit bindings. It does not replace a selected workflow’s sampling or adapter settings. Image live-preview output is attached when the graph exposes a compatible intermediate stream.
 
-The composer’s Generation settings and the image/video viewer offer a pipeline override. Choices are remembered for each generation mode. Only pipelines for enabled connections appear. A missing dependency blocks generation and links to setup instructions. Duration, aspect and resolution controls follow the selected metadata; changing quality changes resolution, not the pipeline’s sampling schedule.
+The composer’s Generation settings and the image/video viewer offer a pipeline override. Choices are remembered for each generation mode. Workflows for disconnected providers remain visible, with a connection requirement; connect the provider before selecting one. A missing dependency blocks generation and links to setup instructions. Duration, aspect and resolution controls follow the selected metadata; changing quality changes resolution, not the pipeline’s sampling schedule.
 
 New jobs store the generation workflow and metadata. Retrying uses that snapshot. New submissions use the current file. Changing defaults or editing a file cannot change a job already in the queue. Renaming a pipeline’s stable `id` is a new pipeline; existing default selections need to be updated.
 
@@ -105,17 +107,27 @@ A minimal image pipeline registration:
 }
 ```
 
-`node` identifies a Vpipe stage or a ComfyUI node. `field` names a direct configuration/input property. The other supported bindings are `frames`, `duration`, `pixels` (width × height) and `device` (ComfyUI GPU selection). Bind every file output. Media loaders must use source/reference bindings, or a `videoSource` binding for an upscaling workflow. Frok replaces the video loader’s example filename with the selected video’s private upload path. Vpipe input producers must precede consumers.
+`node` identifies a Vpipe stage or a ComfyUI node. `field` names a direct configuration/input property. The other supported bindings are `frames`, `fps`, `duration`, `pixels` (width × height), `frameBufferMB` (RGB clip buffer size) and `device` (ComfyUI GPU selection). Bind every file output. Media loaders must use source/reference bindings, or a `videoSource` binding for an upscaling workflow. Frok replaces the video loader’s example filename with the selected video’s private upload path. Vpipe input producers must precede consumers.
 
-Optional `controls` declares `durations` (6, 8, 10), `qualities` (`preview`, `standard`), `aspects`, `fps`, `frameStride` and `frameOffset`. Defaults match the bundled 24 fps MiniMax workflow, with frame counts on its 17n+5 grid. Keep this metadata consistent with the native graph. See the bundled files for starting-frame and multiple-reference bindings.
+Optional `controls` declares `durations` (6, 8, 10), `qualities` (`preview`, `standard`), `aspects`, `fps`, `frameStride` and `frameOffset`. Defaults match the bundled 24 fps MiniMax workflow, with frame counts on its 17n+5 grid. Keep this metadata consistent with the native graph. See the bundled files for starting-frame and multiple-reference bindings. `source.required: true` marks an image-to-video workflow that cannot run without a starting image. `promptSuffix` adds a fixed, visible flavor requirement such as M87’s `--preview`; it is included in saved generation details. `plugins: ["ltx-2.5"]` opts a Vpipe workflow into the known, manually installed LTX plugin.
 
-Dependencies have a trusted relative `reference`, `kind` (`model`, `lora`, `file`) and optional required `files`, `size` and `sha256`. Vpipe model layouts can be `krea`, `minimax` or a bare `transformer`; custom layouts must list their required files. Known Vpipe downloads use `fetch: {model, variant?, key?}`. ComfyUI files use an explicit HTTPS `url` and a path relative to its models directory. Frok also checks model and LoRA inputs in supported native loaders, so leaving one out of metadata does not make a missing file Ready.
+Dependencies have a trusted relative `reference`, `kind` (`model`, `lora`, `file`) and optional required `files`, `size` and `sha256`. Vpipe model layouts can be `krea`, `diffusers`, `minimax`, `ltx` or a bare `transformer`; custom layouts must list their required files. Known Vpipe downloads use `fetch: {model, variant?, key?}`. ComfyUI files use an explicit HTTPS `url` and a path relative to its models directory. Frok also checks model and LoRA inputs in supported native loaders, so leaving one out of metadata does not make a missing file Ready.
+
+## Catalog details
+
+Optional `catalog` metadata powers the rich workflow selectors in **Settings → Generation**. It groups entries by `family`, identifies their `model` and `flavor`, and supplies `uses`, `precision`, `requirements`, `documentation` and `setup`. Every link must use HTTPS. Older and custom metadata without these fields still works.
+
+Use `access: [{name, url, gated: true}]` for repositories requiring access approval. This displays a lock and access instructions; it does not prevent generation with already installed models. The dependency file sizes supply full download totals. Optional `estimates` separates `downloadGB`, `installedGB`, `preparationGB` and `memoryGB`, with required `basis` and `source` fields. Do not substitute storage size for required memory.
+
+Optional `ratings.speed` and `ratings.adherence` each contain a `score` from 0 to 5, a testing `basis` and a `source` link. Leave these absent when there is no evidence; the UI displays **Unrated**. Mark untested adaptations with `experimental: true`. Model and LoRA licenses and gated-access terms still apply.
+
+Catalog metadata describes the workflow. Sampling settings and LoRA strengths remain in the native run file. Changing either file creates a custom revision and removes automatic bundled preparation until the original pair is restored. Frok never runs `prepare.json` or `prepare.vpipeline` found in an editable workflow folder.
 
 ## Preparation and verification
 
-Install runners and custom nodes outside Frok. For unchanged bundled Vpipe workflows, **Prepare models** queues the shipped starter when dependencies are missing. The worker launches that script once, retains its log, and checks readiness afterward. It does not generate custom preparation graphs or repair failed installations. The [setup guide](guide/model-setup.md) includes manual alternatives. Preparation files in editable workflow folders are ignored.
+Install runners and custom nodes outside Frok. For unchanged bundled workflows, **Prepare models** queues either a native Vpipe preparation pipeline or a verified ComfyUI file manifest. The worker retains its log and checks readiness afterward. ComfyUI downloads are streamed and verified before publishing each file, without overwriting conflicting existing files. Preparation does not generate custom setup graphs or repair arbitrary installations. Real-ESRGAN uses manual installation. The [setup guide](guide/model-setup.md) includes manual alternatives. Preparation files in editable workflow folders are ignored.
 
-Frok checks the files used by a pipeline, including declared sizes, bounded safetensor headers and payload lengths. ComfyUI workflows additionally require their node classes on the connected backend. Download URLs, SHA-256 checksums and Vpipe `fetch` metadata describe installation sources for people and external tools; Frok does not download or hash entire model files during readiness checks. Readiness does not prove that an arbitrary graph will infer successfully or fit available memory.
+Frok checks the files used by a pipeline, including declared sizes, bounded safetensor headers and payload lengths. ComfyUI workflows additionally require their node classes on the connected backend. Download URLs, SHA-256 checksums and Vpipe `fetch` metadata describe installation sources used by bundled preparation and manual tools; Frok does not download or hash entire model files during readiness checks. Readiness does not prove that an arbitrary graph will infer successfully or fit available memory.
 
 Declare requirements in `meta.json`. For an older custom ComfyUI workflow, move any dependencies that exist only in `prepare.json` into the metadata. Supported loader inputs remain authoritative, so omitting their declarations does not make a missing model ready.
 

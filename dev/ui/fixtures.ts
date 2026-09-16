@@ -1,3 +1,9 @@
+import krea from '../../resources/pipelines/image/krea-2-turbo/meta.json';
+import m87 from '../../resources/pipelines/image/krea-2-turbo-m87/meta.json';
+import klein from '../../resources/pipelines/image/flux2-klein-4b-distilled/meta.json';
+import qwen from '../../resources/pipelines/image/qwen-image-lightning/meta.json';
+import wan from '../../resources/pipelines/video/wan2-2-5b/meta.json';
+import ltx from '../../resources/pipelines/video/ltx-2-5/meta.json';
 import type { Health, Job } from '../../src/lib/types';
 import { generationOptions } from '../../src/lib/onboarding';
 import { pipelineMetadata } from '../../src/lib/pipelines/schema';
@@ -6,7 +12,8 @@ import type { ExportPreferences } from '../../src/lib/export-preferences';
 
 export const scenario = new URLSearchParams(location.search).get('state') || 'connected';
 const available = !['offline', 'disconnected'].includes(scenario);
-const modelsReady = available && scenario !== 'missing';
+const onlyProvider = scenario === 'vpipe-only' ? 'vpipe' : scenario === 'comfyui-only' ? 'comfyui' : undefined;
+const modelsReady = available && scenario !== 'missing' && !onlyProvider;
 export const health = {
   worker: true,
   checks: [],
@@ -21,8 +28,8 @@ export const health = {
     ['vpipe', 'comfyui', 'ollama'].map((id) => [
       id,
       {
-        enabled: scenario !== 'disconnected',
-        available,
+        enabled: scenario !== 'disconnected' && (!onlyProvider || id === 'ollama' || id === onlyProvider),
+        available: available && (!onlyProvider || id === 'ollama' || id === onlyProvider),
         detail: 'This example service is offline. Check its address and try again.',
       },
     ]),
@@ -85,6 +92,33 @@ export const health = {
   upscalerSupported: true,
   models: { ollama: available },
 } as unknown as Health;
+// A visibly synthetic rated model exercises numeric scores, storage size and long names.
+Object.assign(health.pipelines![0], {
+  name: 'Example image model · Detailed illustration',
+  files: [{ reference: 'example/model.safetensors', size: 4_200_000_000, ready: modelsReady }],
+  catalog: {
+    family: 'Gallery examples', model: 'Synthetic example', flavor: 'Illustration',
+    uses: ['UI testing only'], requirements: [], access: [], experimental: false,
+    documentation: 'https://example.com', setup: 'Synthetic data only. No model is installed.',
+    ratings: {
+      speed: { score: 4.5, basis: 'Synthetic score for UI testing, not a model benchmark.', source: 'https://example.com' },
+      adherence: { score: 3, basis: 'Synthetic score for UI testing, not a model benchmark.', source: 'https://example.com' },
+    },
+  },
+});
+// Real catalog presentation with synthetic readiness and zero runner access.
+for (const [kind, definition] of [['image', krea], ['image', m87], ['image', klein], ['image', qwen], ['video', wan], ['video', ltx]] as const) {
+  const metadata = pipelineMetadata.parse(definition);
+  health.pipelines!.push({
+    ...metadata, kind, supportsSource: !!metadata.source, maxReferences: 0,
+    state: modelsReady ? 'ready' : 'missing', ready: modelsReady,
+    detail: modelsReady ? 'Synthetic installed model files.' : 'Synthetic missing files. No models are downloaded in this gallery.',
+    missing: modelsReady ? [] : metadata.dependencies.map(d => d.reference),
+    files: metadata.dependencies.map(d => ({ reference: d.reference, ready: modelsReady, size: d.size, url: d.url })),
+    preparation: modelsReady ? undefined : `${kind}/${metadata.id.split(':')[1]}`,
+    revision: 'gallery',
+  });
+}
 let preferences: ExportPreferences = {};
 let runtime = { ...runtimeDefaults };
 export const jobs: Job[] = [];
@@ -115,8 +149,9 @@ window.fetch = async (input, init) => {
   if (route === 'health') return Response.json(health);
   if (route === 'jobs') return Response.json({ jobs });
   if (route === 'pipelines/prepare') {
+    const pipeline=health.pipelines!.find(p=>p.id===body.id);
     const now=new Date().toISOString();
-    const job:Job={id:'11111111-1111-4111-8111-111111111111',kind:'setup',runner:'vpipe',status:'queued',total:1,completed:0,message:'Queued',createdAt:now,updatedAt:now,request:{task:'builtin-preparation',preparation:'image/krea-2-turbo',name:'Example images workflow'}};
+    const job:Job={id:'11111111-1111-4111-8111-111111111111',kind:'setup',runner:pipeline?.runner || 'vpipe',status:'queued',total:1,completed:0,message:'Queued',createdAt:now,updatedAt:now,request:{task:'builtin-preparation',preparation:pipeline?.preparation || 'image/krea-2-turbo',name:pipeline?.name || 'Example images workflow'}};
     jobs.push(job);return Response.json({job}, {status:201});
   }
   if (route === 'settings/interface') {

@@ -6,7 +6,7 @@ export type VideoStyle = "normal" | "fun" | "custom" | "preset";
 export type VideoPreset = { id: string; name: string; prompt: string; isDefault?: boolean };
 export type Adapters = { primary?: string; primaryWeight: number; secondary: string; secondaryWeight: number };
 export type Upscaler = 'realesrgan' | 'seedvr2';
-export type Runner = "vpipe" | "comfyui";
+export type Runner = import('./providers/definitions').ProviderId;
 export type PromptTrace = {
   raw: string; enhanced: boolean;
   image?: { original: string; actual: string };
@@ -42,7 +42,7 @@ export type VideoProgressState = {
 };
 export type OllamaConfig = { url: string; model: string };
 // Legacy fields keep older job history readable; new jobs reference only a bundled starter.
-export type SetupRequest = { preparation?:string; name?:string; pipeline?: PipelineSnapshot; task: string; ollama?: OllamaConfig; imageModel?: ImageModelId };
+export type SetupRequest = { preparation?:string; preparationRevision?:string; name?:string; pipeline?: PipelineSnapshot; task: string; ollama?: OllamaConfig; imageModel?: ImageModelId };
 export type Job = {
   id: string; kind: "generate" | "setup"; status: "queued" | "running" | "completed" | "failed" | "cancelled";
   queuePosition?: number; pauseRequested?: boolean; accumulatedSeconds?: number;

@@ -4,16 +4,18 @@ import { InlineMessage } from '@/components/ui/patterns/inline-message';
 import { Spinner } from '@/components/ui/primitives/spinner';
 import { FormField } from '@/components/ui/patterns/form-field';
 import { Button } from '@/components/ui/primitives/button';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Check, Film, Image, Layers3, RefreshCw, ScanLine, Download } from 'lucide-react';
+import { ChevronDown, Film, Image, Layers3, RefreshCw, ScanLine, Download } from 'lucide-react';
 import type { PipelineKind } from '@/lib/pipelines/schema';
 import { generationOptions } from '@/lib/onboarding';
 import { DocumentationLink } from '@/components/shell/documentation-link';
 import { api } from '@/lib/client-api';
 import type { Health, Job, SetupRequest } from '@/lib/types';
 import { isPreparationJob } from '@/lib/preparation-job';
-import { WorkflowSelect } from '@/components/generation/workflow-select';
+import { PipelineCatalog } from './pipeline-catalog';
+import { WorkflowSummary } from '@/components/generation/workflow-summary';
+import { providerDefinitions } from '@/lib/providers/definitions';
 const icons = { image: Image, video: Film, reference: Layers3, upscale: ScanLine };
 export function PipelineSettings({
   health,
@@ -34,28 +36,37 @@ export function PipelineSettings({
 }) {
   const [busy, setBusy] = useState(''),
     [error, setError] = useState('');
+  const [browsing, setBrowsing] = useState<PipelineKind>();
+  const catalogId = useId();
+  const lock = useRef(false);
   useEffect(() => {
     onBusyChange?.(!!busy);
     return () => onBusyChange?.(false);
   }, [busy, onBusyChange]);
   async function choose(kind: PipelineKind, value: string) {
+    if (lock.current) return false;
+    lock.current = true;
     setBusy(kind);
     setError('');
     try {
       await api('settings', 'PATCH', { pipelineSelections: { [kind]: value || null } });
       await onRefresh();
+      return true;
     } catch (e) {
       setError((e as Error).message);
+      return false;
     } finally {
+      lock.current = false;
       setBusy('');
     }
   }
   async function prepare(kind:PipelineKind,id:string) {
-    if(busy)return;
+    if(lock.current)return;
+    lock.current=true;
     setBusy(kind);setError('');
     try {await api('pipelines/prepare','POST',{id});await onRefresh();}
     catch(error){setError((error as Error).message);}
-    finally{setBusy('');}
+    finally{lock.current=false;setBusy('');}
   }
 
   return (
@@ -89,43 +100,31 @@ export function PipelineSettings({
                   <p>{description}</p>
                 </div>
                 <Badge
-                  tone={
-                    checking || busy === kind
-                      ? 'neutral'
-                      : state?.ready
-                        ? 'success'
-                        : value
-                          ? 'warning'
-                          : 'neutral'
-                  }
+                  tone="neutral"
                 >
                   {checking || busy === kind ? (
                     <>
                       <Spinner size={13} />
                       Checking
                     </>
-                  ) : state?.ready ? (
-                    <>
-                      <Check size={13} />
-                      Ready
-                    </>
-                  ) : value ? (
-                    'Setup needed'
-                  ) : (
-                    'Optional'
-                  )}
+                  ) : selected ? providerDefinitions[selected.runner].name : 'Optional'}
                 </Badge>
               </header>
-              <FormField label={<span className="visually-hidden">{name} workflow</span>}>
-                <WorkflowSelect
-                  health={health}
-                  kind={kind}
-                  allowNone
-                  aria-label={name + ' workflow'}
-                  value={value}
-                  disabled={checking || !!busy}
-                  onChange={(e) => void choose(kind, e.target.value)}
-                />
+              <FormField controlId={`${catalogId}-${kind}`} label={<span className="visually-hidden">{name} workflow</span>}>
+                <Button
+                  id={`${catalogId}-${kind}`}
+                  className="workflow-picker"
+                  aria-label={`${name} workflow: ${selected?.name || (value ? 'Selected workflow unavailable' : 'Not enabled')}`}
+                  aria-describedby={selected ? `${catalogId}-${kind}-metrics-state ${catalogId}-${kind}-metrics` : undefined}
+                  aria-haspopup="dialog"
+                  aria-expanded={browsing === kind}
+                  aria-controls={browsing === kind ? catalogId : undefined}
+                  disabled={!health || checking || !!busy}
+                  onClick={() => { setError(''); setBrowsing(kind); }}
+                >
+                  {selected ? <WorkflowSummary pipeline={selected} connection={health?.connections?.[selected.runner]} descriptionId={`${catalogId}-${kind}-metrics`} /> : <span className="workflow-picker-empty"><strong>{value ? 'Selected workflow unavailable' : 'Choose a workflow'}</strong><span>Compare models, ratings and download sizes</span></span>}
+                  <ChevronDown size={16} aria-hidden="true" />
+                </Button>
               </FormField>
               {health && !health.pipelines?.some((p) => p.kind === kind) && (
                 <InlineMessage tone="neutral">
@@ -138,19 +137,17 @@ export function PipelineSettings({
                   )}
                 </InlineMessage>
               )}
-              {selected?.description && (
-                <InlineMessage tone="neutral">{selected.description}</InlineMessage>
-              )}
               {value && !state?.ready && !checking && (
-                <InlineMessage tone="warning">
-                  {state?.detail || 'This workflow needs setup.'}
-                </InlineMessage>
+                <details className="workflow-setup-details">
+                  <summary>Setup details</summary>
+                  <InlineMessage tone="warning">{state?.detail || 'This workflow needs setup.'}</InlineMessage>
+                </details>
               )}
               {selected?.preparation && !state?.ready && !checking && (
                 <div className="workflow-preparation">
                   {!preparing && <Button disabled={!!busy||!health?.worker} loading={busy===kind} onClick={()=>void prepare(kind,selected.id)} variant="secondary"><Download size={14}/>Prepare models</Button>}
                   {job && <Link href={`/queue/${job.id}`} onClick={event=>{if(onOpenJob){event.preventDefault();onOpenJob(job.id);}}}>{job.status==='queued'?'Preparation queued':job.status==='running'?'Preparing models':job.status==='completed'?'Preparation finished':'Preparation needs attention'} · View log →</Link>}
-                  <p>Runs the bundled Vpipe starter in your model workspace. If it fails, use the setup instructions below.</p>
+                  <p>{selected.runner === 'vpipe' ? 'Prepares models in your Vpipe workspace.' : 'Downloads verified files into your ComfyUI model folder.'} Check requirements in the selector first.</p>
                 </div>
               )}
               {value && !state?.ready && !checking && (
@@ -164,14 +161,15 @@ export function PipelineSettings({
         <RefreshCw size={14} className={checking ? 'spin' : ''} />
         Refresh workflows
       </Button>
-      {error && (
+      {browsing && health && <PipelineCatalog id={catalogId} health={health} kind={browsing} busy={!!busy} error={error} onChoose={choose} onClose={() => setBrowsing(undefined)} />}
+      {error && !browsing && (
         <InlineMessage role="alert" tone="danger">
           {error}
         </InlineMessage>
       )}
       {!wizard && (
         <p className="settings-footnote">
-          Workflows define the model and how it runs.{' '}
+          Choose a model and flavor; Frok runs its workflow through your provider. You can always configure pipelines yourself.{' '}
           <Link href="/settings/advanced#workflow-files">Manage workflow files →</Link>
         </p>
       )}

@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { pipelineMetadata, type PipelineKind, type PipelineSnapshot } from '../../src/lib/pipelines/schema';
-import { buildPipeline as build, renderVpipe as render, type RenderInput } from '../../src/lib/vpipe';
+import type { RenderInput } from '../../src/lib/providers/types';
+import { buildPipeline as build, renderVpipe as render } from '../../src/lib/vpipe';
 
 // Tests exercise the same registered factory definitions selected by the UI.
 // No compatibility graph builder or installed model is used by this fixture.

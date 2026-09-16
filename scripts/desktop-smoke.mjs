@@ -6,20 +6,47 @@ import { once } from 'node:events';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import { ensureWorkspace } from '../desktop/workspace.mjs';
-import { checkMediaTools } from './check-media-tools.mjs';
+import { checkMediaTools, bundledMediaPath } from './check-media-tools.mjs';
 
 // Run only against the packaged payload and a new, disposable workspace.
 const base = path.resolve('.data'); await fs.mkdir(base, { recursive: true });
 const home = await fs.mkdtemp(path.join(base, 'desktop-smoke-test-'));
 const logs = path.join(home, 'machine-data/logs');
-const backend = path.resolve('.desktop/backend');
+let resources = path.resolve('.desktop');
+if (process.argv.includes('--packaged')) {
+  const { productName } = JSON.parse(await fs.readFile('electron-builder.json', 'utf8'));
+  const arch = process.arch === 'x64' ? '' : `-${process.arch}`;
+  resources = process.platform === 'darwin'
+    ? path.resolve(`release/mac${arch}/${productName}.app/Contents/Resources`)
+    : path.resolve(`release/${process.platform === 'win32' ? 'win' : 'linux'}${arch}-unpacked/resources`);
+}
+const backend = path.join(resources, 'backend');
+async function verifyLinks(directory) {
+  for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
+    const file = path.join(directory, entry.name);
+    if (entry.isDirectory()) await verifyLinks(file);
+    else if (entry.isSymbolicLink()) {
+      const relative = path.relative(backend, await fs.realpath(file));
+      assert.ok(relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative), 'Packaged dependency points outside the backend: ' + file);
+    }
+  }
+}
+await verifyLinks(backend);
+for (const folder of ['src', 'tests', 'dev', 'scripts'])
+  assert.equal(await fs.stat(path.join(backend, folder)).then(() => true, () => false), false, 'No development folder in the desktop payload: ' + folder);
+for (const folder of JSON.parse(await fs.readFile('desktop/preparations.json', 'utf8'))) {
+  const base = path.join(backend, 'resources/pipelines', folder);
+  const metadata = JSON.parse(await fs.readFile(path.join(base, 'meta.json'), 'utf8'));
+  const preparation = JSON.parse(await fs.readFile(path.join(base, metadata.runner === 'vpipe' ? 'prepare.vpipeline' : 'prepare.json'), 'utf8'));
+  assert.ok(metadata.runner === 'vpipe' ? preparation.stages.length : preparation.files.every(file => file.sha256 && file.size), 'Bundled setup is complete: ' + folder);
+}
 const { version } = JSON.parse(await fs.readFile('.desktop/app/package.json', 'utf8'));
-await checkMediaTools();
+await checkMediaTools(bundledMediaPath(backend));
 const groups = JSON.parse(await fs.readFile('desktop/pipelines.json', 'utf8'));
-const workspace = await ensureWorkspace({ home, stateDirectory:path.join(home,'machine-data'), templates: path.resolve('.desktop/pipeline-templates'), groups, version });
+const workspace = await ensureWorkspace({ home, stateDirectory:path.join(home,'machine-data'), templates: path.join(resources,'pipeline-templates'), groups, version });
 const port = await new Promise((resolve, reject) => { const server = net.createServer(); server.once('error', reject); server.listen(0, '127.0.0.1', () => { const port = server.address().port; server.close(() => resolve(port)); }); });
 const origin = `http://127.0.0.1:${port}`, token = randomBytes(32).toString('hex');
-const child = fork(path.join(backend, 'supervisor.mjs'), [], { execPath: path.resolve('.desktop/runtime', process.platform === 'win32' ? 'node.exe' : 'node'), execArgv: [], cwd: backend, env: { ...process.env, FROK_APP_ROOT: backend, FROK_ENV_FILE: workspace.envFile, FROK_DESKTOP_DEV: '0', FROK_DATA_DIR: workspace.data, FROK_PIPELINES_DIR: workspace.pipelines, FROK_PIPELINE_HOME:home, FROK_PIPELINE_STATE_DIR:path.join(home,'machine-data'), FROK_LOG_DIR: logs, FROK_DESKTOP_TOKEN: token, FROK_ORIGIN: origin, NODE_ENV: 'production', PORT: String(port) }, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
+const child = fork(path.join(backend, 'supervisor.mjs'), [], { execPath: path.join(resources, 'runtime', process.platform === 'win32' ? 'node.exe' : 'node'), execArgv: [], cwd: backend, env: { ...process.env, FROK_APP_ROOT: backend, FROK_ENV_FILE: workspace.envFile, FROK_DESKTOP_DEV: '0', FROK_DATA_DIR: workspace.data, FROK_PIPELINES_DIR: workspace.pipelines, FROK_PIPELINE_HOME:home, FROK_PIPELINE_STATE_DIR:path.join(home,'machine-data'), FROK_LOG_DIR: logs, FROK_DESKTOP_TOKEN: token, FROK_ORIGIN: origin, NODE_ENV: 'production', PORT: String(port) }, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
 let failed;
 child.on('message', message => { if (message?.type === 'fatal') failed = Error(message.message); });
 function waitFor(predicate) {

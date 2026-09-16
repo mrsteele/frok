@@ -1,0 +1,109 @@
+{
+  "version": 1,
+  "id": "comfyui:ltx-2-3",
+  "name": "LTX-2.3 · Text",
+  "runner": "comfyui",
+  "description": "LTX · Distilled LoRA · single pass.",
+  "bindings": {
+    "prompt": [
+      {
+        "node": "5",
+        "field": "text"
+      }
+    ],
+    "seed": [
+      {
+        "node": "11",
+        "field": "noise_seed"
+      }
+    ],
+    "width": [
+      {
+        "node": "8",
+        "field": "width"
+      }
+    ],
+    "height": [
+      {
+        "node": "8",
+        "field": "height"
+      }
+    ],
+    "output": [
+      {
+        "node": "20",
+        "field": "filename_prefix"
+      }
+    ],
+    "frames": [
+      {
+        "node": "8",
+        "field": "length"
+      },
+      {
+        "node": "9",
+        "field": "frames_number"
+      }
+    ],
+    "fps": [
+      {
+        "node": "7",
+        "field": "frame_rate"
+      },
+      {
+        "node": "9",
+        "field": "frame_rate"
+      },
+      {
+        "node": "19",
+        "field": "fps"
+      }
+    ]
+  },
+  "dependencies": [
+    {
+      "kind": "file",
+      "reference": "checkpoints/ltx-2.3-22b-dev-fp8.safetensors",
+      "url": "https://huggingface.co/Lightricks/LTX-2.3-fp8/resolve/1d756cd27fa11c0896c4dfee093cd1bf36c7f7a1/ltx-2.3-22b-dev-fp8.safetensors",
+      "size": 29145431166,
+      "sha256": "28606c5b5a06ce56f896d4dfcb20f212739e07a68fbe48e53638188449d26450"
+    },
+    {
+      "kind": "file",
+      "reference": "text_encoders/gemma_3_12B_it_fp4_mixed.safetensors",
+      "url": "https://huggingface.co/Comfy-Org/ltx-2/resolve/101c239b4b64dd1b45d645365339c56e0e7df4c3/split_files/text_encoders/gemma_3_12B_it_fp4_mixed.safetensors",
+      "size": 9447702218,
+      "sha256": "aaca463d11e6d8d2a4bdb0d6299214c15ef78a3f73e0ef8113d5a9d0219b3f6d"
+    },
+    {
+      "kind": "file",
+      "reference": "loras/ltx_2.3_22b_distilled_1.1_lora_dynamic_fro09_avg_rank_111_bf16.safetensors",
+      "url": "https://huggingface.co/Comfy-Org/ltx-2.3/resolve/f246c0865f5214499a12b72d47464ac8f4f54bee/split_files/loras/ltx_2.3_22b_distilled_1.1_lora_dynamic_fro09_avg_rank_111_bf16.safetensors",
+      "size": 2741024390,
+      "sha256": "31e0c0195fb841bf31af78e8b60858f489e87ddcea4a5239abc80943da65e3ac"
+    }
+  ],
+  "catalog": {
+    "family": "LTX",
+    "model": "LTX-2.3 22B",
+    "flavor": "Distilled LoRA · single pass",
+    "uses": [
+      "Text to video",
+      "Audio"
+    ],
+    "requirements": [
+      "Current ComfyUI with LTX-2.3 nodes",
+      "Large 22B model; check the full download size before preparing"
+    ],
+    "access": [],
+    "documentation": "https://docs.comfy.org/tutorials/video/ltx/ltx-2-3",
+    "setup": "Uses the official template’s first eight-step audio/video pass, without its second upscale pass or prompt-generation branch. Install the listed files in ComfyUI or use Prepare models.",
+    "precision": "FP8 diffusion / FP4 text encoder",
+    "experimental": true
+  },
+  "controls": {
+    "fps": 24,
+    "frameStride": 8,
+    "frameOffset": 1
+  }
+}

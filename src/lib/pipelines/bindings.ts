@@ -1,10 +1,13 @@
+import { pipelinePrompt } from './details';
 import type { PipelineSnapshot } from './schema';
-import type { RenderInput, Pipeline, Stage } from '../vpipe';
+import type { RenderInput } from '../providers/types';
+import type { Pipeline, Stage } from '../vpipe';
 import type { Graph } from '../comfyui';
 export function bindPipeline(snapshot:PipelineSnapshot,input:Omit<RenderInput,'signal'|'log'>,output=input.output,source=input.source,references=input.references) {
   const {metadata:m}=snapshot,graph=structuredClone(snapshot.graph);
-  const frames=Math.ceil((input.request.duration*m.controls.fps-m.controls.frameOffset)/m.controls.frameStride)*m.controls.frameStride+m.controls.frameOffset;
-  const values={prompt:input.prompt,seed:input.seed,width:input.width,height:input.height,pixels:input.width*input.height,frames,duration:input.request.duration,output};
+  if(m.source?.required&&!source)throw Error('This workflow requires a starting image.');
+  const frames=input.frames??Math.ceil((input.request.duration*m.controls.fps-m.controls.frameOffset)/m.controls.frameStride)*m.controls.frameStride+m.controls.frameOffset;
+  const values={prompt:pipelinePrompt(input.prompt,m.promptSuffix),seed:input.seed,width:input.width,height:input.height,pixels:input.width*input.height,frames,fps:input.fps??m.controls.fps,frameBufferMB:Math.ceil(input.width*input.height*frames*3/1024/1024)+1,duration:input.request.duration,output};
   const stages=(graph as unknown as Pipeline).stages;
   function config(id:string):Record<string,unknown> {
     const value=m.runner==='vpipe'?stages.find(stage=>stage.id===id)?.config:(graph as Graph)[id]?.inputs;

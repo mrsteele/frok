@@ -1,0 +1,17 @@
+{
+  "id": "prepare-flashvsr",
+  "stages": [
+    {
+      "id": "fetch-flashvsr",
+      "type": "model-fetch",
+      "config": {
+        "model_path": "JunhaoZhuang/FlashVSR-v1.1",
+        "hf_token": "",
+        "base_path": "./models",
+        "skip_existing_files": true,
+        "overwrite_existing": false
+      },
+      "iports": []
+    }
+  ]
+}

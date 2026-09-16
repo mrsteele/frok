@@ -129,7 +129,7 @@ async function installPipelines({ home, templates, groups, version, stateFile })
     for (const entry of entries) state.files[entry.name] = entry.digest;
     await write(stateFile, JSON.stringify(state, null, 2) + '\n');
   }
-  for(const name of ['VPIPE-LICENSE','VPIPE-NOTICE']){
+  for(const name of ['VPIPE-LICENSE','VPIPE-NOTICE','COMFY-LICENSE','LTX-LICENSE','LTX-NOTICE','CATALOG-NOTICE']){
     const notice=await read(path.join(/* turbopackIgnore: true */ templates,name));
     if(notice)await write(path.join(/* turbopackIgnore: true */ locations.pipelines,name),notice);
   }

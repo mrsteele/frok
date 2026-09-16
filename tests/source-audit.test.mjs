@@ -62,10 +62,13 @@ test('shipped pipeline bundles exclude personal and obsolete templates', async (
   }
   const preparations=JSON.parse(await fs.readFile(new URL('../desktop/preparations.json',import.meta.url),'utf8'));
   for(const folder of preparations){
-    assert.match(folder,/^(image|video|reference)\/[a-z0-9-]+$/);
-    assert.ok(groups.flat().includes(`${folder}/run.vpipeline`));
-    const file=JSON.parse(await fs.readFile(new URL(`../resources/pipelines/${folder}/prepare.vpipeline`,import.meta.url),'utf8'));
-    assert.ok(file.stages.length,'Every packaged starter has a native pipeline.');
+    assert.match(folder,/^(image|video|reference|upscale)\/[a-z0-9-]+$/);
+    const metadata=JSON.parse(await fs.readFile(new URL(`../resources/pipelines/${folder}/meta.json`,import.meta.url),'utf8'));
+    const extension=metadata.runner==='vpipe'?'vpipeline':'json';
+    assert.ok(groups.flat().includes(`${folder}/run.${extension}`));
+    const file=JSON.parse(await fs.readFile(new URL(`../resources/pipelines/${folder}/prepare.${extension}`,import.meta.url),'utf8'));
+    if(extension==='vpipeline')assert.ok(file.stages.length,'A native setup has a preparation pipeline.');
+    else {assert.deepEqual(file.files,metadata.dependencies);assert.ok(file.files.every(d=>d.url&&d.size&&d.sha256),'File setup pins every download.');}
   }
 });
 

@@ -10,18 +10,32 @@ Publishing source and distributing desktop binaries have different prerequisites
 - Build and test an unpacked app against a disposable workspace using `npm run build:desktop`, `npm run package:dir`, and `npm run smoke:desktop`. These checks do not generate media. Test installation and startup on a clean machine for every platform you intend to advertise; Apple Silicon is the initial generation target.
 - Run `node scripts/check-media-tools.mjs` after the desktop build. Packaging verifies the pinned FFmpeg/FFprobe build, H.264/AAC encoders, source checksums, build recipe and license files. It rejects nonfree builds. The source archives and recipe ship alongside the commands; preserve them in every installer. Do not substitute a local system binary.
 - Review `.desktop/licenses/dependencies.json` and the supplied notices copied into `.desktop/licenses`. Preserve Electron/Chromium and Node notices too. Native package license identifiers alone do not supply every component's notices or corresponding source; check the Sharp/libvips component inventory for each platform before distributing installers.
-- macOS releases are unsigned and not notarized. No Apple account, certificate or signing secrets are required. Test a downloaded installer on a clean Mac, including the first-launch approval described below.
+- macOS releases use free ad-hoc bundle signing and Sparkle Ed25519 update signatures. No Apple account or certificate is required. Configure the update-signing secret described below; releases remain unnotarized. Test a downloaded installer on a clean Mac, including the first-launch approval described below.
 - Once the repository exists, enable private vulnerability reporting, secret scanning/push protection, and branch protection requiring Source checks. These are GitHub repository settings and cannot be enabled by committing configuration alone.
 
 Do not publish the generated draft until these checks are complete. Local builds generate update metadata but never upload releases.
 
-### Unsigned macOS releases
+### macOS releases without Apple signing
 
-The GitHub workflow explicitly disables signing. macOS may block the first launch because the developer cannot be verified. After attempting to open Frok, users who trust the download can use **System Settings → Privacy & Security → Open Anyway** when available. See [Apple’s instructions](https://support.apple.com/en-us/102445).
+The GitHub workflow disables Apple Developer ID signing and uses ad-hoc signing to seal the packaged app. macOS may block the first launch because the developer cannot be verified. After attempting to open Frok, users who trust the download can use **System Settings → Privacy & Security → Open Anyway** when available. See [Apple’s instructions](https://support.apple.com/en-us/102445).
 
-Unsigned macOS builds do not use the current in-app updater. To update, quit Frok, download the new release, and replace the app in Applications. The library and settings remain in the user workspace. Windows and Linux retain their existing update support.
+Sparkle verifies each update using the public key embedded in the installed app. This supports in-app updates without an Apple Developer membership. Builds released before Sparkle was included need one manual replacement; subsequent updates happen within Frok. The library and settings remain in the user workspace.
 
 The packaging code still supports optional signed local builds through `FROK_SIGN_RELEASE=1`, with `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID`. These are not needed by the unsigned release workflow.
+
+## Update signing setup
+
+The public key in `desktop/sparkle-key.json` identifies Frok’s trusted updates. Keep that key unchanged across releases. The matching private seed is stored as the repository’s **Actions secret `SPARKLE_PRIVATE_KEY`**. It is used only by the macOS appcast step, passed to Sparkle over standard input, and never included in installers or logs. The release collector independently verifies each archive’s signature before uploading it.
+
+For a new fork with no existing users, generate its own key pair with `npm run updates:key` after removing the inherited public key file. This creates a private file under `.data/update-signing/` and the public JSON file. The command refuses to replace an existing key. Back up the private file securely, then configure the secret without putting its value in shell history:
+
+```sh
+gh secret set SPARKLE_PRIVATE_KEY --repo OWNER/REPO < .data/update-signing/sparkle-private-key
+```
+
+Commit only the public JSON file. GitHub does not let you retrieve secret values later. Losing the private key prevents signing updates for existing installations; do not casually regenerate it.
+
+The native bridge and Sparkle framework are pinned through `electron-sparkle-updater` in the lockfile. macOS packaging compiles the bridge against the installed Electron version and requires Xcode Command Line Tools. Ordinary development does not build or start Sparkle. To test an actual disposable upgrade locally after building the bridge, run `npm run smoke:updates`; `npm run smoke:updates -- --tamper` checks rejection of a modified download. Neither starts Frok’s backend or accesses its library.
 
 ## Choose and tag a version
 
@@ -42,7 +56,7 @@ The packaging code still supports optional signed local builds through `FROK_SIG
    git push origin "v$(node -p 'require("./package.json").version')"
    ```
 
-GitHub verifies that the tag, `package.json`, and `package-lock.json` agree before building the platform matrix defined in `.github/workflows/release.yml`. Successful builds and smoke checks produce a **draft release** with installers, update manifests, blockmaps, generated release notes and `SHA256SUMS.txt`. The release collector merges the Apple Silicon and Intel downloads into one macOS manifest and verifies download hashes. Review and test the installers, then publish the draft.
+GitHub verifies that the tag, `package.json`, and `package-lock.json` agree before building the platform matrix defined in `.github/workflows/release.yml`. Successful builds and smoke checks produce a **draft release** with installers, update manifests, blockmaps, generated release notes and `SHA256SUMS.txt`. The release collector verifies download hashes and Sparkle signatures. Separate Apple Silicon and Intel appcasts select the correct archive. Review and test the installers, then publish the draft.
 
 Prereleases are supported and marked accordingly. A failed platform build prevents creation of the release. Rerunning can update an existing draft, but refuses to overwrite a published release. The manual workflow trigger must also be run against a version tag, not a branch.
 
@@ -54,12 +68,12 @@ Before accepting contributions, enable GitHub private vulnerability reporting an
 
 ## In-app updates
 
-Installed Windows and Linux releases, and optionally signed macOS builds, check GitHub for stable updates on launch and periodically while open, then download them in the background. **Restart to update** installs the downloaded release and reopens Frok. If a job is running, the user can finish that job before restarting or postpone the update. Remaining queued jobs, the library and settings stay in the workspace. Models stay with their configured runners. Updates never force a restart while rendering.
+Installed macOS, Windows and Linux releases check GitHub for stable updates on launch and periodically while open, then download them in the background. **Restart to update** installs the downloaded release and reopens Frok. If a job is running, the user can finish that job before restarting or postpone the update. Remaining queued jobs, the library and settings stay in the workspace. Models stay with their configured runners. Updates never force a restart while rendering.
 
-The update feed uses the CI repository automatically; local packaging uses the repository link in `desktop/product.mjs`. Keep the ZIP downloads, update manifests and blockmaps attached when publishing a draft. A draft or prerelease is not offered to stable installations. Public downloads need no user GitHub token; private repositories are not supported as a public update feed.
+The update feed uses the CI repository automatically; local packaging uses the repository link in `desktop/product.mjs`. Keep the ZIP downloads, architecture-specific appcasts, update manifests and blockmaps attached when publishing a draft. Sparkle reads `https://github.com/OWNER/REPO/releases/latest/download/appcast-ARCH.xml`; no separate server or Pages deployment is needed. A draft or prerelease is not offered to stable installations. Public downloads need no user GitHub token; private repositories are not supported as a public update feed.
 
-macOS updates require Developer ID signing with the same identity across versions. The unsigned macOS releases produced by this workflow and `npm run dev:desktop` leave updates disabled. Windows uses the NSIS installer; Linux uses the AppImage. The updater is bundled into the desktop shell, and packaging still uses `--publish never`—only the release workflow uploads files.
+macOS uses Sparkle with the same Ed25519 update key across versions. Developer ID signing is optional. `npm run dev:desktop` leaves updates disabled. Windows uses the NSIS installer; Linux uses the AppImage. The updater is bundled into the desktop shell, and packaging still uses `--publish never`—only the release workflow uploads files.
 
-For platforms with in-app updates enabled, verify an actual upgrade between two releases on a disposable workspace (using the same signing identity for signed macOS builds): download progress, postponing a restart, finishing an active job, relaunching, and retained library/queue data. Synthetic tests cover update state, packaging, manifest integrity and restart ordering; they do not replace an installed upgrade test. See the [electron-builder update guide](https://www.electron.build/v26/docs/features/auto-update/).
+For platforms with in-app updates enabled, verify an actual upgrade between two releases on a disposable workspace (using the same Sparkle key for macOS): download progress, postponing a restart, finishing an active job, relaunching, and retained library/queue data. Synthetic tests cover update state, packaging, manifest integrity and restart ordering; they do not replace an installed upgrade test. See [Sparkle’s documentation](https://sparkle-project.org/documentation/) and the [electron-builder update guide](https://www.electron.build/v26/docs/features/auto-update/).
 
 References: [GitHub workflow syntax](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax), [GitHub CLI release creation](https://cli.github.com/manual/gh_release_create), [electron-builder packaging](https://www.electron.build/v26/docs/cli/).

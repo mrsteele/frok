@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "id": "vpipe:krea-2-turbo-m87",
+  "name": "Krea 2 Turbo + M87",
+  "runner": "vpipe",
+  "default": false,
+  "bindings": {
+    "prompt": [
+      {
+        "node": "text-prompt",
+        "field": "text"
+      }
+    ],
+    "seed": [
+      {
+        "node": "generate-image",
+        "field": "seed"
+      }
+    ],
+    "width": [
+      {
+        "node": "generate-image",
+        "field": "width"
+      }
+    ],
+    "height": [
+      {
+        "node": "generate-image",
+        "field": "height"
+      }
+    ],
+    "output": [
+      {
+        "node": "save-image",
+        "field": "path"
+      }
+    ]
+  },
+  "dependencies": [
+    {
+      "kind": "model",
+      "reference": "krea/Krea-2-Turbo",
+      "layout": "krea",
+      "generated": false,
+      "fetch": {
+        "model": "krea/Krea-2-Turbo"
+      }
+    },
+    {
+      "kind": "lora",
+      "reference": "mgwr/M87",
+      "fetch": {
+        "model": "mgwr/M87"
+      }
+    }
+  ],
+  "description": "Krea 2 Turbo with the M87 aesthetic LoRA. Adds the required --preview prompt trigger.",
+  "catalog": {
+    "family": "Krea 2",
+    "model": "krea/Krea-2-Turbo",
+    "flavor": "M87 aesthetic LoRA",
+    "uses": [
+      "Text to image"
+    ],
+    "requirements": [
+      "Apple Silicon Mac",
+      "Accept the model’s Hugging Face terms before downloading",
+      "The M87 --preview trigger is appended automatically."
+    ],
+    "access": [
+      {
+        "name": "krea/Krea-2-Turbo",
+        "url": "https://huggingface.co/krea/Krea-2-Turbo",
+        "gated": true
+      }
+    ],
+    "documentation": "https://github.com/tgo-app-dev/vpipe/blob/6154c90904938e8b325550cbd8f22c8f8503c360/docs/KREA-2.md",
+    "setup": "Prepare the required files in your runner, or install them manually using the model links below. You can edit your own workflow files at any time.",
+    "precision": "BF16",
+    "estimates": {
+      "downloadGB": 35.83,
+      "installedGB": 35.83,
+      "memoryGB": 16,
+      "basis": "Upstream estimate for the required Diffusers folders; memory is a starting point, not a speed guarantee.",
+      "source": "https://github.com/tgo-app-dev/vpipe/blob/6154c90904938e8b325550cbd8f22c8f8503c360/docs/KREA-2.md"
+    }
+  },
+  "promptSuffix": "--preview"
+}

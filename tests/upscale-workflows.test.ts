@@ -67,7 +67,7 @@ after(async () => {
 async function upscalers() {
   const result = await diskCatalog();
   assert.deepEqual(result.errors, []);
-  const pipelines = result.entries.filter(pipeline => pipeline.kind === 'upscale');
+  const pipelines = result.entries.filter(pipeline => pipeline.kind === 'upscale' && pipeline.metadata.runner === 'comfyui');
   assert.deepEqual(pipelines.map(pipeline => pipeline.metadata.id).sort(), ['comfyui:realesrgan', 'comfyui:seedvr2']);
   return pipelines;
 }

@@ -1,35 +1,17 @@
+import { prepareNativeUpscale, finishNativeUpscale } from './native-upscale';
+import { vpipePluginArgs } from './providers/vpipe-plugins';
 import { bindPipeline } from './pipelines/bindings';
 import fs from "node:fs/promises";
 import path from "node:path";
 import { vpipeBin, jobTimeoutMs } from "./config";
-import { libraryDirectory } from './library';
 import { resolveModelAdapter, resolveVpipeModel, vpipeModelsDirectory } from './model-access';
 import { runProcess } from "./process";
 import { imagePreviewPath, imagePreviewDir, clearImagePreviews, liveImagePreviewsEnabled } from "./image-preview";
 import { parseVpipeRuntime } from "./runner-time";
-import type { Generation } from "./types";
+import type { RenderInput } from "./providers/types";
+import { privateRenderDirectory } from "./providers/private-storage";
 export type Stage = { id:string; type:string; config:Record<string,unknown>; iports?:{src:string;oport:number}[] };
 export type Pipeline = { id:string; stages:Stage[]; subpipelines?:unknown[] };
-export type RenderInput = { request:Generation; prompt:string; seed:number; width:number; height:number; output:string; directory:string; source?:string; references:string[]; signal:AbortSignal; log:(line:string)=>void; onRuntime?:(seconds:number)=>void; waitForStop?:()=>boolean };
-const inside = (base: string, file: string) => { const relative = path.relative(base, file); return relative !== '' && relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative); };
-export async function privateJobDirectory(value: string) {
-  const user = await fs.realpath(libraryDirectory()), directory = await fs.realpath(value);
-  if (!inside(path.join(user, 'jobs'), directory)) throw new Error('Runner directory must belong to the local library.');
-  return directory;
-}
-/** Both runners accept only library inputs and a pre-created private job directory. */
-export async function privateRenderDirectory(input: RenderInput) {
-  input.signal.throwIfAborted();
-  const user = await fs.realpath(libraryDirectory()), directory = await privateJobDirectory(input.directory);
-  if (await fs.realpath(path.dirname(input.output)) !== directory) throw new Error('Runner output must stay in its job directory.');
-  const output = await fs.lstat(input.output).catch(error => { if (error.code !== 'ENOENT') throw error; return undefined; });
-  if (output && !output.isFile()) throw new Error('Invalid runner output file.');
-  for (const source of [input.source, ...input.references]) if (source) {
-    const file = await fs.realpath(source);
-    if (!inside(path.join(user, 'media'), file) && !inside(path.join(user, 'jobs'), file)) throw new Error('Runner input must belong to the local library.');
-  }
-  return directory;
-}
 export async function buildPipeline(input: Omit<RenderInput,"signal"|"log">):Promise<Pipeline> {
   if(input.request.pipeline){
     const p=bindPipeline(input.request.pipeline,input) as unknown as Pipeline;
@@ -43,7 +25,10 @@ export async function buildPipeline(input: Omit<RenderInput,"signal"|"log">):Pro
 }
 export async function renderVpipe(input:RenderInput) {
   const directory = await privateRenderDirectory(input);
-  const pipeline=await buildPipeline(input);
+  const plugins = input.request.pipeline ? await vpipePluginArgs(input.request.pipeline.metadata) : [];
+  const upscale=input.request.mode==='upscale'?await prepareNativeUpscale(input):undefined;
+  const rendering=upscale?.input??input;
+  const pipeline=await buildPipeline(rendering);
   // Do not share the runtime LMDB. These paths target Krea's diffusers root
   // and prepared MiniMax roots with on-disk partition metadata. Custom keys
   // whose model_type/files exist only in LMDB are not interchangeable with
@@ -51,7 +36,7 @@ export async function renderVpipe(input:RenderInput) {
   // Upstream @0982c8a7: model-registry.cc; shared/comfy-output-config.cc;
   // minimax-h3/metal-minimax-h3-transformer.cc. LoRA aliases pin exact files.
   for (const stage of pipeline.stages) {
-    for (const key of ['hf_dir', 'dit_dir']) if (typeof stage.config[key] === 'string' && stage.config[key]) stage.config[key] = await resolveVpipeModel(stage.config[key] as string);
+    for (const key of ['hf_dir', 'dit_dir', 'encoder_dir']) if (typeof stage.config[key] === 'string' && stage.config[key]) stage.config[key] = await resolveVpipeModel(stage.config[key] as string);
     for (const key of ['lora', 'lora2']) if (typeof stage.config[key] === 'string' && stage.config[key]) stage.config[key] = await resolveModelAdapter(stage.config[key] as string);
   }
   const dir = await fs.mkdtemp(path.join(directory, 'vpipe-'));
@@ -70,9 +55,10 @@ export async function renderVpipe(input:RenderInput) {
   if (preview) { await clearImagePreviews(input.directory); await fs.mkdir(imagePreviewDir(input.directory), { recursive: true }); }
   let logTail="";
   try {
-    await runProcess(vpipeBin(),["--config",config,"--launch",file],{cwd:dir,env,signal:input.signal,onLog:chunk=>{logTail=(logTail+chunk).slice(-16000);input.log(chunk);},timeout:jobTimeoutMs()});
-    const stat=await fs.stat(input.output).catch(()=>null);
+    await runProcess(vpipeBin(),[...plugins,"--config",config,"--launch",file],{cwd:dir,env,signal:input.signal,onLog:chunk=>{logTail=(logTail+chunk).slice(-16000);input.log(chunk);},timeout:jobTimeoutMs()});
+    const stat=await fs.stat(rendering.output).catch(()=>null);
     if(!stat?.size)throw new Error("Vpipe finished without saving media. Check this job's log and the administrator-configured model installation.");
+    if(upscale)await finishNativeUpscale(upscale,input);
   } finally {
     // Parse once after exit so chunk boundaries and a missing final newline cannot truncate the duration.
     const seconds=parseVpipeRuntime(logTail,pipeline.id);

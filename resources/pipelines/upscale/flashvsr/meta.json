@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "id": "vpipe:flashvsr",
+  "name": "FlashVSR v1.1",
+  "runner": "vpipe",
+  "description": "Temporal video restoration with FlashVSR. Requires Vpipe 0.1.51+ on Apple Silicon. Retains source framing, frame rate and audio.",
+  "videoSource": {
+    "node": "load-video",
+    "field": "input_url"
+  },
+  "upscale": {
+    "spatialMultiple": 128,
+    "frameStride": 8,
+    "frameOffset": 1,
+    "minimumFrames": 25,
+    "extraFrames": 4
+  },
+  "bindings": {
+    "output": [
+      {
+        "node": "save-video",
+        "field": "output_url"
+      }
+    ],
+    "seed": [
+      {
+        "node": "generate-video",
+        "field": "seed"
+      }
+    ],
+    "fps": [
+      {
+        "node": "rgb-to-video",
+        "field": "fps"
+      },
+      {
+        "node": "vae-decode",
+        "field": "fps"
+      },
+      {
+        "node": "generate-video",
+        "field": "fps"
+      }
+    ],
+    "width": [
+      {
+        "node": "generate-video",
+        "field": "width"
+      }
+    ],
+    "height": [
+      {
+        "node": "generate-video",
+        "field": "height"
+      }
+    ],
+    "frames": [
+      {
+        "node": "generate-video",
+        "field": "frames"
+      },
+      {
+        "node": "temporal-stack",
+        "field": "group_size"
+      }
+    ],
+    "frameBufferMB": [
+      {
+        "node": "temporal-stack",
+        "field": "max_mb"
+      }
+    ]
+  },
+  "dependencies": [
+    {
+      "kind": "model",
+      "reference": "JunhaoZhuang/FlashVSR-v1.1",
+      "files": [
+        "config.json",
+        "model_index.json",
+        "diffusion_pytorch_model_streaming_dmd.safetensors",
+        "LQ_proj_in.ckpt",
+        "Wan2.1_VAE.pth",
+        "posi_prompt.pth"
+      ],
+      "fetch": {
+        "model": "JunhaoZhuang/FlashVSR-v1.1"
+      }
+    }
+  ],
+  "catalog": {
+    "family": "FlashVSR v1.1",
+    "model": "FlashVSR v1.1",
+    "flavor": "Video enhancement",
+    "uses": [
+      "Video upscaling"
+    ],
+    "requirements": [],
+    "access": [],
+    "documentation": "https://github.com/tgo-app-dev/vpipe",
+    "setup": "Prepare the required files in your runner, or install them manually using the model links below. You can edit your own workflow files at any time."
+  }
+}

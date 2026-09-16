@@ -72,5 +72,21 @@
     "target": "frok-references",
     "field": "references",
     "max": 9
+  },
+  "catalog": {
+    "family": "MiniMax H3",
+    "model": "MiniMax H3 REF2VA",
+    "flavor": "Turbo · reference 4-step",
+    "uses": [
+      "Reference video",
+      "Audio"
+    ],
+    "requirements": [
+      "Apple Silicon Mac"
+    ],
+    "access": [],
+    "documentation": "https://github.com/tgo-app-dev/vpipe/blob/6154c90904938e8b325550cbd8f22c8f8503c360/docs/MINIMAX-H3.md",
+    "setup": "Prepare the required files in your runner, or install them manually using the model links below. You can edit your own workflow files at any time.",
+    "precision": "8-bit prepared weights"
   }
 }

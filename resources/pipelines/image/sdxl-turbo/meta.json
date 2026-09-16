@@ -40,7 +40,28 @@
     {
       "kind": "file",
       "reference": "checkpoints/sd_xl_turbo_1.0_fp16.safetensors",
-      "url": "https://huggingface.co/stabilityai/sdxl-turbo/resolve/main/sd_xl_turbo_1.0_fp16.safetensors"
+      "url": "https://huggingface.co/stabilityai/sdxl-turbo/resolve/71153311d3dbb46851df1931d3ca6e939de83304/sd_xl_turbo_1.0_fp16.safetensors",
+      "size": 6938081905,
+      "sha256": "e869ac7d6942cb327d68d5ed83a40447aadf20e0c3358d98b2cc9e270db0da26"
     }
-  ]
+  ],
+  "catalog": {
+    "family": "SDXL",
+    "model": "SDXL Turbo",
+    "flavor": "Turbo · 4-step",
+    "uses": [
+      "Text to image"
+    ],
+    "requirements": [],
+    "access": [
+      {
+        "name": "stabilityai/sdxl-turbo",
+        "url": "https://huggingface.co/stabilityai/sdxl-turbo",
+        "gated": false
+      }
+    ],
+    "documentation": "https://huggingface.co/stabilityai/sdxl-turbo",
+    "setup": "Prepare the required files in your runner, or install them manually using the model links below. You can edit your own workflow files at any time.",
+    "precision": "FP16"
+  }
 }

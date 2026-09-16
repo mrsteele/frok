@@ -37,16 +37,30 @@
     {
       "kind": "file",
       "reference": "SEEDVR2/seedvr2_ema_3b-Q4_K_M.gguf",
-      "url": "https://huggingface.co/AInVFX/SeedVR2_comfyUI/resolve/main/seedvr2_ema_3b-Q4_K_M.gguf",
+      "url": "https://huggingface.co/AInVFX/SeedVR2_comfyUI/resolve/ac66d6d98fa49975d893b58c55bff7677191c862/seedvr2_ema_3b-Q4_K_M.gguf",
       "size": 1995344224,
       "sha256": "e665e3909de1a8c88a69c609bca9d43ff5a134647face2ce4497640cc3597f0e"
     },
     {
       "kind": "file",
       "reference": "SEEDVR2/ema_vae_fp16.safetensors",
-      "url": "https://huggingface.co/numz/SeedVR2_comfyUI/resolve/main/ema_vae_fp16.safetensors",
+      "url": "https://huggingface.co/numz/SeedVR2_comfyUI/resolve/09ced71023636e9bc8cdf9cdecfb2625d1e691e8/ema_vae_fp16.safetensors",
       "size": 501324814,
       "sha256": "20678548f420d98d26f11442d3528f8b8c94e57ee046ef93dbb7633da8612ca1"
     }
-  ]
+  ],
+  "catalog": {
+    "family": "SeedVR2",
+    "model": "SeedVR2",
+    "flavor": "Video enhancement",
+    "uses": [
+      "Video upscaling"
+    ],
+    "requirements": [
+      "Install the SeedVR2 custom nodes in ComfyUI"
+    ],
+    "access": [],
+    "documentation": "https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler",
+    "setup": "Prepare the required files in your runner, or install them manually using the model links below. You can edit your own workflow files at any time."
+  }
 }

@@ -47,5 +47,34 @@
       }
     }
   ],
-  "description": "Krea 2 Turbo with its original weights."
+  "description": "Krea 2 Turbo with its original weights.",
+  "catalog": {
+    "family": "Krea 2",
+    "model": "krea/Krea-2-Turbo",
+    "flavor": "Turbo · original weights",
+    "uses": [
+      "Text to image"
+    ],
+    "requirements": [
+      "Apple Silicon Mac",
+      "Accept the model’s Hugging Face terms before downloading"
+    ],
+    "access": [
+      {
+        "name": "krea/Krea-2-Turbo",
+        "url": "https://huggingface.co/krea/Krea-2-Turbo",
+        "gated": true
+      }
+    ],
+    "documentation": "https://github.com/tgo-app-dev/vpipe/blob/6154c90904938e8b325550cbd8f22c8f8503c360/docs/KREA-2.md",
+    "setup": "Prepare the required files in your runner, or install them manually using the model links below. You can edit your own workflow files at any time.",
+    "precision": "BF16",
+    "estimates": {
+      "downloadGB": 35.6,
+      "installedGB": 35.6,
+      "memoryGB": 16,
+      "basis": "Upstream estimate for the required Diffusers folders; memory is a starting point, not a speed guarantee.",
+      "source": "https://github.com/tgo-app-dev/vpipe/blob/6154c90904938e8b325550cbd8f22c8f8503c360/docs/KREA-2.md"
+    }
+  }
 }

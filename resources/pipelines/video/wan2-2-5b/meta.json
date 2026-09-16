@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "id": "comfyui:wan2-2-5b",
+  "name": "Wan 2.2 · 5B",
+  "runner": "comfyui",
+  "description": "Wan 2.2 · Hybrid · 20-step.",
+  "bindings": {
+    "prompt": [
+      {
+        "node": "4",
+        "field": "text"
+      }
+    ],
+    "seed": [
+      {
+        "node": "8",
+        "field": "seed"
+      }
+    ],
+    "width": [
+      {
+        "node": "6",
+        "field": "width"
+      }
+    ],
+    "height": [
+      {
+        "node": "6",
+        "field": "height"
+      }
+    ],
+    "output": [
+      {
+        "node": "11",
+        "field": "filename_prefix"
+      }
+    ],
+    "frames": [
+      {
+        "node": "6",
+        "field": "length"
+      }
+    ],
+    "fps": [
+      {
+        "node": "10",
+        "field": "fps"
+      }
+    ]
+  },
+  "dependencies": [
+    {
+      "kind": "file",
+      "reference": "diffusion_models/wan2.2_ti2v_5B_fp16.safetensors",
+      "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/c4f60d30c55a624e35427060fdd217579a6c1d77/split_files/diffusion_models/wan2.2_ti2v_5B_fp16.safetensors",
+      "size": 9999658848,
+      "sha256": "456f901338bd9eadbded3828b819109a9b68e8a525ca5cf8d0049a69fcfeca1e"
+    },
+    {
+      "kind": "file",
+      "reference": "text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/617a7633e636506f850e043bc4605f290a466a8e/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "size": 6735906897,
+      "sha256": "c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68"
+    },
+    {
+      "kind": "file",
+      "reference": "vae/wan2.2_vae.safetensors",
+      "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/c4f60d30c55a624e35427060fdd217579a6c1d77/split_files/vae/wan2.2_vae.safetensors",
+      "size": 1409400960,
+      "sha256": "e40321bd36b9709991dae2530eb4ac303dd168276980d3e9bc4b6e2b75fed156"
+    }
+  ],
+  "catalog": {
+    "family": "Wan 2.2",
+    "model": "Wan2.2-TI2V-5B",
+    "flavor": "Hybrid · 20-step",
+    "uses": [
+      "Text or image to video"
+    ],
+    "requirements": [
+      "Current ComfyUI with Wan 2.2 nodes"
+    ],
+    "access": [],
+    "documentation": "https://docs.comfy.org/tutorials/video/wan/wan2_2",
+    "setup": "Prepare the required files in your runner, or install them manually using the model links below. You can edit your own workflow files at any time.",
+    "precision": "FP16 diffusion / FP8 text encoder"
+  },
+  "controls": {
+    "fps": 24,
+    "frameStride": 4,
+    "frameOffset": 1
+  },
+  "source": {
+    "target": "6",
+    "field": "start_image"
+  }
+}

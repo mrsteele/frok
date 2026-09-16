@@ -29,10 +29,13 @@
     "smoke:ui": "electron scripts/ui-smoke.mjs",
     "smoke:docs": "electron scripts/desktop-docs-smoke.mjs",
     "test:release": "npm run test:desktop && node --test tests/release-version.test.mjs tests/source-audit.test.mjs && tsx --test tests/library-api.test.ts tests/request-security.test.ts tests/client-session.test.ts tests/pipeline-catalog.test.ts",
-    "check:source": "node scripts/check-source.mjs"
+    "check:source": "node scripts/check-source.mjs",
+    "updates:key": "node scripts/update-key.mjs",
+    "smoke:updates": "node scripts/sparkle-smoke.mjs"
   },
   "dependencies": {
     "dotenv": "^17.2.3",
+    "electron-sparkle-updater": "0.5.0",
     "electron-updater": "6.8.9",
     "lucide-react": "^0.577.0",
     "next": "16.3.4",

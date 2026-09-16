@@ -9,6 +9,12 @@ if (args.some(arg => arg !== '--dir')) throw Error('Use --dir for an unpacked ap
 // Refuse incomplete, stale, or nonfree media tool payloads before packaging.
 await checkMediaTools();
 const config=releaseConfiguration(JSON.parse(await fs.readFile('electron-builder.json','utf8')));
+if (process.platform === 'darwin') {
+  await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ['node_modules/electron-sparkle-updater/bin/electron-sparkle-updater.js', 'rebuild'], { stdio: 'inherit' });
+    child.on('error', reject); child.on('exit', code => code === 0 ? resolve() : reject(Error('Could not build the Sparkle updater.')));
+  });
+}
 const configFile=path.resolve('.desktop/builder-config.json');
 await fs.mkdir(path.dirname(configFile),{recursive:true});
 await fs.writeFile(configFile,JSON.stringify(config,null,2));

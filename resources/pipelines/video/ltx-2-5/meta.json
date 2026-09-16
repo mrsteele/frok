@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "id": "vpipe:ltx-2-5",
+  "name": "LTX-2.5 · Distilled",
+  "runner": "vpipe",
+  "description": "LTX · Distilled · 8-step.",
+  "bindings": {
+    "prompt": [
+      {
+        "node": "text-prompt",
+        "field": "text"
+      }
+    ],
+    "seed": [
+      {
+        "node": "gen",
+        "field": "seed"
+      }
+    ],
+    "width": [
+      {
+        "node": "gen",
+        "field": "width"
+      }
+    ],
+    "height": [
+      {
+        "node": "gen",
+        "field": "height"
+      }
+    ],
+    "frames": [
+      {
+        "node": "gen",
+        "field": "frames"
+      }
+    ],
+    "fps": [
+      {
+        "node": "gen",
+        "field": "fps"
+      },
+      {
+        "node": "rgb-to-video",
+        "field": "fps"
+      }
+    ],
+    "output": [
+      {
+        "node": "save",
+        "field": "output_url"
+      }
+    ]
+  },
+  "dependencies": [
+    {
+      "kind": "model",
+      "reference": "local/LTX-2.5-distilled-8bit",
+      "layout": "ltx",
+      "generated": true
+    }
+  ],
+  "catalog": {
+    "family": "LTX",
+    "model": "Lightricks/LTX-2.5",
+    "flavor": "Distilled · 8-step",
+    "uses": [
+      "Text or image to video",
+      "Audio"
+    ],
+    "requirements": [
+      "Apple Silicon Mac",
+      "Compatible Vpipe LTX-2.5 plugin (ABI 4)"
+    ],
+    "access": [
+      {
+        "name": "Lightricks/LTX-2.5",
+        "url": "https://huggingface.co/Lightricks/LTX-2.5",
+        "gated": true
+      }
+    ],
+    "documentation": "https://github.com/tgo-app-dev/vpipe-ltx-2.5",
+    "setup": "Build the LTX-2.5 plugin against your installed Vpipe (matching ABI 4). Place vpipe-ltx-2.5.so in <Vpipe workspace>/plugins/, then prepare models. Frok does not install or compile plugins.",
+    "precision": "8-bit",
+    "experimental": true
+  },
+  "plugins": [
+    "ltx-2.5"
+  ],
+  "controls": {
+    "fps": 24,
+    "frameStride": 8,
+    "frameOffset": 1
+  },
+  "source": {
+    "target": "gen",
+    "port": 5,
+    "model": "model-select"
+  }
+}

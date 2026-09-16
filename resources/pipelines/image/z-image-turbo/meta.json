@@ -58,5 +58,20 @@
       "sha256": "afc8e28272cd15db3919bacdb6918ce9c1ed22e96cb12c4d5ed0fba823529e38",
       "url": "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/08d04455279082882deaabc8d0d09fc914c071e1/split_files/vae/ae.safetensors"
     }
-  ]
+  ],
+  "catalog": {
+    "family": "Z-Image",
+    "model": "Z-Image Turbo",
+    "flavor": "Turbo · 8-step",
+    "uses": [
+      "Text to image"
+    ],
+    "requirements": [
+      "Current ComfyUI with Z-Image support"
+    ],
+    "access": [],
+    "documentation": "https://docs.comfy.org/tutorials/image/z-image/z-image-turbo",
+    "setup": "Prepare the required files in your runner, or install them manually using the model links below. You can edit your own workflow files at any time.",
+    "precision": "BF16"
+  }
 }

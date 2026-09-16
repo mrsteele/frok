@@ -1,0 +1,161 @@
+{
+  "id": "vosr-2-restore",
+  "stages": [
+    {
+      "id": "load-video",
+      "type": "load-video",
+      "config": {
+        "input_url": "input.mp4",
+        "enable_audio": false
+      },
+      "iports": []
+    },
+    {
+      "id": "video-to-rgb",
+      "type": "video-to-rgb",
+      "config": {
+        "output_dtype": "u8"
+      },
+      "iports": [
+        {
+          "src": "load-video",
+          "oport": 0
+        }
+      ]
+    },
+    {
+      "id": "model-select",
+      "type": "model-select",
+      "iports": [],
+      "config": {
+        "hf_dir": "CSWRY/VOSR"
+      }
+    },
+    {
+      "id": "diffusion-conditioner",
+      "type": "diffusion-conditioner",
+      "iports": [
+        {
+          "src": "",
+          "oport": 0
+        },
+        {
+          "src": "",
+          "oport": 0
+        },
+        {
+          "src": "model-select",
+          "oport": 0
+        },
+        {
+          "src": "video-to-rgb",
+          "oport": 0
+        }
+      ],
+      "config": {
+        "unload_when_idle": "park",
+        "encoder_dir": "facebook/dinov2-large"
+      }
+    },
+    {
+      "id": "vae-encode",
+      "type": "vae-encode",
+      "iports": [
+        {
+          "src": "video-to-rgb",
+          "oport": 0
+        },
+        {
+          "src": "model-select",
+          "oport": 0
+        }
+      ],
+      "config": {}
+    },
+    {
+      "id": "generate-image",
+      "type": "generate-image",
+      "iports": [
+        {
+          "src": "diffusion-conditioner",
+          "oport": 0
+        },
+        {
+          "src": "",
+          "oport": 0
+        },
+        {
+          "src": "model-select",
+          "oport": 0
+        },
+        {
+          "src": "",
+          "oport": 0
+        },
+        {
+          "src": "",
+          "oport": 0
+        },
+        {
+          "src": "vae-encode",
+          "oport": 0
+        },
+        {
+          "src": "",
+          "oport": 0
+        },
+        {
+          "src": "",
+          "oport": 0
+        }
+      ],
+      "config": {
+        "seed": 42
+      }
+    },
+    {
+      "id": "vae-decode",
+      "type": "vae-decode",
+      "iports": [
+        {
+          "src": "generate-image",
+          "oport": 0
+        },
+        {
+          "src": "model-select",
+          "oport": 0
+        }
+      ],
+      "config": {}
+    },
+    {
+      "id": "rgb-to-video",
+      "type": "rgb-to-video",
+      "config": {
+        "fps": 24
+      },
+      "iports": [
+        {
+          "src": "vae-decode",
+          "oport": 0
+        }
+      ]
+    },
+    {
+      "id": "save-video",
+      "type": "save-video",
+      "config": {
+        "output_url": "restored.mp4",
+        "enable_audio": false
+      },
+      "iports": [
+        {
+          "src": "rgb-to-video",
+          "oport": 0
+        }
+      ]
+    }
+  ],
+  "subpipelines": [],
+  "aux": {}
+}

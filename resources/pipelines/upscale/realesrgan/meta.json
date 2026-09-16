@@ -36,5 +36,17 @@
       "url": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
       "size": 67040989
     }
-  ]
+  ],
+  "catalog": {
+    "family": "Real-ESRGAN",
+    "model": "Real-ESRGAN",
+    "flavor": "Video enhancement",
+    "uses": [
+      "Video upscaling"
+    ],
+    "requirements": [],
+    "access": [],
+    "documentation": "https://github.com/xinntao/Real-ESRGAN",
+    "setup": "Prepare the required files in your runner, or install them manually using the model links below. You can edit your own workflow files at any time."
+  }
 }

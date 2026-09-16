@@ -30,7 +30,7 @@ test('empty location uses the external default and audits all installed definiti
   const response=await call('pipelines/library');assert.equal(response.status,200);
   const audit=await response.json();
   assert.equal(audit.configured,'');assert.equal(audit.path,defaultPipelinesDir);
-  assert.deepEqual(audit.counts,{vpipe:3,comfyui:6});assert.deepEqual(audit.errors,[]);
+  assert.deepEqual(audit.counts,{vpipe:options.groups.filter((group:string[])=>group.some(file=>file.endsWith('.vpipeline'))).length,comfyui:options.groups.filter((group:string[])=>group.some(file=>file.endsWith('/run.json'))).length});assert.deepEqual(audit.errors,[]);
   const html=renderToStaticMarkup(createElement(PipelineLibrary,{health:{pipelineLibrary:audit} as Health,checking:false,onRefresh:()=>{}}));
   assert.match(html,/Workflow folder/);assert.match(html,/value=""/);assert.match(html,/Vpipe workflows/);assert.match(html,/Reset default pipelines/);
 });
@@ -43,7 +43,7 @@ test('location edits rescan immediately, retain selections and do not alter queu
   assert.deepEqual((await saved.json()).counts,{vpipe:0,comfyui:0});assert.equal((await catalog()).entries.length,0);
   assert.equal(db.settings().pipelineSelections.image,current.metadata.id);assert.deepEqual(db.getJob(job.id)!.request.pipeline,snapshot);
   const cleared=await call('pipelines/library','PATCH',{path:''});assert.equal(cleared.status,200);
-  assert.equal(db.pipelineDirectorySetting(),'');assert.equal((await catalog()).entries.length,9);
+  assert.equal(db.pipelineDirectorySetting(),'');assert.equal((await catalog()).entries.length,options.groups.length);
 });
 test('invalid locations preserve the old setting; malformed generation files are reported while preparation files are ignored',async()=>{
   for(const value of ['relative/path',path.join(directory,'missing')])assert.equal((await call('pipelines/library','PATCH',{path:value})).status,400);

@@ -25,6 +25,10 @@
       "to": "backend"
     },
     {
+      "from": ".desktop/backend/node_modules",
+      "to": "backend/node_modules"
+    },
+    {
       "from": ".desktop/runtime",
       "to": "runtime"
     },

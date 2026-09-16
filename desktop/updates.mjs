@@ -1,6 +1,6 @@
 export function updateAvailability({ packaged, releaseEnabled, platform = process.platform, appImage = process.env.APPIMAGE }) {
   if (!packaged) return 'Updates are available in installed releases. Development uses your local source.';
-  if (!releaseEnabled) return platform === 'darwin' ? 'This unsigned macOS build uses manual updates. Quit Frok and replace the app with the latest release; your library stays in place.' : 'This build does not receive automatic updates.';
+  if (!releaseEnabled) return 'This build does not receive automatic updates.';
   if (platform === 'linux' && !appImage) return 'Automatic updates are available when running the AppImage.';
   return '';
 }

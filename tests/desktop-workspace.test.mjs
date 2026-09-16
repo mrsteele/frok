@@ -41,7 +41,7 @@ test('repeat boot preserves personal pipelines, media, and configuration', async
 test('fresh installs and resets install only generation files from the shipped manifest', async () => {
   const shipped = { ...options, templates: path.resolve('resources/pipelines'), groups: JSON.parse(await fs.readFile('desktop/pipelines.json', 'utf8')) };
   const result = await ensureWorkspace(shipped);
-  const expected = [...shipped.groups.flat(), 'VPIPE-LICENSE', 'VPIPE-NOTICE'].sort();
+  const expected = [...shipped.groups.flat(), 'VPIPE-LICENSE', 'VPIPE-NOTICE', 'COMFY-LICENSE', 'LTX-LICENSE', 'LTX-NOTICE', 'CATALOG-NOTICE'].sort();
   async function installedFiles() {
     const entries = await fs.readdir(result.pipelines, { recursive: true, withFileTypes: true });
     return entries.filter(entry => entry.isFile()).map(entry => path.relative(result.pipelines, path.join(entry.parentPath, entry.name)).split(path.sep).join('/')).sort();

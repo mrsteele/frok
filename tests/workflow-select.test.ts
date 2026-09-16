@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { WorkflowSelect } from '../src/components/generation/workflow-select';
 import { PipelineSelect } from '../src/components/generation/pipeline-select';
 import { PipelineSettings } from '../src/components/settings/pipeline-settings';
+import { WorkflowSummary } from '../src/components/generation/workflow-summary';
 import { pipelineMetadata, type PipelineKind, type PipelineStatus } from '../src/lib/pipelines/schema';
 import type { Health } from '../src/lib/types';
 
@@ -50,14 +51,43 @@ test('disconnecting preserves the named selection; removed definitions have a di
   assert.match(render(state),/No workflows found/);
 });
 
-test('Settings and onboarding share the options, including unavailable services and opting out',()=>{
+test('connected providers come first even with missing models; unavailable providers stay grouped below',()=>{
+  const state=health();
+  state.pipelines=[
+    workflow('comfy-first','image','comfyui',true),
+    workflow('vpipe-missing','image','vpipe'),
+    workflow('comfy-second','image','comfyui'),
+    workflow('vpipe-ready','image','vpipe',true),
+  ];
+  const ordered=()=>options(render(state,'comfy-first')).map(o=>o.value);
+  assert.deepEqual(ordered(),['vpipe-missing','vpipe-ready','comfy-first','comfy-second']);
+  assert.match(render(state),/<optgroup label="Needs a connection"><option value="comfy-first" disabled=""/);
+  assert.equal(options(render(state,'comfy-first')).find(o=>o.selected)?.value,'comfy-first','ordering preserves the saved selection');
+
+  state.connections!.comfyui.enabled=true;
+  state.connections!.vpipe.available=false;
+  assert.deepEqual(ordered(),['comfy-first','comfy-second','vpipe-missing','vpipe-ready']);
+  assert.match(render(state),/<optgroup label="Needs a connection"><option value="vpipe-missing" disabled=""/);
+
+  state.connections!.vpipe.available=true;
+  assert.deepEqual(ordered(),state.pipelines.map(p=>p.id),'connected choices retain their catalog order');
+  assert.doesNotMatch(render(state),/<optgroup/);
+  delete state.connections;
+  assert.deepEqual(ordered(),state.pipelines.map(p=>p.id),'all workflows remain discoverable without connections');
+  assert.ok(options(render(state)).every(o=>o.disabled));
+});
+
+test('Settings and onboarding share accessible rich triggers with their selected names and metrics',()=>{
   const state=health();
   const settings=renderToStaticMarkup(createElement(PipelineSettings,{health:state,checking:false,onRefresh:()=>{}}));
   const wizard=renderToStaticMarkup(createElement(PipelineSettings,{health:state,checking:false,wizard:true,onRefresh:()=>{}}));
-  assert.deepEqual(options(settings),options(wizard));
-  assert.equal(options(settings).filter(o=>o.value==='').length,4);
-  assert.ok(options(settings).filter(o=>o.value==='').every(o=>!o.disabled));
-  for(const id of ['custom-alternative','custom-reference','custom-upscaler'])assert.equal(options(settings).find(o=>o.value===id)?.disabled,true);
+  for(const html of [settings,wizard]) {
+    assert.equal((html.match(/aria-haspopup="dialog"/g)||[]).length,4);
+    assert.match(html,/Images workflow: custom-image/);
+    assert.match(html,/aria-describedby="[^"]+-metrics-state [^"]+-metrics"/);
+    assert.match(html,/Speed.*Unrated/);assert.match(html,/Adherence.*Unrated/);
+    assert.doesNotMatch(html,/Browse models &amp; details|pipeline-stats|<select/);
+  }
   assert.doesNotMatch(settings+wizard,/included upscaling workflows|compatible service to see its workflows/);
 });
 
@@ -81,4 +111,36 @@ test('generation controls retain defaults and source compatibility with the shar
   const fromImage=renderToStaticMarkup(createElement(PipelineSelect,{kind:'video',source:true,health:state,onChange:()=>{}}));
   assert.ok(!options(fromImage).some(o=>o.value==='custom-video'));
   assert.equal(options(fromImage).find(o=>o.value==='image-capable-video')?.disabled,true);
+});
+
+test('rich model rows preserve fractional and zero ratings and distinguish download size from memory',()=>{
+  const p=workflow('rated-image','image','vpipe');
+  p.catalog=pipelineMetadata.parse({version:1,id:p.id,name:p.name,runner:p.runner,catalog:{
+    family:'Example',model:'Example',flavor:'Example',documentation:'https://example.com',setup:'Manual setup',
+    ratings:{speed:{score:4.5,basis:'Synthetic benchmark',source:'https://example.com'},adherence:{score:0,basis:'Synthetic benchmark',source:'https://example.com'}},
+  }}).catalog;
+  p.files=[{reference:'one',ready:false,size:2e9},{reference:'two',ready:true,size:3e9}];
+  const html=renderToStaticMarkup(createElement(WorkflowSummary,{pipeline:p,connection:{enabled:true,available:true,detail:''}}));
+  assert.match(html,/4.5\/5/);assert.match(html,/0\/5/);assert.match(html,/5.0 GB/);
+  assert.match(html,/Full download/);assert.match(html,/not runtime memory/);assert.match(html,/Needs download/);
+});
+
+test('rich model rows do not invent ratings, partial size totals, or missing-download status while offline',()=>{
+  const p=workflow('unknown-image','image','vpipe');
+  p.files=[{reference:'one',ready:false,size:2e9},{reference:'two',ready:false}];
+  const html=renderToStaticMarkup(createElement(WorkflowSummary,{pipeline:p,connection:{enabled:true,available:false,detail:''}}));
+  assert.equal((html.match(/>Unrated</g)||[]).length,2);
+  assert.match(html,/Size unknown/);assert.match(html,/Connect Vpipe/);assert.doesNotMatch(html,/2.0 GB|Needs download/);
+});
+
+test('a gated installed model is shown as ready; missing custom nodes are setup rather than a download',()=>{
+  const p=workflow('gated-image','image','vpipe',true);
+  p.catalog=pipelineMetadata.parse({version:1,id:p.id,name:p.name,runner:p.runner,catalog:{
+    family:'Example',model:'Example',flavor:'Example',documentation:'https://example.com',setup:'Manual setup',
+    access:[{name:'Example',url:'https://example.com',gated:true}],
+  }}).catalog;
+  const render=()=>renderToStaticMarkup(createElement(WorkflowSummary,{pipeline:p,connection:{enabled:true,available:true,detail:''}}));
+  assert.match(render(),/Gated Hugging Face download/);assert.match(render(),/>Ready</);assert.doesNotMatch(render(),/Needs download/);
+  p.ready=false;p.state='attention';p.detail='Install the required custom nodes.';
+  assert.match(render(),/>Setup needed</);assert.doesNotMatch(render(),/Needs download/);
 });

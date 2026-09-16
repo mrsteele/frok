@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "id": "vpipe:minimax-h3",
+  "name": "MiniMax H3 · Original",
+  "runner": "vpipe",
+  "default": false,
+  "bindings": {
+    "prompt": [
+      {
+        "node": "text-prompt",
+        "field": "text"
+      }
+    ],
+    "seed": [
+      {
+        "node": "generate-video",
+        "field": "seed"
+      }
+    ],
+    "width": [
+      {
+        "node": "generate-video",
+        "field": "width"
+      }
+    ],
+    "height": [
+      {
+        "node": "generate-video",
+        "field": "height"
+      }
+    ],
+    "frames": [
+      {
+        "node": "generate-video",
+        "field": "frames"
+      }
+    ],
+    "output": [
+      {
+        "node": "save-video",
+        "field": "output_url"
+      }
+    ]
+  },
+  "dependencies": [
+    {
+      "kind": "model",
+      "reference": "local/MiniMax-H3-FL2VA-8bit",
+      "layout": "minimax",
+      "generated": true
+    }
+  ],
+  "source": {
+    "target": "generate-video",
+    "port": 5,
+    "model": "model-select"
+  },
+  "catalog": {
+    "family": "MiniMax H3",
+    "model": "MiniMax H3 FL2VA",
+    "flavor": "Original · 8-step",
+    "uses": [
+      "Text or image to video",
+      "Audio"
+    ],
+    "requirements": [
+      "Apple Silicon Mac"
+    ],
+    "access": [],
+    "documentation": "https://github.com/tgo-app-dev/vpipe/blob/6154c90904938e8b325550cbd8f22c8f8503c360/docs/MINIMAX-H3.md",
+    "setup": "Prepare the required files in your runner, or install them manually using the model links below. You can edit your own workflow files at any time.",
+    "precision": "8-bit prepared weights"
+  },
+  "description": "The original MiniMax H3 FL2VA workflow without a Turbo LoRA."
+}

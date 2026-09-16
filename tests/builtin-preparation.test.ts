@@ -69,7 +69,7 @@ test('a queued starter runs through the worker, keeps its log and makes the work
   await fs.writeFile(path.join(folder,'prepare.vpipeline'),JSON.stringify({id:'not-bundled',stages:[{type:'shell',config:{command:'must never run'}}]}));
   store.setValue('pipelineDirectory',custom);
   const job=await enqueue();
-  assert.deepEqual(job.request,{task:'builtin-preparation',preparation:'image/krea-2-turbo',name:'Krea 2 Turbo'});
+  assert.deepEqual(job.request,{task:'builtin-preparation',preparation:'image/krea-2-turbo',preparationRevision:(await builtinPreparation('image/krea-2-turbo')).revision,name:'Krea 2 Turbo'});
   await waitFor(()=>['completed','failed'].includes(store.getJob(job.id)!.status));
   assert.equal(store.getJob(job.id)!.status,'completed',store.getJob(job.id)!.error);
   assert.equal(store.getJob(job.id)!.step,null);

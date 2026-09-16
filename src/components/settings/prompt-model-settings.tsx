@@ -34,7 +34,9 @@ export function PromptModelSettings({
   onBusyChange?: (busy: boolean) => void;
 }) {
   const setting = health?.promptModelSetting;
-  const saved = setting === null ? '__off__' : (setting ?? health?.modelSelections?.prompt ?? '');
+  const defaultModel = health?.recommendedPromptModel || '';
+  const configured = setting === null ? '__off__' : (setting ?? health?.modelSelections?.prompt ?? '');
+  const saved = configured && configured !== '__off__' && sameModel(configured, defaultModel) ? '' : configured;
   const effective = health?.ollamaModel || health?.recommendedPromptModel || '';
   const [value, setValue] = useState(saved),
     [busy, setBusy] = useState(false),
@@ -48,7 +50,7 @@ export function PromptModelSettings({
   const pending = checking || busy || value !== saved || !health;
   const connected = !!health?.connections?.ollama.enabled && health.connections.ollama.available;
   const models = connected ? health?.ollamaModels || [] : [];
-  const options = models.map((model) => ({
+  const options = models.filter((model) => !sameModel(model, defaultModel)).map((model) => ({
     label: model,
     value: saved && sameModel(model, saved) ? saved : model,
   }));
@@ -110,18 +112,17 @@ export function PromptModelSettings({
       </header>
       <FormField
         label="Ollama model"
-        hint="Leave on Default to use the default model when it is installed, or choose another installed model."
+        hint="Choose an installed model for prompt enhancement, or leave it disabled."
       >
         <Select
           value={value}
-          className={!value ? 'default-placeholder' : undefined}
           disabled={pending || !connected}
           onChange={(event) => void choose(event.target.value)}
         >
-          <option value="">
-            Default · {health?.recommendedPromptModel || 'Default Ollama model'}
+          <option value="__off__">Not enabled</option>
+          <option value="" disabled={!models.some((model) => sameModel(model, defaultModel))}>
+            {defaultModel || 'Default Ollama model'} (Default)
           </option>
-          <option value="__off__">None · Enhancement off</option>
           {!!value && value !== '__off__' && !options.some((option) => option.value === value) && (
             <option value={value} disabled>
               {value} · Connection or model unavailable

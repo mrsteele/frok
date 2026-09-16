@@ -17,6 +17,7 @@ export async function checkPipelineRequest(snapshot:PipelineSnapshot,input:Gener
   if(!state.connections?.[m.runner]?.enabled||!state.connections[m.runner].available)throw Error(`Connect ${connectionNames[m.runner]} to use ${m.name}.`);
   if(input.mode==='upscale'&&!m.videoSource)throw Error('Choose an upscaling workflow that accepts a video.');
   if(input.mode!=='image'&&!state.checks.find(c=>c.id==='ffmpeg')?.ready)throw Error(state.checks.find(c=>c.id==='ffmpeg')?.detail||'Video tools need setup.');
+  if(m.source?.required&&!input.sourceId)throw Error('This workflow requires a starting image. Choose an image to animate first.');
   if(input.sourceId&&input.mode!=='upscale'&&!m.source)throw Error('Choose a pipeline that accepts a starting image.');
   if(input.referenceIds.length>(m.references?.max||0))throw Error('Too many references for this pipeline.');
   if(input.mode!=='upscale'&&(!m.controls.qualities.includes(input.quality)||!input.sourceId&&!m.controls.aspects.some(aspect=>aspect===input.aspect)||input.mode!=='image'&&!m.controls.durations.includes(input.duration as 6|8|10)))throw Error('These generation settings are not supported by this pipeline.');
