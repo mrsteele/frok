@@ -6,6 +6,7 @@ import { desktopIcons } from './desktop-icons.mjs';
 import { desktopNode } from './desktop-node.mjs';
 import { buildDesktopDocs } from './desktop-docs.mjs';
 import { desktopNotices } from './desktop-notices.mjs';
+import { copyDesktopBackend } from './desktop-backend.mjs';
 import { ensureMediaTools, mediaDirectory } from './media-tools.mjs';
 import { nodeTarget } from './node-version.mjs';
 const media = await ensureMediaTools();
@@ -30,15 +31,7 @@ await fs.cp('desktop/tray', path.join(output, 'app/tray'), { recursive: true });
 await build({ entryPoints: ['desktop/update-provider.cjs'], outfile: path.join(output, 'app/update-provider.cjs'), bundle: true, platform: 'node', format: 'cjs', external: ['electron'] });
 await fs.writeFile(path.join(output, 'app/package.json'), JSON.stringify({ name: 'frok', productName: 'Frok', version: pkg.version, description: pkg.description, author: pkg.author, license: pkg.license, type: 'module', main: 'main.mjs' }, null, 2));
 const backend = path.join(output, 'backend');
-// Keep Next's relative package links relative when moving the standalone tree.
-// fs.cp otherwise rewrites them to absolute paths into the developer checkout.
-await fs.cp('.next-desktop/standalone', backend, { recursive: true, verbatimSymlinks: true, filter: file => {
-  const relative = path.relative(path.resolve('.next-desktop/standalone'), path.resolve(file));
-  // Next's filesystem traces can retain development sources. Production uses
-  // compiled route chunks and the separately bundled worker, never these folders.
-  if (['src', 'tests', 'dev', 'scripts'].includes(relative.split(path.sep)[0]) || path.basename(file) === '.DS_Store') return false;
-  return !relative.split(path.sep).some(part => part.startsWith('.env') || ['.data', '.desktop', 'pipelines'].includes(part)) && !/\.(sqlite(?:-.*)?|safetensors|gguf)$/.test(file);
-} });
+await copyDesktopBackend('.next-desktop/standalone', backend);
 await fs.cp('.next-desktop/static', path.join(backend, '.next-desktop/static'), { recursive: true });
 await fs.cp('public', path.join(backend, 'public'), { recursive: true });
 for (const file of ['supervisor.mjs', 'process-log.mjs']) await fs.copyFile(path.join('desktop', file), path.join(backend, file));
