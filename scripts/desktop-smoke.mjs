@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import { ensureWorkspace } from '../desktop/workspace.mjs';
 import { checkMediaTools, bundledMediaPath } from './check-media-tools.mjs';
+import { checkDesktopSharp } from './desktop-native.mjs';
 
 // Run only against the packaged payload and a new, disposable workspace.
 const base = path.resolve('.data'); await fs.mkdir(base, { recursive: true });
@@ -32,6 +33,7 @@ async function verifyLinks(directory) {
   }
 }
 await verifyLinks(backend);
+console.log(await checkDesktopSharp(backend, path.join(resources, 'runtime', process.platform === 'win32' ? 'node.exe' : 'node')));
 for (const folder of ['src', 'tests', 'dev', 'scripts'])
   assert.equal(await fs.stat(path.join(backend, folder)).then(() => true, () => false), false, 'No development folder in the desktop payload: ' + folder);
 for (const folder of JSON.parse(await fs.readFile('desktop/preparations.json', 'utf8'))) {
