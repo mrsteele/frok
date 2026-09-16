@@ -45,7 +45,9 @@ const operations=activeOperations();
 const prior=getValue<number>("workerPid",0);
 const lastWorkerHeartbeat=getValue<number>("workerHeartbeat",0);
 if(isAlive(prior)||(getValue('maintenance',false)&&!getValue('libraryResetPending',false))||operations.some(row=>row.kind==='delete'||row.kind==='export')){registry.exec("COMMIT");console.error("Frok worker is already running or maintenance is in progress.");process.exit(1);}
-setValue("workerPid",process.pid);setValue("workerHeartbeat",Date.now());setValue('workerProtocol',{pid:process.pid,version:workerProtocolVersion});registry.exec("COMMIT");
+// Reserve the queue immediately, but keep health checks unready until startup
+// recovery finishes. A recent heartbeat from the previous worker is stale too.
+setValue("workerPid",process.pid);setValue("workerHeartbeat",0);setValue('workerProtocol',{pid:process.pid,version:workerProtocolVersion});registry.exec("COMMIT");
 await recoverInterruptedLibraryReset();
 libraryDatabase();
 for(const job of listJobs().filter(j=>j.kind==='setup'&&!isPreparationJob(j)&&['queued','running'].includes(j.status))) {
@@ -70,9 +72,7 @@ process.on('message',message=>{if(desktopControl.accept(message))stop();reportDe
 if(process.send)process.on('disconnect',stop);
 let sampling=false;
 const gpuTimer=setInterval(()=>{if(active&&!sampling){sampling=true;void sampleGpu().catch(()=>{}).finally(()=>{sampling=false;});}},3000);
-const heartbeat=setInterval(()=>{setValue("workerHeartbeat",Date.now());reportDesktopQueue();},3000);
-reportDesktopQueue();
-console.log(`Frok generation worker ready · ${dataDir}`);
+let heartbeat: ReturnType<typeof setInterval> | undefined;
 let cleaning: Promise<unknown> | undefined;
 function cleanJobs() {
   if (stopping || cleaning) return;
@@ -150,6 +150,10 @@ async function generate(job:Job,signal:AbortSignal,log:(s:string)=>void,onFinish
 
 try {
   await recoverJobTimes(db,jobsDir());
+  setValue("workerHeartbeat",Date.now());
+  heartbeat=setInterval(()=>{setValue("workerHeartbeat",Date.now());reportDesktopQueue();},3000);
+  reportDesktopQueue();
+  console.log(`Frok generation worker ready · ${dataDir}`);
   cleanJobs();
   while(!stopping){
     if(!desktopControl.mayClaim){await delay(100);continue;}
