@@ -5,8 +5,7 @@ import { createHash } from 'node:crypto';
 // Unlike fetch(), these clients preserve archive bytes even when a server
 // labels the archive itself as Content-Encoding: gzip.
 export async function downloadMediaSource(source) {
-  const signal = AbortSignal.timeout(120_000);
-  async function download(url, redirects = 0) {
+  async function download(url, signal, redirects = 0) {
     const client = url.protocol === 'https:' ? https : url.protocol === 'http:' ? http : null;
     if (!client) throw Error(`Unsupported media source protocol: ${url.protocol}`);
     return new Promise((resolve, reject) => {
@@ -17,7 +16,7 @@ export async function downloadMediaSource(source) {
           const next = new URL(response.headers.location, url);
           if (redirects >= 5 || (url.protocol === 'https:' && next.protocol !== 'https:')) {
             reject(Error(`Unsafe or excessive redirects downloading ${source.name}`));
-          } else resolve(download(next, redirects + 1));
+          } else resolve(download(next, signal, redirects + 1));
           return;
         }
         if (status !== 200) {
@@ -39,5 +38,18 @@ export async function downloadMediaSource(source) {
       request.on('error', reject);
     });
   }
-  return download(new URL(source.url));
+  const urls = [source.url, ...(source.mirrors || [])];
+  const errors = [];
+  for (const [index, url] of urls.entries()) {
+    try {
+      // Each source gets its own deadline; every candidate must match the same
+      // pinned hash before any bytes can be cached or extracted.
+      return await download(new URL(url), AbortSignal.timeout(120_000));
+    } catch (error) {
+      errors.push(error);
+      if (index + 1 < urls.length) console.warn(`${error.message}\nTrying alternate source for ${source.name}: ${urls[index + 1]}`);
+    }
+  }
+  if (errors.length === 1) throw errors[0];
+  throw new AggregateError(errors, `Could not download verified ${source.name} source from any configured URL:\n${errors.map(error => error.message).join('\n')}`);
 }

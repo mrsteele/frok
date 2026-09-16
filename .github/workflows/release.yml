@@ -29,8 +29,13 @@ jobs:
         id: version
         run: node scripts/release-version.mjs
 
-  build:
+  checks:
+    name: Source checks before packaging
     needs: version
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: [version, checks]
     strategy:
       fail-fast: false
       matrix:
@@ -91,9 +96,9 @@ jobs:
         run: node --test tests/media-tool-distribution.test.mjs
       - name: Build platform installer
         run: npm run package
-      - name: Check packaged backend (no inference)
+      - name: Smoke test packaged backend (no inference)
         run: npm run smoke:desktop -- --packaged
-      - name: Verify native update and tamper rejection (disposable apps)
+      - name: Smoke test native update and tamper rejection (disposable apps)
         if: runner.os == 'macOS'
         run: |
           npm run smoke:updates
@@ -120,7 +125,7 @@ jobs:
             !release/builder-*.yml
 
   release:
-    needs: [version, build]
+    needs: [version, checks, build]
     runs-on: ubuntu-24.04
     permissions:
       contents: write

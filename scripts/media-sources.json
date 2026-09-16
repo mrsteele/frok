@@ -1,6 +1,6 @@
 [
   {"name":"ffmpeg","version":"8.0.3","url":"https://ffmpeg.org/releases/ffmpeg-8.0.3.tar.gz","archive":"ffmpeg-8.0.3.tar.gz","sha256":"5c868087e6a0d4243b97776c16f3bfe1511cc53f15c26c822b393a3289608121"},
   {"name":"x264","version":"b35605ac","url":"https://codeload.github.com/mirror/x264/tar.gz/b35605ac","archive":"x264-b35605ac.tar.gz","sha256":"3573e4b86887a762ff138597737fa2e573a1567323bcbc8eeef73da81232257a"},
-  {"name":"zlib","version":"1.3.2","url":"https://zlib.net/zlib-1.3.2.tar.gz","archive":"zlib-1.3.2.tar.gz","sha256":"bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16"},
+  {"name":"zlib","version":"1.3.2","url":"https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz","mirrors":["https://zlib.net/fossils/zlib-1.3.2.tar.gz"],"archive":"zlib-1.3.2.tar.gz","sha256":"bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16"},
   {"name":"pkgconf","version":"2.5.1","url":"https://distfiles.ariadne.space/pkgconf/pkgconf-2.5.1.tar.xz","archive":"pkgconf-2.5.1.tar.xz","sha256":"cd05c9589b9f86ecf044c10a2269822bc9eb001eced2582cfffd658b0a50c243"}
 ]
