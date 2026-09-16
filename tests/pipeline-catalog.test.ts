@@ -68,6 +68,9 @@ fixture.test('an installed Krea base is ready without any fused model variant',a
  for(const component of ['transformer','text_encoder','vae']){await fs.mkdir(path.join(base,component),{recursive:true});await fs.writeFile(path.join(base,component,'model.safetensors'),Buffer.concat([size,header,Buffer.alloc(1)]));}
  await fs.mkdir(path.join(base,'tokenizer'),{recursive:true});await fs.writeFile(path.join(base,'tokenizer/tokenizer.json'),'{}');await fs.writeFile(path.join(base,'model_index.json'),'{}');
  const status=await pipelineStatus(p);assert.equal(status.ready,true);assert.deepEqual(status.missing,[]);assert.equal(p.metadata.dependencies.length,1);
+ assert.equal(status.downloadAccess?.state,'not-required');
+ const flavor=(await diskCatalog()).entries.find(p=>p.metadata.id==='vpipe:krea-2-turbo-m87')!;
+ const partial=await pipelineStatus(flavor);assert.equal(partial.ready,false);assert.equal(partial.downloadAccess?.state,'not-required','An installed gated base plus a missing public LoRA requires no gated download.');
 });
 fixture.test('resolving a pipeline copies its definition without changing administrator settings',async()=>{
  db.setValue('pipelineSelections',{image:null,video:'vpipe:minimax-h3-turbo',reference:null,upscale:null});

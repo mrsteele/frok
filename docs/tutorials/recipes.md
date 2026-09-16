@@ -10,7 +10,7 @@ A recipe is a named motion instruction you can apply to many starting images. It
 
 > Slowly move the camera in a shallow arc around the main product. Keep its shape, color and branding unchanged. Use soft studio reflections and a calm, deliberate pace. Keep the background stable.
 
-Open an image of a product. In the motion dropdown, choose **Showroom**. Selecting a recipe **immediately queues a video** using its saved text. Any draft in the Custom text box is ignored.
+Open an image of a product. Under **Motion recipes**, choose **Showroom**. Its text appears in the video prompt so you can review it. Choose **Generate video** when ready. Selecting a recipe replaces the current draft; editing its text turns it into a custom prompt without changing the saved recipe.
 
 ## How recipes combine with the image
 
@@ -20,13 +20,13 @@ Be explicit about what must remain unchanged. A recipe cannot guarantee perfect 
 
 ## Custom and your default recipe
 
-**Custom** is the default editor: type directions and press Enter to render. Choosing Custom in the dropdown only returns focus to the editor.
+**Custom** lets you type your own directions. Choose **Generate video** or press **⌘ / Ctrl + Enter** to generate. Plain Enter adds a new line.
 
-An empty Custom prompt and the quick video button on an image use your **default recipe**. In **Settings → Recipes**, click **Make default** beside any recipe. The selection is saved, marked **Default** in the recipe menus, and applies to future quick videos and empty prompts. Selecting a recipe immediately renders with that recipe, regardless of which one is the default, and ignores the editor's draft.
+Generating from an image with an empty video prompt uses your **default recipe**. **Generate video** on an image card immediately queues a video with that default recipe; click the image itself to open the editor. In **Settings → Recipes**, click **Make default** beside any recipe. The selection is saved, marked **Default** in the recipe menus, and applies to future empty prompts and image-card generation. Choosing a recipe in an editor prepares that recipe for the next generation, regardless of which one is the default; it never starts a job on its own.
 
 New libraries start with **Normal**, **Silly** and **Dance** as editable examples. **Normal** is the first default and asks for simple movement that continues the image's action. It is an ordinary recipe: you can edit its prompt, rename it, replace it or delete it. Dance asks for movement that matches the mood and atmosphere of the image, from relaxed swaying to lively footwork.
 
-Deleting the default makes the next remaining recipe the default; the confirmation tells you which one. If you delete every recipe, type a video prompt or add a recipe before using quick video actions. The Reset action shows a warning before restoring all starter recipes and making Normal the default again. Existing recipe lists gain a Normal default on upgrade without replacing their custom prompts.
+Deleting the default makes the next remaining recipe the default; the confirmation tells you which one. If you delete every recipe, type a video prompt or add a recipe before generating a video from an image. The Reset action shows a warning before restoring all starter recipes and making Normal the default again. Existing recipe lists gain a Normal default on upgrade without replacing their custom prompts.
 
 ## Repeating an older take
 

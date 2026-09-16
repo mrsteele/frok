@@ -9,7 +9,6 @@ import {
   Heart,
   Image as ImageIcon,
   Layers3,
-  Play,
   SlidersHorizontal,
   Trash2,
 } from 'lucide-react';
@@ -27,7 +26,7 @@ import {
 import { promptDetails } from '@/lib/prompt-details';
 import { formatRunnerTime } from '@/lib/runner-time';
 import { generationIssue, promptEnhancementIssue, type SetupTarget } from '@/lib/readiness';
-import { motionChoices, motionChoiceInput } from '@/lib/video-presets';
+import { motionChoices, motionChoiceInput, type MotionChoice } from '@/lib/video-presets';
 import { useVideoPresets } from '@/components/generation/use-video-presets';
 import { VideoPlayer } from './video-player';
 import { captureVideoPlayback, type VideoPlayback } from '@/lib/video-playback';
@@ -79,6 +78,7 @@ export function MediaViewer({
   const cursor = selected?.id;
   const { presets, defaultPreset, error: presetError } = useVideoPresets();
   const [prompt, setPrompt] = useState('');
+  const [recipe, setRecipe] = useState<MotionChoice>();
   const [quality, setQuality] = useState<{
     renderId: string;
     version: 'sd' | 'hd';
@@ -209,6 +209,7 @@ export function MediaViewer({
       controls.pipelineId,
     ) || promptEnhancementIssue(health, controls.enhance);
   const choices = motionChoices(presets);
+  const selectedRecipe = recipe || choices[0];
   const missingReferences = referenceRoot && family?.references?.some((ref) => !ref.media);
   const disabled = !family || !!blocked || submitting || sending || !!missingReferences;
   useEffect(() => {
@@ -218,6 +219,7 @@ export function MediaViewer({
         original?.generation?.videoPreset?.prompt ||
         '',
     );
+    setRecipe(undefined);
     setError('');
     if (details.current) details.current.open = false;
   }, [cursor, original?.id]);
@@ -243,7 +245,7 @@ export function MediaViewer({
       ),
     });
   }
-  async function generate(redo = false, choice = choices[0]) {
+  async function generate(redo = false, choice = selectedRecipe) {
     if (disabled || requestLock.current || !family) return;
     requestLock.current = true;
     setSending(true);
@@ -449,12 +451,12 @@ export function MediaViewer({
             disabled={saving || !family}
             onClick={() => void favorite()}
             aria-label={
-              displayed.favorite ? 'Remove creation from favorites' : 'Save creation to favorites'
+              displayed.favorite ? 'Remove creation from favorites' : 'Add creation to favorites'
             }
             aria-pressed={displayed.favorite}
           >
             <Heart size={18} fill={displayed.favorite ? 'currentColor' : 'none'} />
-            {displayed.favorite ? 'Saved' : 'Save'}
+            {displayed.favorite ? 'Favorited' : 'Favorite'}
           </button>
           {render?.hd ? (
             <details className="viewer-download">
@@ -528,7 +530,10 @@ export function MediaViewer({
           root={family.root}
           selected={displayed}
           prompt={prompt}
-          onPromptChange={setPrompt}
+          onPromptChange={(value) => {
+            setPrompt(value);
+            setRecipe(undefined);
+          }}
           onGenerate={() => void generate()}
           onRedo={() => void generate(true)}
           onUpscale={() => void upscale()}
@@ -537,6 +542,7 @@ export function MediaViewer({
           upscaleDisabled={enhancedWithSelected || sending || submitting}
           upscalerName={upscalerName}
           defaultRecipeName={defaultPreset?.name}
+          selectedRecipeName={recipe?.name}
           settings={
             <button
               type="button"
@@ -574,9 +580,12 @@ export function MediaViewer({
                     <button
                       key={item.value}
                       disabled={disabled}
+                      aria-pressed={recipe?.value === item.value}
                       onClick={(event) => {
                         event.currentTarget.closest('details')?.removeAttribute('open');
-                        void generate(false, item);
+                        setRecipe(item);
+                        setPrompt(item.videoPreset?.prompt || '');
+                        document.getElementById('viewer-motion-prompt')?.focus();
                       }}
                     >
                       <span>
@@ -586,7 +595,7 @@ export function MediaViewer({
                         </strong>
                         <small>{item.description}</small>
                       </span>
-                      <Play size={15} />
+                      <ChevronRight size={15} />
                     </button>
                   ))}
               </>
@@ -621,7 +630,7 @@ export function MediaViewer({
         {displayed.jobId && <AssetJobLink key={displayed.jobId} jobId={displayed.jobId} />}
         {imageRoot && presetError && (
           <p className="viewer-error" role="alert">
-            Motion presets could not be loaded. Check Settings → Recipes.
+            Motion recipes could not be loaded. Check Settings → Recipes.
           </p>
         )}
         {error && (

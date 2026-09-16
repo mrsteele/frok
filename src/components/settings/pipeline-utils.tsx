@@ -150,7 +150,7 @@ export function PipelineUtils() {
             </FormField>
           </div>
           <FormField
-            label="Run workflow"
+            label="Workflow file"
             hint="Choose a native Vpipe generation pipeline or a ComfyUI API export, up to 1 MB."
           >
             <Input

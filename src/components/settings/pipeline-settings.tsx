@@ -161,7 +161,7 @@ export function PipelineSettings({
         <RefreshCw size={14} className={checking ? 'spin' : ''} />
         Refresh workflows
       </Button>
-      {browsing && health && <PipelineCatalog id={catalogId} health={health} kind={browsing} busy={!!busy} error={error} onChoose={choose} onClose={() => setBrowsing(undefined)} />}
+      {browsing && health && <PipelineCatalog id={catalogId} health={health} kind={browsing} busy={!!busy} error={error} onChoose={choose} onRefresh={onRefresh} onClose={() => setBrowsing(undefined)} />}
       {error && !browsing && (
         <InlineMessage role="alert" tone="danger">
           {error}

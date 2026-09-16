@@ -58,7 +58,17 @@
 .workflow-summary-heading { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 4px 8px; }
 .workflow-summary-name { display: flex; align-items: baseline; gap: 6px; flex: 1 1 160px; min-width: 0; }
 .workflow-summary-name strong { font-size: 13px; line-height: 1.5; font-weight: 500; color: var(--ui-text); overflow-wrap: anywhere; }
-.workflow-lock { color: var(--ui-warning); flex-shrink: 0; }
+.workflow-access-icon { display: inline-flex; align-items: center; flex-shrink: 0; }
+.workflow-access-icon--warning { color: var(--ui-warning); }
+.workflow-access-icon--success { color: var(--ui-success); }
+.pipeline-access { margin-top: 16px; }
+.pipeline-access-title { display: flex; align-items: center; gap: 6px; }
+.pipeline-access .ui-button { margin-top: 12px; }
+.pipeline-access-repositories { margin: 12px 0 0; padding-left: 18px; }
+.pipeline-access-repositories li { margin: 8px 0; }
+.pipeline-access-repositories a { overflow-wrap: anywhere; }
+.pipeline-access-repositories a > svg { margin-left: 5px; }
+.pipeline-access-repositories small { display: block; color: var(--ui-muted); }
 .workflow-summary-state { font-size: 10px; line-height: 1.9; white-space: nowrap; color: var(--ui-muted); }
 .workflow-summary-state--missing { color: var(--ui-warning); }
 .workflow-summary-state--ready { color: var(--ui-success); }

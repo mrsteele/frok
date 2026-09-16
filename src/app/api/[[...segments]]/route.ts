@@ -7,7 +7,8 @@ import { deleteJobs } from '@/lib/job-deletion';
 import { buildPipelineBundle, zipFiles } from '@/lib/pipelines/utils';
 import { runtimeOptions, runtimeStatus } from '@/lib/preferences';
 import { pipelineLibraryAudit, savePipelineDirectory, resetDefaultPipelines } from '@/lib/pipelines/location';
-import { catalog } from '@/lib/pipelines/catalog';
+import { catalog, pipelineStatus } from '@/lib/pipelines/catalog';
+import { checkDownloadAccess } from '@/lib/providers/huggingface-access';
 import { workerStatus } from '@/lib/worker-health';
 import { queueBusy } from '@/lib/worker-queue';
 import { snapshotRequest, checkPipelineRequest, validatePipelineSelections } from '@/lib/pipelines/selection';
@@ -63,6 +64,16 @@ async function route(request:Request,{params}:Context) {
   if(resource==='pipelines'&&id==='prepare'&&!action&&method==='POST'){
     const input=z.object({id:z.string().min(1).max(160)}).strict().parse(await body(request));
     return json({job:await queuePreparation(input.id,request.signal)},201);
+  }
+  if(resource==='pipelines'&&id==='access-check'&&!action&&method==='POST'){
+    const input=z.object({id:z.string().min(1).max(160)}).strict().parse(await body(request));
+    const snapshot=(await catalog()).entries.find(p=>p.metadata.id===input.id);
+    if(!snapshot)throw new HttpError(404,'Workflow not found.');
+    const state=await health();
+    const pipeline=await pipelineStatus(snapshot,state.connections?.[snapshot.metadata.runner]||{enabled:false,available:false,detail:''});
+    pipeline.downloadAccess=await checkDownloadAccess(pipeline.downloadAccess!,request.signal);
+    healthCaches.clear();
+    return json({pipeline});
   }
   if(resource==='pipelines'&&id==='reset'&&method==='POST'){
     z.object({confirm:z.literal('RESET DEFAULT PIPELINES')}).strict().parse(await body(request));

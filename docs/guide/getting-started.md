@@ -64,6 +64,6 @@ Connect Ollama in **Services**, then choose one of its installed text-generation
 
 ## 5. Make a first batch
 
-Return to **Envision**, choose Image, open generation settings and try four images. Enter a short, specific prompt and generate. Settings remember your choices. The queue and image placeholders show what is happening.
+Return to **Create**, choose Image, open generation settings and try four images. Enter a short, specific prompt and generate. Settings remember your choices. The queue and image placeholders show what is happening.
 
 Continue with [your first creation](../tutorials/first-creation.md). If the generate button is disabled, follow the warning to the exact missing setup item; [troubleshooting](./troubleshooting.md) covers the common cases.

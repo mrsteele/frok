@@ -1,15 +1,15 @@
 # Your library and asset links
 
-A creation is a **group**: its starting asset, video takes, and enhanced copies. Envision and Favorites show one card per group, using its latest asset. One heart saves or unsaves the entire group.
+A creation is a **group**: its starting asset, video takes, and enhanced copies. Create and Favorites show one card per group, using its latest asset. One heart adds or removes the entire group from Favorites.
 
 ## Find your work
 
 | View | What it shows |
 | --- | --- |
-| Envision | All retained creations grouped by prompt, newest sections first |
+| Create | All retained creations grouped by prompt, newest sections first |
 | Favorites | Saved groups, with image and video filters |
 
-Filters use the latest asset shown on the group card. An image with video takes appears as a video creation. Envision keeps its sections after refresh. New idea clears only the composer. Collapse a section or use Jump to prompt to move around; Show older prompts reveals earlier sections. Older History links redirect to Envision.
+Filters use the latest asset shown on the group card. An image with video takes appears as a video creation. Create keeps its sections after refresh. New idea clears only the composer. Collapse a section or use Jump to prompt to move around; Show older prompts reveals earlier sections. Older History links redirect to Create.
 
 ## Stable asset addresses
 
@@ -30,7 +30,7 @@ Older `/images/:id`, `/videos/:id` and `/video/:id` links resolve to the corresp
 
 ## Save and download
 
-Save marks the group as a favorite. Video generation automatically saves the creation. If you unheart a video, its starting image and sibling videos are also unsaved.
+Favorite adds the group to Favorites. Video generation automatically favorites the creation. Removing a video from Favorites also removes its starting image and sibling videos from Favorites; their files remain on this device.
 
 Download exports the current image or video. If an enhanced copy exists, the download menu offers the original SD and enhanced version. A downloaded file is independent of subsequent library deletion.
 
@@ -40,10 +40,10 @@ Download exports the current image or video. If an enhanced copy exists, the dow
 | --- | --- | --- |
 | Delete a video take | That take and its enhanced copies | Root and other takes |
 | Delete a root asset | The root and all attached takes | Unrelated creations |
-| Clear unsaved | Unsaved generations eligible for deletion | Favorites and their groups, uploads, and media used by active jobs |
-| Delete a prompt section | Eligible unsaved creations in that section | Favorites, even when in the section |
+| Delete unfavorited | Unfavorited generated media eligible for deletion | Favorites and their groups, uploads, and media used by active jobs |
+| Delete a prompt section | Eligible unfavorited creations in that section | Favorites, even when in the section |
 | Delete all my stuff | The entire library and app settings | Downloaded models, runners, pipeline files and saved API tokens |
 
-Review the confirmation before deleting. A favorite is protected from **Clear unsaved**, but explicitly deleting its root can still delete it. Active jobs may prevent deletion of a source they need; finish or cancel the job first. Whole-library reset is in **Settings → Services**. [Storage and backups →](../storage.md)
+Review the confirmation before deleting. A favorite is protected from **Delete unfavorited**, but explicitly deleting its root can still delete it. Active jobs may prevent deletion of a source they need; finish or cancel the job first. Whole-library reset is in **Settings → Advanced**. [Storage and backups →](../storage.md)
 
 Asset deletion removes its library media files and records. Associated job records, logs and working files are also deleted. For image batches, a log may be shared with other images; those saved images stay. Deleting a job directly or letting it expire keeps its saved media. Downloads and backups you keep separately are independent of library deletion. [What deletion removes →](../storage.md#what-deletion-removes)

@@ -89,7 +89,7 @@ export function Connections({
       <div id={editorId} className="service-editor">
         {!selected ? (
           <p className="service-picker-hint">
-            Choose a service above to connect it. Only connect what you have installed.
+            Choose a service above to review or change its connection.
           </p>
         ) : selected === 'ollama' ? (
           <OllamaConnection

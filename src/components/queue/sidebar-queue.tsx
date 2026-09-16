@@ -74,13 +74,13 @@ export function SidebarQueue({
     progress = live ? jobProgress(live) : undefined;
   const caption =
     state === 'offline'
-      ? 'The queue worker is offline.'
+      ? 'The local queue is unavailable. Restart Frok to reconnect.'
       : state === 'connecting'
         ? 'Checking the local queue…'
         : job
           ? running?.message || title
           : failed.length
-            ? 'Inspect, retry, or clear failed jobs.'
+            ? 'Review failed jobs, then retry or delete their logs.'
             : 'Ready when you are.';
   const close = () => setExpanded(false);
   return (
@@ -88,13 +88,14 @@ export function SidebarQueue({
       <button
         ref={toggle}
         className="queue-rail-toggle"
-        aria-label={`Queue · ${label}${pending.length ? ` · ${pending.length} pending` : ''}`}
+        aria-label={`Queue · ${label}${pending.length ? ` · ${pending.length} waiting` : ''}`}
         title={`Queue · ${label}`}
         aria-expanded={expanded}
         aria-controls="sidebar-queue-details"
         onClick={() => setExpanded((value) => !value)}
       >
         <Layers3 size={18} />
+        <span className="queue-rail-label">Queue</span>
         <span className="queue-state-dot" />
         {progress?.percent !== undefined && <small>{progress.percent}%</small>}
       </button>
@@ -155,7 +156,7 @@ export function SidebarQueue({
           </div>
           <Link href="/queue" onClick={close} className="queue-meta">
             {progress?.percent !== undefined && `${progress.percent}% · `}
-            {pending.length} pending{failed.length > 0 && ` · ${failed.length} failed`}
+            {pending.length} waiting{failed.length > 0 && ` · ${failed.length} failed`}
           </Link>
           {live && <GpuGraph telemetry={telemetry} compact />}
         </div>

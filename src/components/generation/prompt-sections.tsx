@@ -64,7 +64,7 @@ export function PromptSections({
         >
           <button
             className="icon-button prompt-delete"
-            title="Delete unsaved creations in this prompt"
+            title="Delete unfavorited creations in this prompt"
             aria-label={`Delete prompt section ${index + 1}`}
             disabled={submitting}
             onClick={() => onDelete(section)}
@@ -84,19 +84,22 @@ export function PromptSections({
               <p className="prompt-section-empty">
                 {section.active.length
                   ? 'Waiting for the next creation…'
-                  : 'No creations here yet. Load more to try this prompt again.'}
+                  : 'No creations here yet. Generate more to try this prompt again.'}
               </p>
             )}
             <footer className="load-more" id={`prompt-end-${section.id}`}>
               {section.request && (
                 <button
                   className="secondary"
-                  aria-label={`Load more for prompt ${index + 1}`}
+                  aria-label={`Generate more for prompt ${index + 1}`}
                   disabled={submitting || moreDisabled(section)}
                   onClick={() => onMore(section)}
                 >
                   <Plus size={16} />
-                  Load more
+                  Generate{' '}
+                  {section.request.mode === 'image'
+                    ? `${section.request.count} more ${section.request.count === 1 ? 'image' : 'images'}`
+                    : 'another video'}
                 </button>
               )}
               {section.active.length > 0 && (

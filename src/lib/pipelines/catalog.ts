@@ -10,6 +10,8 @@ import { providerDefinitions } from '../providers/definitions';
 import type { InspectionContext } from '../providers/types';
 import type { Health } from '../types';
 import { connectionNames, type ConnectionStatus } from '../service-config';
+import { dependencyRepository, downloadAccess, requiredGatedDownloads } from './download-access';
+import { cachedDownloadAccess } from '../providers/huggingface-access';
 
 export { digest, readDefinition } from './definition';
 export function validatePipeline(snapshot:PipelineSnapshot) {
@@ -52,14 +54,16 @@ export async function resolvePipeline(kind:PipelineKind,id?:string) {
 export async function pipelineStatus(snapshot:PipelineSnapshot,connection?:ConnectionStatus,context?:InspectionContext):Promise<PipelineStatus> {
   const {metadata:m,kind}=snapshot;
   const result:PipelineStatus={id:m.id,name:m.name,runner:m.runner,kind,description:m.description,default:m.default,controls:m.controls,supportsSource:!!m.source,requiresSource:m.source?.required,maxReferences:m.references?.max||0,state:'missing',ready:false,detail:'',missing:[],revision:snapshot.revision,catalog:m.catalog};
+  result.downloadAccess=downloadAccess('unknown');
   try{validatePipeline(snapshot);}catch(error){return {...result,state:'attention',detail:(error as Error).message};}
   const deps=dependencies(snapshot),missing:typeof deps=[];
-  result.files=deps.map(d=>({reference:d.reference,ready:false,size:d.size,url:d.url}));
+  result.files=deps.map(d=>({reference:d.reference,ready:false,size:d.size,url:d.url,repository:dependencyRepository(d,m.runner)}));
   // Keep catalog choices visible without probing services the user has not connected.
   if(connection&&(!connection.enabled||!connection.available))return {...result,state:'attention',detail:`Connect ${connectionNames[m.runner]} to use ${m.name}.`};
   for(const d of deps)if(!await dependencyReady(snapshot,d))missing.push(d);
   result.missing=missing.map(d=>d.reference);
-  result.files=deps.map(d=>({reference:d.reference,ready:!missing.includes(d),size:d.size,url:d.url}));
+  result.files=deps.map(d=>({reference:d.reference,ready:!missing.includes(d),size:d.size,url:d.url,repository:dependencyRepository(d,m.runner)}));
+  result.downloadAccess=cachedDownloadAccess(requiredGatedDownloads(result));
   result.preparation=missing.length?await preparationFor(snapshot):undefined;
   const issue=await providerFor(m.runner).inspect(snapshot,missing,context);
   if(issue)return {...result,state:'attention',detail:issue};

@@ -162,12 +162,41 @@ async function smoke() {
       (await window.webContents.capturePage()).toPNG(),
     );
     window.webContents.setZoomFactor(1);
+    for (const [state, width] of [['ready', 420], ['partial', 1280], ['token-required', 1280], ['denied', 420], ['granted', 800], ['unchecked', 1280], ['unavailable', 1280], ['unknown', 1280]]) {
+      window.setContentSize(width, 900);
+      await load('generation', `access-${state}`);
+      const expectedIcon = ['token-required', 'denied'].includes(state) ? 'warning' : state === 'granted' ? 'success' : null;
+      assert.equal(await js("document.querySelector('.workflow-picker .workflow-access-icon')?.className.includes('--warning') ? 'warning' : document.querySelector('.workflow-picker .workflow-access-icon') ? 'success' : null"), expectedIcon, state + ' trigger icon');
+      if (state === 'ready') {
+        assert.equal(await js("document.querySelector('.workflow-picker .workflow-summary-state').textContent"), 'Ready');
+        await fs.writeFile(path.join(screenshots, 'access-ready-trigger.png'), (await window.webContents.capturePage()).toPNG());
+      }
+      await openCatalog('access ' + state);
+      if (width === 420) await js("document.querySelector('.pipeline-catalog-details-toggle').click()");
+      assert.equal(await js("window.__uiCalls.some(call=>call.url==='/api/pipelines/access-check')"), false, 'browsing never checks Hugging Face');
+      assert.equal(await js("!!document.querySelector('.pipeline-catalog-preview .workflow-access-icon--warning')"), expectedIcon === 'warning', state + ' details warning');
+      if (['ready', 'partial'].includes(state)) assert.equal(await js("!!document.querySelector('.pipeline-access')"), false, state + ' has no download access notice');
+      await noOverflow('access ' + state);
+      await fs.writeFile(path.join(screenshots, `access-${state}.png`), (await window.webContents.capturePage()).toPNG());
+      if (state === 'unchecked') {
+        await js("Array.from(document.querySelectorAll('.pipeline-access button')).find(button=>button.textContent.includes('Check download access')).click()");
+        await wait("document.querySelector('.pipeline-access button').textContent.includes('Checking')");
+        assert.equal(await js("document.querySelector('.pipeline-catalog-header button').disabled"), true, 'bounded check prevents closing mid-request');
+        await wait("!!document.querySelector('.pipeline-access .workflow-access-icon--success')");
+        assert.equal(await js("window.__uiCalls.filter(call=>call.url==='/api/pipelines/access-check').length"), 1, 'one explicit access check');
+        assert.equal(await js("window.__uiCalls.some(call=>call.url==='/api/pipelines/prepare')"), false, 'access check does not prepare or download');
+        await fs.writeFile(path.join(screenshots, 'access-checked.png'), (await window.webContents.capturePage()).toPNG());
+      }
+      await closeCatalog();
+      if (state === 'unchecked') assert.equal(await js("!!document.querySelector('.workflow-picker .workflow-access-icon--success')"), true, 'permission refresh reaches selected workflow');
+    }
+    window.setContentSize(1280, 900);
     await load('generation', 'missing');
     await openCatalog('catalog selection');
     const searchCatalog = value => js(`(()=>{const input=document.querySelector('.pipeline-catalog input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(value)});input.dispatchEvent(new Event('input',{bubbles:true}));})()`);
     await searchCatalog('no-matching-example-model');
     await wait("document.querySelector('.pipeline-catalog-preview').textContent.includes('No matching workflows')");
-    assert.equal(await js("Array.from(document.querySelectorAll('.pipeline-catalog button')).find(button=>button.textContent==='Use workflow').disabled"), true, 'an empty search cannot change the selection');
+    assert.equal(await js("Array.from(document.querySelectorAll('.pipeline-catalog button')).find(button=>button.textContent==='Set default workflow').disabled"), true, 'an empty search cannot change the selection');
     await searchCatalog('');
     await wait("document.querySelectorAll('.pipeline-catalog-option').length>1");
     await js("(()=>{const select=document.querySelector('.pipeline-catalog select');select.value='comfyui';select.dispatchEvent(new Event('change',{bubbles:true}));})()");
@@ -175,7 +204,7 @@ async function smoke() {
     await js("Array.from(document.querySelectorAll('.pipeline-catalog-option')).find(button=>button.textContent.includes('Qwen-Image')).click()");
     await wait("document.querySelector('.pipeline-catalog-preview h3').textContent.includes('Qwen-Image')");
     assert.equal(await js("document.querySelector('.pipeline-catalog-option[aria-pressed=true]').textContent.includes('Needs download')"), true);
-    await js("Array.from(document.querySelectorAll('.pipeline-catalog button')).find(button=>button.textContent==='Use workflow').click()");
+    await js("Array.from(document.querySelectorAll('.pipeline-catalog button')).find(button=>button.textContent==='Set default workflow').click()");
     await wait("!document.querySelector('.pipeline-catalog')");
     assert.equal(await js("window.__uiCalls.filter(call=>call.url==='/api/pipelines/prepare').length"), 0, 'selection does not download models');
     await js("Array.from(document.querySelectorAll('button')).find(button=>button.textContent.includes('Prepare models')).click()");
@@ -183,7 +212,7 @@ async function smoke() {
     assert.equal(await js("window.__uiCalls.find(call=>call.url==='/api/pipelines/prepare').body.id"), 'comfyui:qwen-image-lightning', 'preparation follows the selected provider workflow');
     await load('generation', 'disconnected');
     await openCatalog('disconnected catalog');
-    assert.equal(await js("Array.from(document.querySelectorAll('.pipeline-catalog button')).find(button=>button.textContent==='Use workflow').disabled"), true, 'disconnected workflows remain browseable but cannot be selected');
+    assert.equal(await js("Array.from(document.querySelectorAll('.pipeline-catalog button')).find(button=>button.textContent==='Set default workflow').disabled"), true, 'disconnected workflows remain browseable but cannot be selected');
     await closeCatalog();
     for (const [state, connected, disconnected, width] of [
       ['vpipe-only', 'Vpipe', 'ComfyUI', 1280],
@@ -202,10 +231,10 @@ async function smoke() {
       assert.ok(groups[1].providers.length && groups[1].providers.every(name => name === disconnected), state + ' unavailable provider models stay at the bottom');
       assert.equal(await js("document.querySelector('[aria-label=\"Connected providers\"] .pipeline-catalog-option').textContent.includes('Needs download')"), true, 'missing downloads do not make a connected provider unavailable');
       await js("document.querySelector('[aria-label=\"Connected providers\"] .pipeline-catalog-option').click()");
-      await wait("!Array.from(document.querySelectorAll('.pipeline-catalog button')).find(button=>button.textContent==='Use workflow').disabled");
+      await wait("!Array.from(document.querySelectorAll('.pipeline-catalog button')).find(button=>button.textContent==='Set default workflow').disabled");
       await fs.writeFile(path.join(screenshots, `catalog-${state}.png`), (await window.webContents.capturePage()).toPNG());
       await js("document.querySelector('.pipeline-catalog-unavailable .pipeline-catalog-option').click()");
-      await wait("Array.from(document.querySelectorAll('.pipeline-catalog button')).find(button=>button.textContent==='Use workflow').disabled");
+      await wait("Array.from(document.querySelectorAll('.pipeline-catalog button')).find(button=>button.textContent==='Set default workflow').disabled");
       assert.equal(await js("document.querySelector('.pipeline-catalog-footer').textContent.includes('Connect ' + " + JSON.stringify(disconnected) + ")"), true, 'unavailable model details explain which provider to connect');
       await noOverflow(state + ' unavailable details');
       await closeCatalog();
@@ -215,7 +244,7 @@ async function smoke() {
     await load('generation');
     await openCatalog('opting out');
     await js("document.querySelector('.pipeline-catalog-none').click()");
-    await js("Array.from(document.querySelectorAll('.pipeline-catalog button')).find(button=>button.textContent==='Turn off').click()");
+    await js("Array.from(document.querySelectorAll('.pipeline-catalog button')).find(button=>button.textContent==='Clear default').click()");
     await wait("!document.querySelector('.pipeline-catalog')");
     assert.equal(await js("document.querySelector('.workflow-picker').textContent.includes('Choose a workflow')"), true, 'opting out clears the selection');
     assert.equal(await js("window.__uiCalls.filter(call=>call.url==='/api/pipelines/prepare').length"), 0);

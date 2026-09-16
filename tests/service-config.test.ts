@@ -112,7 +112,7 @@ test('a new browser cannot generate even when every service and shared model is 
   assert.deepEqual(store.settings().connections,emptyConnections);assert.deepEqual(store.settings().modelSelections,emptyModelSelections);
   const state=await setup.health();assert.ok(Object.values(state.connections!).every(service=>service.available));
   assert.ok(Object.values(state.capabilities!).every(capability=>!capability.configured&&!capability.ready));assert.equal(state.ollama,false);
-  for(const mode of ['image','video','reference','upscale'] as const)assert.match(generationBlocker(state,mode)!,/Choose an available pipeline/);
+  for(const mode of ['image','video','reference','upscale'] as const)assert.match(generationBlocker(state,mode)!,/Choose an available workflow/);
   assert.equal((await call('jobs','POST',request)).status,409);assert.equal(store.listJobs().length,0);
   await patch({setupDismissed:true});assert.deepEqual(store.settings().modelSelections,emptyModelSelections);
 });

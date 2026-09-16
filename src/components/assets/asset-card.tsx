@@ -1,7 +1,7 @@
 'use client';
 import { useRef } from 'react';
 import Link from 'next/link';
-import { Clock3, Film, Heart, Loader2, Play, Trash2 } from 'lucide-react';
+import { Clock3, Film, Heart, Loader2, Trash2 } from 'lucide-react';
 import type { Job, Media } from '@/lib/types';
 import { mediaUrl } from '@/lib/types';
 import { VideoProgress } from '@/components/queue/video-progress';
@@ -11,6 +11,7 @@ export function AssetCard({
   animation,
   queued = 0,
   submitting,
+  queueing = false,
   saving,
   href,
   onFavorite,
@@ -21,6 +22,7 @@ export function AssetCard({
   animation?: Job;
   queued?: number;
   submitting: boolean;
+  queueing?: boolean;
   saving: boolean;
   href: string;
   onFavorite: () => void;
@@ -44,7 +46,7 @@ export function AssetCard({
   return (
     <article
       className="media-card"
-      aria-busy={!!animation}
+      aria-busy={!!animation || queueing}
       onMouseEnter={play}
       onMouseLeave={resetPreview}
       onFocus={play}
@@ -91,28 +93,31 @@ export function AssetCard({
         className={`heart-button ${item.favorite ? 'saved' : ''}`}
         disabled={saving}
         onClick={onFavorite}
-        aria-label={item.favorite ? 'Remove creation from favorites' : 'Save creation to favorites'}
+        aria-label={item.favorite ? 'Remove creation from favorites' : 'Add creation to favorites'}
         aria-pressed={item.favorite}
       >
         <Heart size={16} fill={item.favorite ? 'currentColor' : 'none'} />
       </button>
       {item.kind === 'image' ? (
         <button
-          className="animate-button play-button"
-          disabled={submitting}
+          type="button"
+          className="animate-button"
+          disabled={submitting || queueing}
+          aria-busy={queueing || undefined}
           onClick={onAnimate}
-          title={animation ? 'View video progress' : 'Render video with default recipe'}
-          aria-label={animation ? 'View video progress' : 'Render video with default recipe'}
+          title={animation ? 'View video progress' : 'Queue a video using your default motion recipe'}
+          aria-label={queueing ? 'Queuing video' : animation ? 'View video progress' : 'Generate video'}
         >
-          {animation ? (
+          {queueing ? <Loader2 size={16} className="spin" /> : animation ? (
             animation.status === 'running' ? (
               <Loader2 size={16} className="spin" />
             ) : (
               <Clock3 size={16} />
             )
           ) : (
-            <Play size={16} fill="currentColor" />
+            <Film size={16} />
           )}
+          <span>{queueing ? 'Queuing…' : animation ? 'View progress' : 'Generate video'}</span>
         </button>
       ) : (
         <span className="media-badge">

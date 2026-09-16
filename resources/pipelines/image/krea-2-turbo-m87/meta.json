@@ -64,7 +64,6 @@
     ],
     "requirements": [
       "Apple Silicon Mac",
-      "Accept the model’s Hugging Face terms before downloading",
       "The M87 --preview trigger is appended automatically."
     ],
     "access": [

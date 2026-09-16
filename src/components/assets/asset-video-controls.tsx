@@ -32,6 +32,7 @@ export function AssetVideoControls({
   recipes,
   settings,
   defaultRecipeName,
+  selectedRecipeName,
 }: {
   root: Media;
   selected: Media;
@@ -47,6 +48,7 @@ export function AssetVideoControls({
   recipes?: ReactNode;
   settings?: ReactNode;
   defaultRecipeName?: string;
+  selectedRecipeName?: string;
 }) {
   const features = assetVideoFeatures(root, selected);
   return (
@@ -81,8 +83,9 @@ export function AssetVideoControls({
           onKeyDown={(event) => {
             if (
               features.editPrompt &&
+              !disabled &&
               event.key === 'Enter' &&
-              !event.shiftKey &&
+              (event.metaKey || event.ctrlKey) &&
               !event.nativeEvent.isComposing
             ) {
               event.preventDefault();
@@ -107,7 +110,7 @@ export function AssetVideoControls({
           {recipes && (
             <details className="viewer-mode viewer-recipes">
               <summary>
-                Motion recipes
+                {selectedRecipeName ? `Recipe: ${selectedRecipeName}` : 'Motion recipes'}
                 <ChevronDown size={13} />
               </summary>
               <div className="viewer-mode-options">{recipes}</div>
@@ -137,12 +140,22 @@ export function AssetVideoControls({
               </button>
             )}
             {features.editPrompt && (
-              <button className="viewer-render" disabled={disabled} onClick={onGenerate}>
+              <button
+                className="viewer-render"
+                disabled={disabled}
+                onClick={onGenerate}
+                title="Generate video · ⌘ / Ctrl + Enter"
+              >
                 {busy ? <Loader2 size={15} className="spin" /> : <Play size={15} />}Generate video
               </button>
             )}
           </div>
         </div>
+        {features.editPrompt && (
+          <p className="viewer-shortcut">
+            ⌘ / Ctrl + Enter to generate · Enter for a new line
+          </p>
+        )}
       </div>
     </div>
   );

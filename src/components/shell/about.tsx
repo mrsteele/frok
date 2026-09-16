@@ -26,7 +26,7 @@ export function About({ onCreate, onSetup }: { onCreate: () => void; onSetup: ()
           <ImageIcon size={21} strokeWidth={1.5} />
           <h2>Find your next idea.</h2>
           <p>
-            Explore a batch of images, try another direction, and save the ones that stay with you.
+            Explore a batch of images, try another direction, and favorite the ones you want to find again.
           </p>
         </section>
         <section>
@@ -41,8 +41,8 @@ export function About({ onCreate, onSetup }: { onCreate: () => void; onSetup: ()
           <Layers3 size={21} strokeWidth={1.5} />
           <h2>Make it your own.</h2>
           <p>
-            Connect your tools, choose image/video pipelines and a prompt model, and let your queue
-            take care of the work.
+            Connect your tools and choose image and video workflows. Add optional prompt enhancement,
+            then let your queue take care of the work.
           </p>
         </section>
       </div>
@@ -57,7 +57,7 @@ export function About({ onCreate, onSetup }: { onCreate: () => void; onSetup: ()
         <div>
           <p>New here?</p>
           <button onClick={onSetup}>
-            Open the setup guide <ArrowUpRight size={13} />
+            Open Quick setup <ArrowUpRight size={13} />
           </button>
         </div>
         <SocialLinks labels />

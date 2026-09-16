@@ -140,7 +140,7 @@ test('a gated installed model is shown as ready; missing custom nodes are setup 
     access:[{name:'Example',url:'https://example.com',gated:true}],
   }}).catalog;
   const render=()=>renderToStaticMarkup(createElement(WorkflowSummary,{pipeline:p,connection:{enabled:true,available:true,detail:''}}));
-  assert.match(render(),/Gated Hugging Face download/);assert.match(render(),/>Ready</);assert.doesNotMatch(render(),/Needs download/);
+  assert.doesNotMatch(render(),/workflow-access-icon|Gated Hugging Face download/);assert.match(render(),/>Ready</);assert.doesNotMatch(render(),/Needs download/);
   p.ready=false;p.state='attention';p.detail='Install the required custom nodes.';
   assert.match(render(),/>Setup needed</);assert.doesNotMatch(render(),/Needs download/);
 });

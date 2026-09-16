@@ -3,16 +3,16 @@ import type { Generation, VideoPreset, VideoStyle } from './types';
 
 export const videoPresetsKey = 'userPrompts';
 export const videoPresetSchema = z.object({
-  id: z.string().min(1).max(80).regex(/^[a-zA-Z0-9_-]+$/, 'Use a simple, unique preset ID.'),
-  name: z.string().trim().min(1, 'Give this preset a name.').max(60, 'Keep the name under 61 characters.'),
-  prompt: z.string().trim().min(1, 'Describe what this preset should do.').max(4000, 'Keep the recipe under 4,001 characters.'),
+  id: z.string().min(1).max(80).regex(/^[a-zA-Z0-9_-]+$/, 'Use a simple, unique recipe ID.'),
+  name: z.string().trim().min(1, 'Give this recipe a name.').max(60, 'Keep the name under 61 characters.'),
+  prompt: z.string().trim().min(1, 'Describe what this recipe should do.').max(4000, 'Keep the recipe under 4,001 characters.'),
   isDefault: z.boolean().optional(),
 });
-const presetsSchema = z.array(videoPresetSchema).max(100, 'You can save up to 100 presets.').superRefine((items, ctx) => {
+const presetsSchema = z.array(videoPresetSchema).max(100, 'You can save up to 100 recipes.').superRefine((items, ctx) => {
   const ids = new Set<string>(), names = new Set(['custom']);
   if (items.filter(item => item.isDefault).length > 1) ctx.addIssue({ code: 'custom', message: 'Choose only one default recipe.' });
   for (const item of items) {
-    if (ids.has(item.id)) ctx.addIssue({ code: 'custom', message: 'Each preset needs a unique ID.' });
+    if (ids.has(item.id)) ctx.addIssue({ code: 'custom', message: 'Each recipe needs a unique ID.' });
     if (names.has(item.name.toLowerCase())) ctx.addIssue({ code: 'custom', message: 'Choose a unique name; Custom is reserved for typed prompts.' });
     ids.add(item.id); names.add(item.name.toLowerCase());
   }
@@ -30,7 +30,7 @@ export function validateVideoPresets(value: unknown): VideoPreset[] {
 export function decodeVideoPresets(raw: string | null): VideoPreset[] {
   if (raw === null) return starterVideoPresets.map(preset => ({ ...preset }));
   let value: unknown;
-  try { value = JSON.parse(raw); } catch { throw new Error('Saved presets contain invalid JSON.'); }
+  try { value = JSON.parse(raw); } catch { throw new Error('Saved recipes contain invalid JSON.'); }
   let presets = validateVideoPresets(value);
   // Rename untouched starter recipes while preserving edits and custom names.
   presets = presets.map(preset => {
@@ -75,7 +75,7 @@ export function applyDefaultVideoPreset(input: Generation, presets: readonly Vid
 export type MotionChoice = { value: string; name: string; description: string; videoStyle: VideoStyle; videoPreset?: VideoPreset; isDefault?: boolean };
 export function motionChoices(presets: VideoPreset[]): MotionChoice[] {
   return [
-    { value: 'custom', name: 'Custom', description: 'Type your own direction, then render', videoStyle: 'custom' },
+    { value: 'custom', name: 'Custom', description: 'Type your own direction, then generate', videoStyle: 'custom' },
     ...presets.map(preset => ({ value: `preset:${preset.id}`, name: preset.name, description: preset.prompt, videoStyle: 'preset' as const, videoPreset: preset, isDefault: preset.isDefault })),
   ];
 }

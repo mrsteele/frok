@@ -1,0 +1,121 @@
+/* Task-oriented controls shared by the studio's creation, asset and queue views. */
+.create-button {
+  width: auto;
+  min-width: 106px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 9px;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+  background: var(--ui-accent);
+  color: var(--ui-accent-text);
+}
+.create-button:hover:not(:disabled) {
+  background: #d5ecde;
+  color: var(--ui-accent-text);
+}
+.composer-controls,
+.control-left {
+  flex-wrap: wrap;
+}
+.composer-controls > .create-button {
+  margin-left: auto;
+}
+.select-control .select-value {
+  max-width: none;
+}
+.media-card .animate-button {
+  min-height: 34px;
+  padding: 6px 9px;
+  gap: 6px;
+}
+.media-card .animate-button > span {
+  display: block;
+  max-width: none;
+}
+.media-card {
+  container-type: inline-size;
+}
+.media-card .video-progress-overlay {
+  padding-bottom: 46px;
+}
+/* Short cards reserve the bottom row for their progress action. */
+@container (max-width: 320px) {
+  .media-card .video-progress-label {
+    padding: 4px 40px;
+    max-width: 100%;
+  }
+  .media-card .video-progress-label > svg,
+  .media-card .video-progress-label small {
+    display: none;
+  }
+  .media-card .video-progress-label strong {
+    font-size: clamp(13px, 8cqw, 18px);
+    line-height: 1.2;
+  }
+}
+.viewer-shortcut {
+  margin: 0;
+  padding: 0 14px 12px;
+  font-size: 11px;
+  color: #999;
+}
+.viewer-recipes summary {
+  overflow-wrap: anywhere;
+}
+.session-header {
+  height: auto;
+  min-height: 57px;
+  padding-block: 10px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.queue-empty {
+  padding-block: 64px;
+}
+.queue-rail-label {
+  font-size: 10px;
+  line-height: 1.2;
+}
+.job-actions .job-log-link {
+  gap: 5px;
+  min-height: 32px;
+}
+
+@media (max-width: 800px) {
+  :root { --sidebar-width: 68px; }
+  .sidebar { padding-inline: 5px; }
+  .sidebar nav a,
+  .sidebar .new-idea {
+    width: 58px;
+    min-height: 54px;
+    flex-direction: column;
+    gap: 5px;
+    padding: 8px 2px;
+  }
+  .sidebar nav a > span:not(.settings-badge),
+  .sidebar .new-idea > span {
+    display: block;
+    font-size: 10px;
+    line-height: 1.2;
+  }
+  .sidebar nav a .settings-badge {
+    top: 4px;
+    right: 7px;
+  }
+  .sidebar .new-idea { margin-top: 10px; }
+  .queue-rail-toggle { min-height: 54px; }
+  .composer-controls { row-gap: 10px; }
+  .viewer-shortcut { padding-inline: 10px; }
+}
+
+@media (max-height: 600px) and (max-width: 800px) {
+  .sidebar { overflow-y: auto; }
+  .sidebar nav { margin-top: 0; }
+  .sidebar nav a,
+  .sidebar .new-idea,
+  .queue-rail-toggle { min-height: 46px; padding-block: 5px; }
+  .sidebar-footer { gap: 0; }
+}

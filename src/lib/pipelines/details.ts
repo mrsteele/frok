@@ -34,7 +34,7 @@ export const catalogDetails = z.object({
 }).strict();
 
 export type CatalogDetails = z.infer<typeof catalogDetails>;
-export type PipelineFiles = { reference: string; ready: boolean; size?: number; url?: string }[];
+export type PipelineFiles = { reference: string; ready: boolean; size?: number; url?: string; repository?: string }[];
 export function gatedAccess(details?: CatalogDetails) {
   return details?.access.filter(item => item.gated) || [];
 }

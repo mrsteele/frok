@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { providerIds } from '../providers/definitions';
 import { catalogDetails, type PipelineFiles } from './details';
+import type { DownloadAccess } from './download-access';
 export const pipelineKinds=['image','video','reference','upscale'] as const;
 export const pipelineRunners=providerIds;
 export type PipelineKind=typeof pipelineKinds[number];
@@ -39,5 +40,5 @@ export function currentPipelineSelections(value:PipelineSelections):PipelineSele
   return {...value,upscale:replacement};
 }
 export type PipelineSnapshot={metadata:PipelineMetadata;kind:PipelineKind;graph:Record<string,unknown>;revision:string};
-export type PipelineStatus={id:string;name:string;kind:PipelineKind;runner:PipelineMetadata['runner'];description:string;default:boolean;controls:PipelineMetadata['controls'];supportsSource:boolean;requiresSource?:boolean;maxReferences:number;state:'ready'|'missing'|'attention';ready:boolean;detail:string;missing:string[];revision:string;preparation?:string;catalog?:PipelineMetadata['catalog'];files?:PipelineFiles};
+export type PipelineStatus={id:string;name:string;kind:PipelineKind;runner:PipelineMetadata['runner'];description:string;default:boolean;controls:PipelineMetadata['controls'];supportsSource:boolean;requiresSource?:boolean;maxReferences:number;state:'ready'|'missing'|'attention';ready:boolean;detail:string;missing:string[];revision:string;preparation?:string;catalog?:PipelineMetadata['catalog'];files?:PipelineFiles;downloadAccess?:DownloadAccess};
 export function selectedPipeline(health:import('../types').Health|undefined,kind:PipelineKind,override?:string) {return health?.pipelines?.find(item=>item.kind===kind&&item.id===(override||health.pipelineSelections?.[kind]));}

@@ -118,6 +118,7 @@ export default function Studio({ children }: { children: ReactNode }) {
   const [checkingHealth, setCheckingHealth] = useState(false);
   const healthSequence = useRef(0);
   const [uploads, setUploads] = useState<Media[]>([]);
+  const [quickVideoId, setQuickVideoId] = useState<string>();
   const [deleting, setDeleting] = useState<DeleteTarget>();
   const [deletingJob, setDeletingJob] = useState<{ job?: Job }>();
   const [jobSources, setJobSources] = useState<Media[]>([]);
@@ -464,7 +465,7 @@ export default function Studio({ children }: { children: ReactNode }) {
       await refresh();
       setNotice(
         input.mode === 'image'
-          ? `${input.count} images queued`
+          ? `${input.count} ${input.count === 1 ? 'image' : 'images'} queued`
           : input.mode === 'upscale'
             ? 'HD enhancement queued'
             : 'Video queued',
@@ -533,30 +534,25 @@ export default function Studio({ children }: { children: ReactNode }) {
   function chooseMotion(value: string) {
     const choice = motionChoices(presets).find((item) => item.value === value);
     if (!choice) return;
-    if (draftImages.items.some((item) => item.id === request.sourceId)) {
-      patch({ videoStyle: choice.videoStyle, videoPreset: choice.videoPreset });
-      setAdvanced(false);
-      if (choice.videoStyle === 'custom') textRef.current?.focus();
-      return;
-    }
-    if (choice.videoStyle === 'custom') {
-      setAdvanced(false);
-      textRef.current?.focus();
-      return;
-    }
-    if (blocked || submitting || uploading) return;
+    patch(motionChoiceInput(choice, request.prompt));
     setAdvanced(false);
-    void submit({ ...request, ...motionChoiceInput(choice, request.prompt), count: 1 });
+    requestAnimationFrame(() => textRef.current?.focus());
   }
-  function makeVideo(item: Media) {
-    void submit(
-      animationRequest(item, undefined, { prompt: '', videoStyle: 'custom' }, request.enhance, {
-        duration: request.duration,
-        quality: request.quality,
-        pipelineId: request.pipelineChoices?.video,
-      }),
-      true,
-    );
+  async function makeVideo(item: Media) {
+    if (submissionLock.current) return;
+    setQuickVideoId(item.id);
+    try {
+      await submit(
+        animationRequest(item, undefined, { prompt: '', videoStyle: 'custom' }, request.enhance, {
+          duration: request.duration,
+          quality: request.quality,
+          pipelineId: request.pipelineChoices?.video,
+        }),
+        true,
+      );
+    } finally {
+      setQuickVideoId(undefined);
+    }
   }
   async function moveJob(job: Job, action: 'move' | 'next' | 'start', beforeId?: string | null) {
     if (queueMoveLock.current) return;
@@ -821,12 +817,13 @@ export default function Studio({ children }: { children: ReactNode }) {
         )}
         {!(route?.view === 'queue' && route.id === job.id) && (
           <Link
-            className="icon-button job-log-link"
-            title="View runner log"
-            aria-label="View runner log"
+            className="queue-quick-action job-log-link"
+            title="View job details and logs"
+            aria-label="View job details and logs"
             href={`/queue/${encodeURIComponent(job.id)}`}
           >
             <Terminal size={16} />
+            <span>Details</span>
           </Link>
         )}
         {isActive(job) ? (
@@ -884,11 +881,12 @@ export default function Studio({ children }: { children: ReactNode }) {
         animation={animation}
         queued={animations.length - 1}
         submitting={submitting}
+        queueing={quickVideoId === item.id}
         saving={favoriting.includes(rootId)}
         href={mediaPath(item)}
         onFavorite={() => void favorite(item)}
         onDelete={() => setDeleting({ scope: 'media', id: rootId })}
-        onAnimate={() => (animation ? openQueue(animation.id) : makeVideo(item))}
+        onAnimate={() => (animation ? openQueue(animation.id) : void makeVideo(item))}
       />
     );
   };
@@ -949,12 +947,14 @@ export default function Studio({ children }: { children: ReactNode }) {
           </div>
         )}
         <label className="visually-hidden" htmlFor="prompt">
-          Describe what you want to envision
+          Describe what you want to create
         </label>
         <textarea
           id="prompt"
           ref={textRef}
-          value={request.prompt}
+          value={
+            request.videoStyle === 'preset' ? request.videoPreset?.prompt || '' : request.prompt
+          }
           maxLength={8000}
           rows={hasCreations ? 2 : 4}
           placeholder={
@@ -962,11 +962,20 @@ export default function Studio({ children }: { children: ReactNode }) {
               ? 'Describe your video. Use <Picture 1> to refer to an image…'
               : source
                 ? 'Let it move naturally, or describe what happens next…'
-                : 'Type to envision'
+                : request.mode === 'video'
+                  ? 'Describe the scene and what happens in your video…'
+                  : 'Describe an image: the subject, setting and style…'
           }
-          onChange={(e) => patch({ prompt: e.target.value })}
+          onChange={(e) =>
+            patch({
+              prompt: e.target.value,
+              ...(request.videoStyle === 'preset'
+                ? { videoStyle: 'custom', videoPreset: undefined }
+                : {}),
+            })
+          }
           onKeyDown={(e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !e.nativeEvent.isComposing) {
               e.preventDefault();
               if (!blocked) void submit();
             }
@@ -995,7 +1004,7 @@ export default function Studio({ children }: { children: ReactNode }) {
                 {request.mode === 'image'
                   ? 'Image'
                   : request.mode === 'reference'
-                    ? 'References'
+                    ? 'Reference video'
                     : 'Video'}
               </span>
               <select
@@ -1005,7 +1014,7 @@ export default function Studio({ children }: { children: ReactNode }) {
               >
                 <option value="image">Image</option>
                 <option value="video">Video</option>
-                <option value="reference">References</option>
+                <option value="reference">Reference video</option>
               </select>
               <ChevronDown size={12} />
             </label>
@@ -1090,7 +1099,11 @@ export default function Studio({ children }: { children: ReactNode }) {
           </div>
           <button
             className="create-button"
-            aria-label="Generate"
+            aria-label={
+              request.mode === 'image'
+                ? `Generate ${request.count} ${request.count === 1 ? 'image' : 'images'}`
+                : 'Generate video'
+            }
             title={blocked || 'Generate · ⌘ / Ctrl + Enter'}
             disabled={
               !!blocked ||
@@ -1101,13 +1114,13 @@ export default function Studio({ children }: { children: ReactNode }) {
             }
             onClick={() => void submit()}
           >
-            {submitting ? <Loader2 size={18} className="spin" /> : <ArrowUp size={20} />}
+            {submitting && !quickVideoId ? <Loader2 size={18} className="spin" /> : <ArrowUp size={18} />}
+            <span>{submitting && !quickVideoId ? 'Queuing…' : 'Generate'}</span>
           </button>
         </div>
       </div>
       {advanced && (
         <GenerationSettings
-          stagedSource={draftImages.items.some((item) => item.id === request.sourceId)}
           request={request}
           health={health}
           presets={presets}
@@ -1160,7 +1173,7 @@ export default function Studio({ children }: { children: ReactNode }) {
           <nav>
             {(
               [
-                { id: 'envision', label: 'Envision', Icon: ImageIcon },
+                { id: 'envision', label: 'Create', Icon: ImageIcon },
                 { id: 'favorites', label: 'Favorites', Icon: Heart },
               ] as const
             ).map(({ id, label, Icon }) => (
@@ -1188,7 +1201,7 @@ export default function Studio({ children }: { children: ReactNode }) {
                 </span>
               )}
             </Link>
-            <DocumentationLink onError={setError} />
+            <DocumentationLink label="Docs" onError={setError} />
           </nav>
           <button className="new-idea" aria-label="New idea" onClick={newIdea}>
             <Plus size={17} />
@@ -1278,7 +1291,7 @@ export default function Studio({ children }: { children: ReactNode }) {
         ) : route?.view === 'queue' ? (
           <PageShell
             showBack={!!route.id}
-            title={route.id ? 'Job & runner log' : 'Queue'}
+            title={route.id ? 'Job details & logs' : 'Queue'}
             fallback={route.id ? '/queue' : '/'}
           >
             {route.id ? (
@@ -1287,7 +1300,8 @@ export default function Studio({ children }: { children: ReactNode }) {
               <>
                 <div className="queue-toolbar">
                   <p className="muted">
-                    One job at a time · {pending.length} pending · Drag pending jobs to reorder
+                    One job at a time · {pending.length} waiting
+                    {pending.length > 1 && ' · Drag waiting jobs to reorder'}
                   </p>
                   <button
                     disabled={!failed.length && !completed.length && !cancelled.length}
@@ -1300,7 +1314,17 @@ export default function Studio({ children }: { children: ReactNode }) {
                 {running && <GpuGraph telemetry={telemetry} />}
                 <div className="job-list">
                   {!unfinished.length && !completed.length && !cancelled.length ? (
-                    <p className="empty-state muted">Your queue is empty.</p>
+                    <div className="empty-state queue-empty">
+                      <Layers3 size={28} />
+                      <h2>Your queue is empty</h2>
+                      <p>
+                        Generation and model preparation jobs appear here. You can follow their
+                        progress and review logs.
+                      </p>
+                      <Link className="secondary" href="/">
+                        Create something
+                      </Link>
+                    </div>
                   ) : unfinished.length ? (
                     unfinished.map(renderJob)
                   ) : (
@@ -1384,14 +1408,14 @@ export default function Studio({ children }: { children: ReactNode }) {
             {hasCreations && (
               <>
                 <header className="session-header">
-                  <span>Envision</span>
+                  <span>Create</span>
                   <PromptJump sections={sections} />
                   <button
                     className="clear-history"
                     onClick={() => setDeleting({ scope: 'history' })}
                   >
                     <Trash2 size={14} />
-                    Clear unsaved
+                    Delete unfavorited…
                   </button>
                   <button onClick={newIdea}>
                     <Plus size={15} />
@@ -1406,7 +1430,7 @@ export default function Studio({ children }: { children: ReactNode }) {
           <header className="library-header">
             <div>
               <h1>Favorites</h1>
-              <p>The things you love, saved on your machine.</p>
+              <p>Your favorited images and videos, stored on this device.</p>
             </div>
             <nav className="filter-tabs" aria-label="Filter media">
               {(['all', 'image', 'video'] as const).map((kind) => (
@@ -1468,8 +1492,13 @@ export default function Studio({ children }: { children: ReactNode }) {
             {!visible.length && library && (
               <div className="empty-state">
                 {loading ? <Loader2 className="spin" size={22} /> : <Heart size={28} />}
-                <h2>{loading ? 'Loading…' : 'Save something you love'}</h2>
-                {!loading && <p>Tap a heart to save an image. Videos are saved automatically.</p>}
+                <h2>{loading ? 'Loading…' : 'Keep your favorites here'}</h2>
+                {!loading && (
+                  <>
+                    <p>Use the heart on an image to favorite it. Generated videos appear here automatically.</p>
+                    <Link className="secondary" href="/">Explore your creations</Link>
+                  </>
+                )}
               </div>
             )}
             {hasMore && (

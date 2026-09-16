@@ -7,16 +7,18 @@ import ltx from '../../resources/pipelines/video/ltx-2-5/meta.json';
 import type { Health, Job } from '../../src/lib/types';
 import { generationOptions } from '../../src/lib/onboarding';
 import { pipelineMetadata } from '../../src/lib/pipelines/schema';
+import { dependencyRepository, downloadAccess, requiredGatedDownloads, type DownloadAccessState } from '../../src/lib/pipelines/download-access';
 import { runtimeDefaults } from '../../desktop/preferences.mjs';
 import type { ExportPreferences } from '../../src/lib/export-preferences';
+import { previewJobs, studioResponse } from './studio-fixtures';
 
 export const scenario = new URLSearchParams(location.search).get('state') || 'connected';
 const available = !['offline', 'disconnected'].includes(scenario);
 const onlyProvider = scenario === 'vpipe-only' ? 'vpipe' : scenario === 'comfyui-only' ? 'comfyui' : undefined;
-const modelsReady = available && scenario !== 'missing' && !onlyProvider;
+const modelsReady = available && scenario !== 'missing' && !onlyProvider && !scenario.startsWith('access-');
 export const health = {
   worker: true,
-  checks: [],
+  checks: [{ id: 'ffmpeg', name: 'Video tools', ready: true, detail: 'Synthetic bundled video tools.' }],
   runner: 'vpipe',
   ollama: available,
   ollamaConnected: available,
@@ -114,14 +116,34 @@ for (const [kind, definition] of [['image', krea], ['image', m87], ['image', kle
     state: modelsReady ? 'ready' : 'missing', ready: modelsReady,
     detail: modelsReady ? 'Synthetic installed model files.' : 'Synthetic missing files. No models are downloaded in this gallery.',
     missing: modelsReady ? [] : metadata.dependencies.map(d => d.reference),
-    files: metadata.dependencies.map(d => ({ reference: d.reference, ready: modelsReady, size: d.size, url: d.url })),
+    files: metadata.dependencies.map(d => ({ reference: d.reference, ready: modelsReady, size: d.size, url: d.url, repository: dependencyRepository(d, metadata.runner) })),
     preparation: modelsReady ? undefined : `${kind}/${metadata.id.split(':')[1]}`,
     revision: 'gallery',
   });
 }
+for (const pipeline of health.pipelines!) pipeline.downloadAccess = available ? requiredGatedDownloads(pipeline) : downloadAccess('unknown');
+if (scenario.startsWith('access-')) {
+  const state = scenario.slice(7);
+  const pipeline = health.pipelines!.find(p => p.id === (state === 'partial' ? 'vpipe:krea-2-turbo-m87' : 'vpipe:krea-2-turbo'))!;
+  health.pipelineSelections!.image = pipeline.id;
+  if (state === 'ready' || state === 'partial') {
+    pipeline.files![0].ready = true;
+    pipeline.ready = state === 'ready';
+    pipeline.state = pipeline.ready ? 'ready' : 'missing';
+    pipeline.missing = pipeline.files!.filter(file => !file.ready).map(file => file.reference);
+    pipeline.detail = pipeline.ready ? 'All declared dependencies are installed.' : 'Only the public M87 LoRA needs downloading. The Krea base is already installed.';
+    pipeline.downloadAccess = requiredGatedDownloads(pipeline);
+    if (pipeline.ready) pipeline.preparation = undefined;
+    health.capabilities!.image = { configured: true, ready: pipeline.ready, connection: pipeline.runner, detail: pipeline.detail };
+  } else {
+    const accessState = state as DownloadAccessState;
+    pipeline.downloadAccess = downloadAccess(accessState, pipeline.downloadAccess!.repositories.map(repository => ({ ...repository, state: accessState })));
+  }
+}
 let preferences: ExportPreferences = {};
 let runtime = { ...runtimeDefaults };
-export const jobs: Job[] = [];
+const studio = new URLSearchParams(location.search).get('view') === 'studio';
+export const jobs: Job[] = studio ? previewJobs(scenario) : [];
 export const calls: { url: string; method: string; body: unknown }[] = [];
 Object.assign(window, { __uiCalls: calls });
 
@@ -143,11 +165,23 @@ window.fetch = async (input, init) => {
     );
   await new Promise((resolve) => setTimeout(resolve, 60));
   const route = url.pathname.slice(5);
+  if (studio && route === 'jobs' && method === 'POST') await new Promise(resolve => setTimeout(resolve, 350));
+  const preview = studio ? studioResponse(route, method, body, scenario, jobs) : undefined;
+  if (preview) return preview;
   if (route === 'envision' || route === 'media') return Response.json({ media: [], sections: [] });
   if (route === 'telemetry')
     return Response.json({ samples: [], busy: null, detail: 'Synthetic preview' });
   if (route === 'health') return Response.json(health);
   if (route === 'jobs') return Response.json({ jobs });
+  if (route === 'pipelines/access-check') {
+    // Synthetic permission response: never reads real credentials or contacts HF.
+    await new Promise(resolve => setTimeout(resolve, 450));
+    const source = health.pipelines!.find(p => p.id === body.id)!;
+    const result = scenario === 'access-unavailable' ? 'unavailable' : scenario === 'access-denied' ? 'denied' : 'granted';
+    const pipeline = { ...source, downloadAccess: downloadAccess(result, source.downloadAccess!.repositories.map(repository => ({ ...repository, state: result, checkedAt: new Date().toISOString() }))) };
+    health.pipelines = health.pipelines!.map(p => p.id === pipeline.id ? pipeline : p);
+    return Response.json({ pipeline });
+  }
   if (route === 'pipelines/prepare') {
     const pipeline=health.pipelines!.find(p=>p.id===body.id);
     const now=new Date().toISOString();

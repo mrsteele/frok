@@ -783,6 +783,17 @@
 .preset-actions .preset-default {
   margin-right: 4px;
 }
+@media (max-width: 480px) {
+  .preset-copy {
+    flex-basis: 100%;
+  }
+  .preset-actions {
+    width: 100%;
+  }
+  .preset-actions .preset-default {
+    margin-right: auto;
+  }
+}
 .runtime-timeout-input {
   display: flex;
   align-items: center;

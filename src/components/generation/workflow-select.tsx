@@ -6,6 +6,7 @@ import type { Health } from '@/lib/types';
 import type { PipelineKind, PipelineStatus } from '@/lib/pipelines/schema';
 import { connectionNames } from '@/lib/service-config';
 import { groupWorkflowsByConnection } from './workflow-options';
+import { workflowDownloadAccess } from '@/lib/pipelines/download-access';
 
 type Props = Omit<ComponentProps<'select'>, 'children' | 'value'> & {
   health?: Health;
@@ -36,11 +37,16 @@ export function WorkflowSelect({
     const connection = health?.connections?.[p.runner],
       connected = connection?.enabled && connection.available;
     const service = connectionNames[p.runner];
+    const access = workflowDownloadAccess(p);
+    const accessLabel = !connected || p.ready ? '' : access.state === 'token-required' ? ' · Token needed'
+      : access.state === 'denied' ? ' · Access needed'
+      : access.state === 'granted' ? ' · Download access verified' : '';
     return (
       <option key={p.id} value={p.id} disabled={!connected || (!allowNone && !!p.requiresSource && !source)}>
-        {p.catalog?.access.some(item => item.gated) ? '🔒 ' : ''}{p.name}
+        {p.name}
         {!allowNone && p.requiresSource && !source ? ' · Needs a starting image' : ''}
         {p.id === defaultId ? ' (Default)' : ''}
+        {accessLabel}
         {connected
           ? ` · ${service}${p.ready ? '' : ' · Setup needed'}`
           : ` (requires ${service})`}
@@ -54,7 +60,7 @@ export function WorkflowSelect({
           {allowNone
             ? 'Not enabled'
             : workflows.length
-              ? 'Choose a pipeline'
+              ? 'Choose a workflow'
               : 'No workflows found'}
         </option>
       )}

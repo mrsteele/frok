@@ -46,6 +46,18 @@ Settings, onboarding and shared dialog controls use the library. Generation, ass
 
 Settings and onboarding use a rich workflow button that opens the native catalog dialog. Reuse `generation/workflow-summary` for the selected model and catalog rows: keep names, access status, speed, adherence and full download size together. Unknown metrics stay unrated; size never implies runtime memory. Keep detailed requirements in the catalog instead of adding a second stats block below a selector. The generation composer's native selector retains its existing source compatibility behavior.
 
+Use green for success, orange for warnings, neutral text for ordinary or unknown states, and red for errors. Download locks come from `workflowDownloadAccess`, never directly from a model's gated metadata. Installed files need no lock; confirmed missing access gets an orange closed lock, and verified permission gets a green open lock. A saved token is not proof of permission. Checks must be explicit user actions, not effects or background health requests.
+
 Run `npm run dev:ui` for a standalone gallery at http://127.0.0.1:4178. It includes primitive states and the real Settings/onboarding components with synthetic services. Every API call is intercepted, and desktop actions are harmless fixtures. It does not start the app, open a library, or contact runners. Reload to reset examples; saved preview preferences are isolated from Frok.
 
 Run `npm run smoke:ui` for isolated Electron layout, keyboard, focus and interaction checks. Screenshots go into ignored `.data/ui-checks`. The normal Node test suite checks native props, field associations, status behavior and existing feature rules. No new UI framework or test dependency is required.
+
+## Interaction conventions
+
+Involve a design-focused agent when changing visual design, wording or flows, as required by the root `AGENTS.md`. Review the journey and the result, including narrow screens, keyboard access and recovery from errors.
+
+Use task names in navigation: Create, Favorites, Settings, Docs and Queue. Call reusable motion prompts recipes, and generation configurations workflows. Reserve “load” and “show older” for existing data; generation actions must say Generate. Choosing a recipe or opening an asset must never start a job. Recipe choices populate a reviewable draft; Generate commits it. Use Cmd/Ctrl+Enter to generate and leave plain Enter available for multiline prompts.
+
+All retained media is already on disk. Use “favorite” for the heart action and “Delete unfavorited” for bulk cleanup. Keep the deletion preview and its exact exceptions before committing deletion.
+
+`shell/studio.css` holds the studio's task controls and responsive navigation, loaded after other feature styles in both app and gallery. Open `http://127.0.0.1:4178/?view=studio&state=connected` to review full app journeys. States `empty`, `busy`, `error`, `disconnected` and `offline` use synthetic data; generation calls create in-memory queue entries only. `npm run smoke:ux` checks these journeys and saves screenshots in `.data/ux-checks`.

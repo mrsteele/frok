@@ -27,6 +27,7 @@
     "test:desktop": "node --test tests/desktop-*.test.mjs && tsx --test tests/desktop-auth.test.ts",
     "smoke:desktop": "node scripts/desktop-smoke.mjs",
     "smoke:ui": "electron scripts/ui-smoke.mjs",
+    "smoke:ux": "electron scripts/studio-ux-smoke.mjs",
     "smoke:docs": "electron scripts/desktop-docs-smoke.mjs",
     "test:release": "npm run test:desktop && node --test tests/release-version.test.mjs tests/source-audit.test.mjs && tsx --test tests/library-api.test.ts tests/request-security.test.ts tests/client-session.test.ts tests/pipeline-catalog.test.ts",
     "check:source": "node scripts/check-source.mjs",

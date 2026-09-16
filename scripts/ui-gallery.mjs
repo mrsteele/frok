@@ -39,13 +39,23 @@ export async function startUIGallery({ port = 4178, watch = true } = {}) {
     '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Frok UI gallery</title><link rel="stylesheet" href="/gallery.css"></head><body><div id="root"></div><script type="module" src="/gallery.js"></script></body></html>';
   const server = http.createServer(async (req, res) => {
     const route = new URL(req.url, 'http://localhost').pathname;
+    if (route === '/brand/mark.svg') {
+      res.setHeader('Content-Type', 'image/svg+xml');
+      res.end(await fs.readFile(path.join(root, 'public/brand/mark.svg')));
+      return;
+    }
     if (route.startsWith('/docs/')) {
       const response = await docsResponse(path.join(root, 'public/docs'))(new Request('frok-docs://help' + route.slice(5), {headers:req.headers}));
       res.writeHead(response.status, Object.fromEntries(response.headers));
       res.end(Buffer.from(await response.arrayBuffer()));
       return;
     }
-    if (route === '/') {
+    if (route.startsWith('/api/media/')) {
+      res.setHeader('Content-Type', 'image/svg+xml');
+      res.end('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480"><defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#345849"/><stop offset="1" stop-color="#aec7a4"/></linearGradient></defs><path fill="url(#sky)" d="M0 0h640v480H0z"/><circle cx="440" cy="130" r="46" fill="#e8daac"/><path d="M0 290L180 110l160 210L490 195l150 110v175H0" fill="#233e39"/><path d="M0 325q190-35 320 0t320 0v155H0" fill="#497568"/><text x="24" y="450" fill="#d5e6d4" font-family="sans-serif" font-size="16">Synthetic UI preview · no generated media</text></svg>');
+      return;
+    }
+    if (route === '/' || !path.extname(route)) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.end(html);
       return;

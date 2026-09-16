@@ -35,7 +35,7 @@ export function useVideoPresets() {
         setState({
           presets: [],
           ready: true,
-          error: `Could not load motion presets: ${(e as Error).message} Your saved data has been kept.`,
+          error: `Could not load motion recipes: ${(e as Error).message} Your saved data has been kept.`,
         });
       }
     };

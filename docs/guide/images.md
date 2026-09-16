@@ -1,6 +1,6 @@
 # Generate images
 
-On **Envision**, type a prompt, choose Image and select an aspect ratio. Open the sliders button for batch size, pipeline, quality, seed and prompt enhancement. The number beside the button shows how many generations are requested.
+On **Create**, type a prompt, choose Image and select an aspect ratio. Open the sliders button for batch size, pipeline, quality, seed and prompt enhancement. The number beside the button shows how many generations are requested.
 
 ## Give the model a clear brief
 
@@ -18,7 +18,7 @@ The batch has a tile for every requested image. Rendering is sequential: one act
 
 ## Prompt sections
 
-Every time you choose **Generate**, Envision starts a new section labeled with your prompt, even if you use the same prompt and settings again. New sections appear at the top, and new image requests scroll toward the queued batch. Sections can be collapsed to keep the workspace tidy. **Jump to prompt** moves between sections. Only **Load more** appends another image batch to the bottom of its existing section, using that section's saved settings and fresh seeds. It keeps the section in place and does not run automatically as you scroll.
+Every time you choose **Generate**, Create starts a new section labeled with your prompt, even if you use the same prompt and settings again. New sections appear at the top, and new image requests scroll toward the queued batch. Sections can be collapsed to keep the workspace tidy. **Jump to prompt** moves between sections. Only **Generate more** appends another image batch to the bottom of its existing section, using that section's saved settings and fresh seeds. It keeps the section in place and does not run automatically as you scroll.
 
 Your sections remain after refreshing or restarting Frok, even if you delete their queue logs. **New idea** clears the composer without hiding earlier work. **Show older prompts** reveals earlier sections without generating anything.
 

@@ -24,7 +24,7 @@ export function missingSetup(health: Health | undefined): { target: SetupTarget;
   if (!health) return [];
   if(health.capabilities){
     const selected=(Object.entries(health.capabilities) as [Capability,NonNullable<Health['capabilities']>[Capability]][]).filter(([,value])=>value.configured);
-    if(!selected.length)return [{target:'runner',name:'Connect a service and choose a pipeline'}];
+    if(!selected.length)return [{target:'runner',name:'Connect a service and choose a workflow'}];
     const missing:{target:SetupTarget;name:string}[]=selected.filter(([,value])=>!value.ready).map(([target])=>({target,name:target==='image'&&health.modelSelections?.image?imageModels[health.modelSelections.image].name:capabilityNames[target]}));
     if(!health.worker)missing.unshift({target:'worker',name:'Generation queue'});
     return missing;
@@ -47,11 +47,11 @@ export function generationIssue(health: Health | undefined, mode: Generation['mo
   if (!health.worker) return { message: health.checks.find(check=>check.id==='worker')?.detail||'The generation queue is offline. Start it before creating.', action: 'Open Settings', target: 'worker' };
   if(health.pipelines){
     const p=selectedPipeline(health,mode,pipelineId);
-    if(!p)return {message:'Choose an available pipeline in Settings → Generation.',action:'Choose a pipeline',target:mode};
+    if(!p)return {message:'Choose an available workflow in Settings → Generation.',action:'Choose a workflow',target:mode};
     const connection=health.connections?.[p.runner];
     if(!connection?.enabled||!connection.available)return {message:`Connect ${connectionNames[p.runner]} to use ${p.name}.`,action:'Configure connections',target:'runner'};
     if(mode!=='image'&&!health.checks.find(c=>c.id==='ffmpeg')?.ready)return {message:health.checks.find(c=>c.id==='ffmpeg')?.detail||'Video tools need setup.',action:'Set up video tools',target:'ffmpeg'};
-    if(sourceId&&mode!=='upscale'&&!p.supportsSource)return {message:'Choose a pipeline that accepts a starting image.',action:'Choose a pipeline',target:mode};
+    if(sourceId&&mode!=='upscale'&&!p.supportsSource)return {message:'Choose a workflow that accepts a starting image.',action:'Choose a workflow',target:mode};
     if(!p.ready)return {message:p.detail,action:'Review workflow',target:mode};
     return;
   }

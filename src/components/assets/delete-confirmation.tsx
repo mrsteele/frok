@@ -76,15 +76,15 @@ export function DeleteConfirmation({
     target.scope === 'section'
       ? 'Delete this prompt section?'
       : target.scope === 'history'
-        ? 'Clear unsaved creations?'
+        ? 'Delete unfavorited creations?'
         : `Delete this ${subject}?`;
   return (
     <ConfirmationDialog title={title} busy={busy} onClose={onClose}>
       <p>
         {target.scope === 'section'
-          ? 'Delete the unsaved creations in this prompt section. Favorited images and all their videos will stay in the section and your library.'
+          ? 'Delete unfavorited creations in this prompt section. Favorited images and all their videos stay in your library.'
           : target.scope === 'history'
-            ? 'Remove unsaved generations. Favorites and all their versions, uploaded root images, and media used by active jobs will stay.'
+            ? 'Delete unfavorited generated media from this device. Favorites and all their versions, uploaded starting images, and media used by active jobs stay.'
             : images
               ? plan?.videos
                 ? 'Delete this image and all of its attached videos.'
@@ -101,8 +101,8 @@ export function DeleteConfirmation({
           {plan.total
             ? `Will delete: ${counts}.`
             : target.scope === 'section'
-              ? 'No unsaved files to delete. Associated inactive jobs can be removed; favorites stay.'
-              : 'Nothing to delete. Your saved and active creations are protected.'}
+              ? 'No unfavorited files to delete. Associated inactive jobs can be removed; favorites stay.'
+              : 'Nothing to delete. Your favorites, uploaded starting images and active creations are protected.'}
         </p>
       ) : (
         !error && (
@@ -158,7 +158,7 @@ export function DeleteConfirmation({
         >
           {busy ? null : <Trash2 size={15} />}{' '}
           {target.scope === 'history'
-            ? 'Clear unsaved'
+            ? 'Delete unfavorited'
             : target.scope === 'section'
               ? 'Delete section'
               : 'Delete'}

@@ -13,7 +13,6 @@ export function GenerationSettings({
   presetError,
   storageError,
   disabled,
-  stagedSource = false,
   onPatch,
   onChoose,
   onDone,
@@ -24,7 +23,6 @@ export function GenerationSettings({
   presetError: string;
   storageError?: string;
   disabled: boolean;
-  stagedSource?: boolean;
   onPatch: (change: Partial<Generation>) => void;
   onChoose: (value: string) => void;
   onDone: () => void;
@@ -115,10 +113,10 @@ export function GenerationSettings({
       {request.mode === 'video' && request.sourceId && (
         <>
           <label className="composer-motion-style">
-            {stagedSource ? 'Motion recipe' : 'Render with recipe'}
+            Motion recipe
             <select
               value={
-                stagedSource && request.videoStyle === 'preset'
+                request.videoStyle === 'preset'
                   ? `preset:${request.videoPreset?.id}`
                   : 'custom'
               }
@@ -134,9 +132,7 @@ export function GenerationSettings({
             </select>
           </label>
           <p className="settings-hint">
-            {stagedSource
-              ? 'Choose a recipe, then click Generate when you’re ready.'
-              : 'Choose a recipe to render immediately.'}{' '}
+            Choose a recipe, then click Generate when you’re ready.{' '}
             Custom uses your text, or your default recipe when left empty.
           </p>
           {presetError && (

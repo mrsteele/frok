@@ -30,10 +30,10 @@ const tabs = [
   { id: 'recipes', label: 'Recipes', icon: Sparkles },
   { id: 'advanced', label: 'Advanced', icon: SlidersHorizontal },
 ] as const;
-const steps = ['Welcome', 'Services', 'Generation', 'All done'];
+const steps = ['Welcome', 'Services', 'Generation', 'Review'];
 const introductions = {
-  services: { title: 'Your local services', description: 'Connect the tools you use. You can use more than one.' },
-  generation: { title: 'Choose how you create', description: 'Pick a default workflow for each kind of creation. Everything is optional.' },
+  services: { title: 'Connect your local tools', description: 'Connect Vpipe or ComfyUI to generate images and videos. Ollama is optional, for prompt enhancement.' },
+  generation: { title: 'Choose how you create', description: 'Choose a default workflow for the things you want to make. You can leave the others off and add them later.' },
 };
 
 export function Setup({
@@ -61,9 +61,10 @@ export function Setup({
   const attention = settingsAttention(health), workflows = setupWorkflows(health);
   const preparing = jobs.some(job => isPreparationJob(job) && ['queued', 'running'].includes(job.status));
   const needsAttention = workflows.some(item => !item.ready), anyReady = workflows.some(item => item.ready);
+  const runnerConnected = [health?.connections?.vpipe, health?.connections?.comfyui].some(connection => connection?.enabled && connection.available);
   const current = wizard ? (['welcome', 'services', 'generation', 'summary'] as const)[step] : section;
   const intro = current === 'services' || current === 'generation' ? introductions[current] : undefined;
-  const title = intro?.title || (current === 'welcome' ? 'Welcome to Frok' : preparing ? 'Your setup is underway' : needsAttention ? 'Your choices are saved' : anyReady ? 'You’re ready to create' : 'Make yourself at home');
+  const title = intro?.title || (current === 'welcome' ? 'Welcome to Frok' : preparing ? 'Your setup is underway' : needsAttention ? 'Your choices are saved' : anyReady ? 'You’re ready to create' : 'Set up your first workflow');
   useEffect(() => {
     if (!wizard) return;
     body.current?.scrollTo({ top: 0 });
@@ -104,25 +105,44 @@ export function Setup({
         <p>Create images and videos with your local AI tools. Keep your prompts, queue, and creations together in one place.</p>
       </div>
       <iframe className="welcome-demo" src="/docs/welcome-demo.html" title="Frok demonstration: a prompt becomes an image, then a video" tabIndex={-1} />
-      <p className="welcome-footnote">Connect Vpipe or ComfyUI. Add Ollama for prompt enhancement. Your creations stay on your computer.</p>
+      <p className="welcome-footnote">You’ll connect Vpipe or ComfyUI, then choose a model. Ollama can help with prompts, but isn’t required. Your creations stay on your computer.</p>
     </div>}
     {current === 'summary' && <>
       <div className="wizard-intro">
         <h2 id={titleId} tabIndex={-1}>{title}</h2>
-        <p>{preparing ? 'Preparation jobs continue in Queue. You can explore Frok while they run.' : needsAttention ? 'Use Prepare models or the setup instructions in Generation settings for anything still missing.' : anyReady ? 'Your connected tools are ready. You can change these choices in Settings.' : 'Everything is optional. Connect services and choose workflows in Settings whenever you’re ready.'}</p>
+        <p>{preparing ? 'Model preparation continues in Queue. You can explore Frok while it runs.' : needsAttention ? 'Finish the setup below to use these workflows, or explore Frok and return to Settings later.' : anyReady ? 'Your connected tools are ready. You can change these choices in Settings.' : 'To generate, connect a local tool and choose a workflow. You can do that now or return to Settings later.'}</p>
       </div>
       <div className="wizard-summary">
         {workflows.map(item => {
           const job = jobs.find(job => isPreparationJob(job)
             && (job.request as SetupRequest).preparation === item.workflow?.preparation
             && ['queued', 'running'].includes(job.status));
+          const connection = item.workflow && health?.connections?.[item.workflow.runner];
+          const needsConnection = !!item.workflow && !(connection?.enabled && connection.available);
           return <div key={item.kind}>
             <Badge tone={item.ready ? 'success' : 'warning'}>{item.ready ? <Check size={17} /> : <CircleAlert size={17} />}</Badge>
             <div>
               <strong>{item.name}</strong>
               <p>{item.workflow?.name || 'Workflow unavailable'}</p>
             </div>
-            <small>{item.ready ? 'Ready' : job?.status === 'queued' ? 'Queued' : job?.status === 'running' ? 'Preparing' : 'Needs setup'}</small>
+            <div className="wizard-summary-actions">
+              <small>{item.ready ? 'Ready' : job?.status === 'queued' ? 'Queued' : job?.status === 'running' ? 'Preparing' : 'Needs setup'}</small>
+              {!item.ready && (job ? (
+                <Button size="compact" variant="ghost" disabled={pending} onClick={() => void finish(`/queue/${job.id}`)}>
+                  View progress<ArrowRight size={13} />
+                </Button>
+              ) : (
+                <Button
+                  size="compact"
+                  variant="ghost"
+                  disabled={pending}
+                  aria-label={`${needsConnection ? 'Connect service' : 'Finish setup'} for ${item.name.toLowerCase()}`}
+                  onClick={() => { setError(''); setStep(needsConnection ? 1 : 2); }}
+                >
+                  {needsConnection ? 'Connect service' : 'Finish setup'}<ArrowRight size={13} />
+                </Button>
+              ))}
+            </div>
           </div>;
         })}
         {health?.connections?.ollama.enabled && <div>
@@ -131,15 +151,27 @@ export function Setup({
           </Badge>
           <div>
             <strong>Prompt enhancement</strong>
-            <p>{enhance && health.ollama ? health.ollamaModel : 'You can enable this in Services.'}</p>
+            <p>{enhance && health.ollama ? health.ollamaModel : enhance ? 'Check the Ollama connection and prompt model in Services.' : 'Optional. You can enable this in Services.'}</p>
           </div>
-          <small>{enhance && health.ollama ? 'On' : 'Off'}</small>
+          <div className="wizard-summary-actions">
+            <small>{enhance && health.ollama ? 'On' : enhance ? 'Needs setup' : 'Off'}</small>
+            {enhance && !health.ollama && (
+              <Button size="compact" variant="ghost" disabled={pending} onClick={() => { setError(''); setStep(1); }}>
+                Check Ollama<ArrowRight size={13} />
+              </Button>
+            )}
+          </div>
         </div>}
-        {!workflows.length && !health?.connections?.ollama.enabled && <div>
-          <Check size={20} />
+        {!workflows.length && <div>
+          <Layers3 size={20} />
           <div>
-            <strong>Your studio, at your pace</strong>
-            <p>Open Quick setup from Services to return here.</p>
+            <strong>No generation workflow selected</strong>
+            <p>{runnerConnected ? 'Choose an image or video workflow to get started.' : 'Connect Vpipe or ComfyUI before choosing a workflow.'}</p>
+          </div>
+          <div className="wizard-summary-actions">
+            <Button size="compact" variant="ghost" disabled={pending} onClick={() => { setError(''); setStep(runnerConnected ? 2 : 1); }}>
+              {runnerConnected ? 'Choose a workflow' : 'Connect a service'}<ArrowRight size={13} />
+            </Button>
           </div>
         </div>}
       </div>

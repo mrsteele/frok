@@ -8,7 +8,7 @@ An open asset page switches to a new render when it becomes available and update
 
 ## Animate an image
 
-Adding a starting image keeps a local preview in the composer. You can remove or replace it, adjust settings, or switch to References before submitting; nothing uploads until you choose **Generate**. Frok then uploads the root image, queues the video and opens its asset page with generation progress. Missing generation details, such as prompts and seeds, are omitted for uploads. On the asset page, type motion into the Video prompt box and press Enter or **Generate video**. Shift+Enter adds a line break. The video-settings button opens duration, quality, pipeline, seed and enhancement controls.
+Adding a starting image keeps a local preview in the composer. You can remove or replace it, adjust settings, or switch to Reference video before submitting; nothing uploads until you choose **Generate**. Frok then uploads the root image, queues the video and opens its asset page with generation progress. Missing generation details, such as prompts and seeds, are omitted for uploads. On the asset page, type motion into the Video prompt box and choose **Generate video** or press **⌘ / Ctrl + Enter**. Plain Enter adds a line break. The video-settings button opens duration, quality, pipeline, seed and enhancement controls.
 
 The image prompt is always visible above the generation panel, with scrolling for long text. **Video settings** forms the top row of the panel, before the video prompt and generation actions. An amber badge appears when a fixed seed is set. **Generate video** uses that seed; **Redo · New seed** always chooses a different seed without changing the saved setting. Text-to-video only supports Redo here, so its settings omit the fixed-seed field.
 
@@ -20,14 +20,16 @@ The image prompt is always visible above the generation panel, with scrolling fo
 | --- | --- |
 | Generate video, with text | Your text, combined with the actual image-generation prompt |
 | Generate video, empty | Your default recipe, initially Normal |
-| Quick video button on an image | Your default recipe |
-| Motion recipes → A saved recipe | Immediately queues its saved direction; ignores text-box drafts |
+| Generate video on an image card | Immediately queues a video using your default recipe; stays on the current page |
+| Motion recipes → A saved recipe | Prepares its direction for review; choose Generate video to start |
 
 For uploaded images without a saved description, the first frame still conditions the video, but the text enhancer has no visual understanding of it. Give useful motion directions instead of assuming Ollama can identify what is in the upload.
 
+Hover over an image card (or focus its controls with the keyboard) to use **Generate video**. After queuing, the button becomes **View progress**. Click the image itself to open the asset page and customize motion or settings before generating.
+
 ## How the prompt is built
 
-The actual image prompt is preserved as first-frame context. Frok appends your custom direction or the selected recipe. Set the recipe for empty prompts and quick video actions with **Make default** in Settings → Recipes. Normal starts as the default and is fully editable. With enhancement enabled, Ollama can add compatible detail to the direction while retaining the original text. Queued jobs keep a snapshot of the recipe and pipeline.
+The actual image prompt is preserved as first-frame context. Frok appends your custom direction or the selected recipe. Set the recipe for empty video prompts with **Make default** in Settings → Recipes. Normal starts as the default and is fully editable. With enhancement enabled, Ollama can add compatible detail to the direction while retaining the original text. Queued jobs keep a snapshot of the recipe and pipeline.
 
 **Generation details** follows this order:
 
@@ -38,11 +40,11 @@ The actual image prompt is preserved as first-frame context. Frok appends your c
 
 ## Start with text
 
-On Envision, select Video and write the scene and action. The resulting video is saved automatically. The video itself is the root asset; no starting image is extracted. Its asset page shows the saved prompt and **Redo**. Redo creates another take in the same family using that prompt. To use a different text-to-video prompt, start a new creation on Envision.
+On Create, select Video and write the scene and action. The resulting video is saved automatically. The video itself is the root asset; no starting image is extracted. Its asset page shows the saved prompt and **Redo**. Redo creates another take in the same family using that prompt. To use a different text-to-video prompt, start a new creation on Create.
 
 ## Use references
 
-Select Reference video, add the reference images and choose a reference-capable pipeline. Images remain local previews until you choose **Generate**. Switching a staged starting image to References keeps it attached. The pipeline's declared reference limit controls how many inputs are allowed. Describe what should happen and how the references relate to it.
+Select Reference video, add the reference images and choose a reference-capable pipeline. Images remain local previews until you choose **Generate**. Switching a staged starting image to Reference video keeps it attached. The pipeline's declared reference limit controls how many inputs are allowed. Describe what should happen and how the references relate to it.
 
 The generated video is the root asset. Uploaded references stay attached to it and do not appear as standalone cards in History or Favorites. Its asset page shows small previews of the saved reference images; click one to download it. Use **Redo** to repeat a take, or edit the prompt and choose **Generate video**. These actions keep the original reference images in their original order. To use different reference images, start a new creation.
 

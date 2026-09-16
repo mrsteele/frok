@@ -51,7 +51,7 @@ export function VideoPresets() {
     try {
       await savePreset(draft);
       setDraft(undefined);
-      setNotice('Preset saved. Choose it in the video prompt menu.');
+      setNotice('Recipe saved. Choose it from Motion recipes when making a video.');
       setFailure('');
     } catch (e) {
       setFailure((e as Error).message);
@@ -68,7 +68,7 @@ export function VideoPresets() {
       const next = defaultVideoPreset(await deletePreset(id));
       setDeleting(undefined);
       setNotice(
-        `Preset deleted.${defaultPreset?.id === id ? (next ? ` ${next.name} is now the default.` : ' Add a recipe or type a prompt to generate videos.') : ''} Existing renders keep their saved recipe.`,
+        `Recipe deleted.${defaultPreset?.id === id ? (next ? ` ${next.name} is now the default.` : ' Add a recipe or type a prompt to generate videos.') : ''} Existing renders keep their saved recipe.`,
       );
       setFailure('');
     } catch (e) {
@@ -84,7 +84,7 @@ export function VideoPresets() {
     setBusy(true);
     try {
       await setDefaultPreset(preset.id);
-      setNotice(`${preset.name} is now the default for quick videos and empty prompts.`);
+      setNotice(`${preset.name} is now the default when an image’s video prompt is empty.`);
       setFailure('');
     } catch (e) {
       setFailure((e as Error).message);
@@ -115,8 +115,8 @@ export function VideoPresets() {
     <section className="motion-presets" aria-labelledby="motion-presets-title" aria-busy={busy}>
       <div className="preset-heading">
         <div>
-          <h3 id="motion-presets-title">Motion presets</h3>
-          <p>Reuse a direction across different images.</p>
+          <h3 id="motion-presets-title">Motion recipes</h3>
+          <p>Save reusable video prompts for movement, camera direction and style.</p>
         </div>
         <div className="preset-heading-actions">
           <Button
@@ -127,7 +127,7 @@ export function VideoPresets() {
               setFailure('');
               setNotice('');
             }}
-            variant="secondary"
+            variant="ghost"
           >
             <RotateCcw size={13} />
             Reset recipes
@@ -135,17 +135,16 @@ export function VideoPresets() {
           <Button
             disabled={busy || !ready || !!error}
             onClick={() => edit()}
-            variant="secondary"
+            variant="primary"
           >
             <Plus size={13} />
-            Add preset
+            Add recipe
           </Button>
         </div>
       </div>
       <InlineMessage tone="neutral">
-        Selecting a recipe renders immediately with the image description and ignores the editor’s
-        draft. The default is also used when you click an image’s video button or leave its video
-        prompt empty.
+        Choose a recipe while making a video, then select Generate video when you’re ready.
+        Your default recipe is used when an image’s video prompt is left empty.
       </InlineMessage>
       {ready && !error && (
         <InlineMessage role="status" tone="neutral">
@@ -155,7 +154,7 @@ export function VideoPresets() {
               like any other recipe.
             </>
           ) : (
-            'No default recipe. Add a recipe to enable quick videos, or type your own video prompt.'
+            'No default recipe. Add one, or type your own video prompt when making a video.'
           )}
         </InlineMessage>
       )}
@@ -202,7 +201,7 @@ export function VideoPresets() {
         </ConfirmationDialog>
       )}
       {!ready ? (
-        <InlineMessage tone="neutral">Loading presets…</InlineMessage>
+        <InlineMessage tone="neutral">Loading recipes…</InlineMessage>
       ) : (
         !error && (
           <div className="preset-list">
@@ -255,12 +254,12 @@ export function VideoPresets() {
                     busy={busy}
                     onClose={() => setDeleting(undefined)}
                   >
-                    <p>This removes the saved preset. Existing renders will keep their recipe.</p>
+                    <p>This removes the saved recipe. Existing renders will keep their recipe.</p>
                     {preset.isDefault && (
                       <p>
                         {presets.find((item) => item.id !== preset.id)
                           ? `“${presets.find((item) => item.id !== preset.id)!.name}” will become the default recipe.`
-                          : 'You will need to type a video prompt or add a recipe before using quick video actions.'}
+                          : 'You will need to type a video prompt or add a recipe before generating a video from an image.'}
                       </p>
                     )}
                     {failure && (
@@ -278,7 +277,7 @@ export function VideoPresets() {
                         Cancel
                       </Button>
                       <Button loading={busy} onClick={() => remove(preset.id)} variant="danger">
-                        Delete preset
+                        Delete recipe
                       </Button>
                     </FormActions>
                   </ConfirmationDialog>
@@ -287,7 +286,7 @@ export function VideoPresets() {
             ))}
             {!presets.length && !draft && (
               <p className="preset-empty">
-                No saved presets. Add a recipe for a campaign, a character, or a favorite kind of
+                No saved recipes. Add a recipe for a campaign, a character, or a favorite kind of
                 motion.
               </p>
             )}

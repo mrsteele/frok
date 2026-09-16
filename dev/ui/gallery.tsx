@@ -20,12 +20,14 @@ import { ConfirmationDialog } from '../../src/components/ui/patterns/confirmatio
 import { SettingsDialog } from '../../src/components/ui/patterns/settings-dialog';
 import { Setup } from '../../src/components/settings/setup';
 import { InterfacePreferences } from '../../src/components/shell/interface-preferences';
+import Studio from '../../src/components/shell/studio';
 import '../../src/app/globals.css';
 import '../../src/components/ui/tokens.css';
 import '../../src/components/ui/ui.css';
 import '../../src/components/settings/settings.css';
 import '../../src/components/settings/pipeline-catalog.css';
 import '../../src/components/onboarding/onboarding.css';
+import '../../src/components/shell/studio.css';
 import './gallery.css';
 
 const views = [
@@ -78,7 +80,7 @@ function Gallery() {
           value={scenario}
           onChange={(event) => location.assign(`?view=${view}&state=${event.target.value}`)}
         >
-          {['connected', 'vpipe-only', 'comfyui-only', 'disconnected', 'offline', 'busy', 'missing', 'error'].map((state) => (
+          {['connected', 'vpipe-only', 'comfyui-only', 'disconnected', 'offline', 'busy', 'missing', 'error', 'access-ready', 'access-partial', 'access-token-required', 'access-denied', 'access-granted', 'access-unchecked', 'access-unavailable', 'access-unknown'].map((state) => (
             <option key={state}>{state}</option>
           ))}
         </Select>
@@ -273,4 +275,8 @@ function Gallery() {
     </main>
   );
 }
-createRoot(document.getElementById('root')!).render(<Gallery />);
+createRoot(document.getElementById('root')!).render(
+  new URLSearchParams(location.search).get('view') === 'studio'
+    ? <InterfacePreferences><Studio>{null}</Studio></InterfacePreferences>
+    : <Gallery />,
+);

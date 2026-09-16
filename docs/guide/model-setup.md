@@ -8,7 +8,15 @@ Filter by provider or search a model family. The catalog includes Krea, FLUX Kle
 
 Each entry shows its purpose, precision, required files, setup instructions and access requirements. **Full download** is the total for that workflow, including shared files; preparation reuses matching installed files. Installed size, temporary preparation space and runtime memory are separate estimates when a source provides them. An unknown value is shown as **Not specified**. Speed and prompt adherence remain **Unrated** unless metadata includes a rating with a source and testing basis. They are not universal performance promises.
 
-A lock marks a gated download. Follow its access link to accept the model's terms, then save a Hugging Face read token in **Settings → Advanced → API tokens** and restart Frok. Access approval and a token are separate requirements. Already installed models can run without the token.
+Access icons describe **remaining downloads**, not whether a model was originally gated:
+
+- **No icon:** no gated download is needed, including models already installed.
+- **Orange closed lock:** a required download needs a token, or Hugging Face has denied access.
+- **Green open lock:** Hugging Face confirmed this token can read the required model repositories. Files still need to be downloaded.
+
+An unchecked token or unknown requirement stays neutral, without a lock. Open the model details and use **Check download access** to verify permission without downloading weights. Frok only contacts Hugging Face for this check when you request it; the result expires after five minutes. A failed connection is an error, not proof of denied access. Disconnected runners and custom or prepared models whose download sources cannot be verified also remain neutral.
+
+For gated downloads, the token's account must have model access: accept any required terms on the model page and wait for publisher approval if required. Save a token with read access to that repository in **Settings → Advanced → API tokens**, then restart Frok. Token permissions and model approval are separate requirements; a saved token alone does not prove access. Already installed models run without a token, and their license still applies. See Hugging Face's [gated-model guide](https://huggingface.co/docs/hub/models-gated) and [token permissions](https://huggingface.co/docs/hub/security-tokens).
 
 **Experimental** entries are adapted from upstream examples and have not been inference-tested in Frok. Check their requirements before downloading: some video workflows need tens of gigabytes of model storage and substantial working memory. Choosing a workflow never starts a download. Use **Prepare models** explicitly after reviewing its details.
 

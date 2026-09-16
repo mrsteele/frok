@@ -56,8 +56,7 @@
       "Text to image"
     ],
     "requirements": [
-      "Apple Silicon Mac",
-      "Accept the model’s Hugging Face terms before downloading"
+      "Apple Silicon Mac"
     ],
     "access": [
       {

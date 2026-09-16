@@ -59,7 +59,8 @@ test('disconnected catalog details include file sizes and gates without probing 
   const krea = await pipelineStatus(entries.find(p => p.metadata.id === 'vpipe:krea-2-turbo')!, { enabled: false, available: false, detail: '' });
   const qwen = await pipelineStatus(entries.find(p => p.metadata.id === 'comfyui:qwen-image-lightning')!, { enabled: false, available: false, detail: '' });
   const html = renderToStaticMarkup(createElement(PipelineDetails, { pipeline: krea }));
-  assert.match(html, /Gated download/); assert.match(html, /Already installed models can run without it/); assert.match(html, /Unrated/); assert.match(html, /Manage workflow files/);
+  assert.doesNotMatch(html, /workflow-access-icon|Gated download/); assert.match(html, /Download requirements not verified/); assert.match(html, /Unrated/); assert.match(html, /Manage workflow files/);
+  assert.equal(krea.downloadAccess?.state, 'unknown');
   assert.ok(qwen.files!.every(d => d.size! > 0)); assert.equal(fetch.mock.callCount(), 0);
   const original = entries.find(p => p.metadata.id === krea.id)!.metadata;
   assert.doesNotThrow(() => pipelineMetadata.parse(original));

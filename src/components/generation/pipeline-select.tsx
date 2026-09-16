@@ -21,7 +21,7 @@ export function PipelineSelect({
     selectedId = value || defaultId || '';
   return (
     <label className="pipeline-select">
-      Pipeline
+      Workflow
       <WorkflowSelect
         health={health}
         kind={kind}
