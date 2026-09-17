@@ -113,7 +113,7 @@ jobs:
         if: runner.os == 'macOS'
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
-          GITHUB_REF_NAME: v${{ needs.version.outputs.version }}
+          FROK_RELEASE_TAG: v${{ needs.version.outputs.version }}
         run: node scripts/sparkle-appcast.mjs
       - uses: actions/upload-artifact@v7
         with:

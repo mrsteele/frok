@@ -90,6 +90,9 @@ test('branch preflight validates the package version but only tag runs may publi
   assert.notEqual(check(false, 'v999.0.0').status, 0);
   assert.deepEqual(workflow.jobs.build.needs, ['version', 'checks']);
   assert.deepEqual(workflow.jobs.release.needs, ['version', 'checks', 'build']);
+  const signing = workflow.jobs.build.steps.find(step => step.run === 'node scripts/sparkle-appcast.mjs');
+  assert.equal(signing.env.FROK_RELEASE_TAG, 'v${{ needs.version.outputs.version }}');
+  assert.equal(signing.env.GITHUB_REF_NAME, undefined);
   const publishing = workflow.jobs.release.steps.find(step => step.name === 'Attach installers to a draft release');
   assert.equal(publishing.if, "startsWith(github.ref, 'refs/tags/')");
   const collecting = workflow.jobs.release.steps.find(step => step.run?.includes('scripts/release-artifacts.mjs'));

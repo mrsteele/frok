@@ -3,6 +3,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { spawn } from 'node:child_process';
 import { publicUpdateKey } from './update-key.mjs';
+import { updateReleaseTag } from './release-version.mjs';
 import { product } from '../desktop/product.mjs';
 
 const { version } = JSON.parse(await fs.readFile('package.json', 'utf8'));
@@ -11,8 +12,7 @@ const seed = process.env.SPARKLE_PRIVATE_KEY?.trim();
 if (!seed || publicUpdateKey(seed) !== publicEdKey) throw Error('SPARKLE_PRIVATE_KEY is missing or does not match desktop/sparkle-key.json.');
 const repository = process.env.GITHUB_REPOSITORY || new URL(product.githubUrl).pathname.slice(1);
 if (!/^[\w.-]+\/[\w.-]+$/.test(repository)) throw Error('Invalid release repository.');
-const tag = process.env.GITHUB_REF_NAME || `v${version}`;
-if (tag !== `v${version}`) throw Error('The release tag must match package.json.');
+const tag = updateReleaseTag(version);
 const arch = process.arch;
 if (!['arm64', 'x64'].includes(arch)) throw Error('Unsupported macOS release architecture.');
 const filename = `Frok-${version}-mac-${arch}.zip`;

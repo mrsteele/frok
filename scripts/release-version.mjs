@@ -7,6 +7,11 @@ export function releaseVersion(tag,version,lockVersion){
   if(tag.slice(1)!==version||version!==lockVersion)throw Error('The release tag, package.json version, and package-lock.json version must match.');
   return {version,prerelease:!!match[4]};
 }
+export function updateReleaseTag(version, env = process.env) {
+  const tag = env.FROK_RELEASE_TAG || env.GITHUB_REF_NAME || `v${version}`;
+  releaseVersion(tag, version, version);
+  return tag;
+}
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   const pkg=JSON.parse(fs.readFileSync('package.json','utf8')),lock=JSON.parse(fs.readFileSync('package-lock.json','utf8'));
   const result=releaseVersion(process.env.GITHUB_REF_NAME,pkg.version,lock.version);
