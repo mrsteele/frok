@@ -78,3 +78,9 @@ test('retries a failed transfer that never saved an asset', async t => {
   assert.deepEqual(f.waits, [2000]);
   assert.equal(f.assets.length, 2);
 });
+test('retries timed-out requests without losing saved assets', async t => {
+  const f = await fixture(t); f.failUpload = 'GitHub request timed out.';
+  await f.upload();
+  assert.deepEqual(f.uploads, ['Frok.zip', 'SHA256SUMS.txt']);
+  assert.deepEqual(f.waits, [2000]);
+});

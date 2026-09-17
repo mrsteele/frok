@@ -10,8 +10,8 @@ import { releaseVersion } from './release-version.mjs';
 
 const exec = promisify(execFile);
 async function gh(args) {
-  try { return (await exec('gh', args, { maxBuffer: 10 * 1024 * 1024 })).stdout; }
-  catch (error) { throw Error(error.stderr || error.message); }
+  try { return (await exec('gh', args, { maxBuffer: 10 * 1024 * 1024, timeout: args[1] === 'upload' ? 300_000 : 60_000 })).stdout; }
+  catch (error) { throw Error(error.killed ? 'GitHub request timed out.' : error.stderr || error.message); }
 }
 const transient = error => error.pendingUpload || /HTTP (?:408|429|5\d\d)|timed? out|TLS handshake|connection reset|unexpected EOF|error connecting|ECONNRESET|ETIMEDOUT/i.test(error.message);
 async function digest(file) {
