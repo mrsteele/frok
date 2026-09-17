@@ -7,6 +7,7 @@ import { createHash, generateKeyPairSync, sign } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { EventEmitter } from 'node:events';
 import vm from 'node:vm';
+import { spawnSync } from 'node:child_process';
 import { build } from 'esbuild';
 import { load, dump } from 'js-yaml';
 import { releaseConfiguration } from '../scripts/desktop-release-config.mjs';
@@ -73,4 +74,24 @@ test('the packaged updater loads without a node_modules tree or a running Electr
   assert.equal(typeof updater.checkForUpdates, 'function'); assert.equal(typeof updater.quitAndInstall, 'function');
   // Constructing the provider performs no update check or download.
   assert.equal(updater.updateInfoAndProvider, null);
+});
+
+// This exercises the actual workflow's shell step rather than duplicating its version logic.
+test('branch preflight validates the package version but only tag runs may publish', { skip: process.platform === 'win32' }, async () => {
+  const workflow = load(await fs.readFile('.github/workflows/release.yml', 'utf8'));
+  const step = workflow.jobs.version.steps.find(step => step.id === 'version');
+  const pkg = JSON.parse(await fs.readFile('package.json', 'utf8'));
+  const check = (preflight, ref) => spawnSync('bash', ['-e', '-c', step.run], {
+    encoding: 'utf8', env: { ...process.env, PREFLIGHT: String(preflight), GITHUB_REF_NAME: ref, GITHUB_OUTPUT: '' },
+  });
+  assert.equal(check(true, 'release-candidate').status, 0);
+  assert.equal(check(false, `v${pkg.version}`).status, 0);
+  assert.notEqual(check(false, 'release-candidate').status, 0);
+  assert.notEqual(check(false, 'v999.0.0').status, 0);
+  assert.deepEqual(workflow.jobs.build.needs, ['version', 'checks']);
+  assert.deepEqual(workflow.jobs.release.needs, ['version', 'checks', 'build']);
+  const publishing = workflow.jobs.release.steps.find(step => step.name === 'Attach installers to a draft release');
+  assert.equal(publishing.if, "startsWith(github.ref, 'refs/tags/')");
+  const collecting = workflow.jobs.release.steps.find(step => step.run?.includes('scripts/release-artifacts.mjs'));
+  assert.equal(collecting.if, undefined);
 });

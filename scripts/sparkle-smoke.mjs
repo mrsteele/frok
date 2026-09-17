@@ -6,6 +6,7 @@ import { spawn, execFileSync } from 'node:child_process';
 import { generateKeyPairSync } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { build } from 'esbuild';
+import { trackSmokeChild, waitForSmokeProcess, removeSmokeDirectory } from './smoke-cleanup.mjs';
 import { publicUpdateKey } from './update-key.mjs';
 
 if (process.platform !== 'darwin') throw Error('The Sparkle smoke test requires macOS.');
@@ -27,7 +28,7 @@ const server = http.createServer(async (request, response) => {
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const appcastUrl = `http://127.0.0.1:${server.address().port}/appcast.xml`;
-let child;
+let child, stopChild, passed;
 try {
   const app = path.join(root, 'Frok Update Test.app'), resources = path.join(app, 'Contents/Resources');
   await fs.cp(electronApp, app, { recursive: true, verbatimSymlinks: true });
@@ -41,6 +42,7 @@ try {
   await fs.writeFile(path.join(code, 'main.cjs'), `
 const {app,BrowserWindow}=require('electron'),fs=require('node:fs'),path=require('node:path');
 const root=${JSON.stringify(root)};
+fs.writeFileSync(path.join(root,'app-pid'),String(process.pid));
 app.setPath('userData',path.join(root,'profile'));app.setPath('logs',path.join(root,'logs'));
 app.whenReady().then(async()=>{
   if(app.getVersion()==='0.0.2'){
@@ -81,19 +83,27 @@ app.whenReady().then(async()=>{
   if(process.argv.includes('--tamper'))await fs.appendFile(path.join(archives,'update.zip'),'tampered');
   await version('0.0.1');
   child = spawn(path.join(app, 'Contents/MacOS/Electron'), [], { stdio: ['ignore', 'pipe', 'pipe'] });
+  stopChild = trackSmokeChild(child);
   let logs = ''; child.stdout.on('data', data => logs = (logs + data).slice(-12000)); child.stderr.on('data', data => logs = (logs + data).slice(-12000));
   for (let tick = 0; tick < 180; tick++) {
-    if (await fs.stat(path.join(root, 'success')).catch(() => undefined)) { if(process.argv.includes('--tamper'))throw Error('Tampered update was accepted'); console.log('Sparkle smoke passed: signed download, queue-safe install, replacement and relaunch.'); break; }
+    if (await fs.stat(path.join(root, 'success')).catch(() => undefined)) { if(process.argv.includes('--tamper'))throw Error('Tampered update was accepted'); passed = 'Sparkle smoke passed: signed download, queue-safe install, replacement and relaunch.'; break; }
     const failure = await fs.readFile(path.join(root, 'failure'), 'utf8').catch(() => '');
     if(failure&&process.argv.includes('--tamper')){
       if(await fs.stat(path.join(root,'drained')).catch(()=>undefined))throw Error('Tampered update reached installation');
-      console.log('Sparkle smoke passed: tampered archive rejected before installation.');break;
+      passed = 'Sparkle smoke passed: tampered archive rejected before installation.';break;
     }
     if (failure || tick === 179) throw Error(`${failure || 'Sparkle upgrade timed out'}\n${logs}`);
     await new Promise(resolve => setTimeout(resolve, 500));
   }
 } finally {
-  if (child?.exitCode === null) child.kill('SIGTERM');
-  server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
-  await fs.rm(root, { recursive: true, force: true });
+  try {
+    await stopChild?.();
+    const pid = await fs.readFile(path.join(root, 'app-pid'), 'utf8').catch(error => { if (error.code === 'ENOENT') return ''; throw error; });
+    if (pid && Number(pid) !== child?.pid) await waitForSmokeProcess(Number(pid));
+    await removeSmokeDirectory(root);
+  } finally {
+    server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
+  }
 }
+
+console.log(passed);

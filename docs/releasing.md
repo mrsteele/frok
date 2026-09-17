@@ -1,6 +1,6 @@
 # Releasing Frok
 
-The repository includes a GitHub Actions workflow (`.github/workflows/release.yml`) for versioned desktop releases. Nothing runs until the project is hosted on GitHub and a matching tag is pushed.
+The repository includes a GitHub Actions workflow (`.github/workflows/release.yml`) for versioned desktop releases. Version tags create draft releases. You can also run the workflow manually on a branch to check a release before tagging it.
 
 ## Before publishing installers
 
@@ -42,23 +42,23 @@ The native bridge and Sparkle framework are pinned through `electron-sparkle-upd
 `package.json` is the source of the application version. npm maintains its matching lockfile entries. The private documentation package has no release version, and the guides do not repeat the current application version.
 
 1. Run the checks in [Contributing](./development.md), review the staged changes, and commit the release-ready code.
-2. To advance the version, run `npm version patch`, `npm version minor`, or `npm version major` in a clean checkout. npm updates both package files, commits them and creates the matching tag. Stay on a pre-major version for as long as development needs; a major bump is an explicit maintainer decision.
-3. To release the version already in `package.json` without a bump, create its tag instead. In a POSIX shell (including Git Bash on Windows):
+2. To advance the version, run `npm version patch --no-git-tag-version` (or `minor` / `major`) in a clean checkout. Commit both package files. This updates the version without creating a tag yet. Skip the bump when releasing the version already in `package.json`.
+3. Push the release-ready commit. In **GitHub → Actions → Desktop release → Run workflow**, select its branch. This preflight runs source checks, all platform builds, smoke tests, macOS update signing, and combined artifact validation without creating a release. `SPARKLE_PRIVATE_KEY` must be configured. Download the workflow artifacts to test the installers. Wait for every job to pass.
+4. Check out the exact commit that passed preflight, then create its tag. If code or version changes, repeat preflight before tagging. In a POSIX shell (including Git Bash on Windows):
 
    ```sh
    git tag -a "v$(node -p 'require("./package.json").version')" -m "Release"
    ```
 
-4. Push the commit and that version's tag:
+5. Push that version's tag:
 
    ```sh
-   git push origin HEAD
    git push origin "v$(node -p 'require("./package.json").version')"
    ```
 
 GitHub verifies that the tag, `package.json`, and `package-lock.json` agree before building the platform matrix defined in `.github/workflows/release.yml`. Successful builds and smoke checks produce a **draft release** with installers, update manifests, blockmaps, generated release notes and `SHA256SUMS.txt`. The release collector verifies download hashes and Sparkle signatures. Separate Apple Silicon and Intel appcasts select the correct archive. Review and test the installers, then publish the draft.
 
-Prereleases are supported and marked accordingly. A failed platform build prevents creation of the release. Rerunning can update an existing draft, but refuses to overwrite a published release. The manual workflow trigger must also be run against a version tag, not a branch.
+Prereleases are supported and marked accordingly. A failed platform build prevents creation of the release. Rerunning can update an existing draft, but refuses to overwrite a published release. Manual branch runs do not create drafts; version-tag runs create or update drafts after the same checks pass.
 
 This is explicit semantic versioning: maintainers choose patch/minor/major rather than having commit messages determine the version automatically. No release is uploaded from a local build. `release/` is ignored temporary output used by both local packaging and GitHub runners; do not commit its contents.
 
