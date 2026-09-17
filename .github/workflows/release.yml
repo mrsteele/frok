@@ -157,17 +157,4 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.ref_name }}
           RELEASE_VERSION: ${{ needs.version.outputs.version }}
-          PRERELEASE: ${{ needs.version.outputs.prerelease }}
-        shell: bash
-        run: |
-          cd artifacts
-          sha256sum -- * > SHA256SUMS.txt
-          cd ..
-          if gh release view "$RELEASE_TAG" --json isDraft > existing.json 2>/dev/null; then
-            node -e "if (!JSON.parse(require('fs').readFileSync('existing.json')).isDraft) throw Error('Published releases are immutable; use a new version.')"
-            gh release upload "$RELEASE_TAG" artifacts/* --clobber
-          else
-            flags=()
-            if [ "$PRERELEASE" = true ]; then flags+=(--prerelease); fi
-            gh release create "$RELEASE_TAG" artifacts/* --verify-tag --draft --generate-notes --title "Frok $RELEASE_VERSION" "${flags[@]}"
-          fi
+        run: node scripts/release-upload.mjs artifacts
