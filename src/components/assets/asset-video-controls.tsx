@@ -31,8 +31,6 @@ export function AssetVideoControls({
   upscalerName,
   recipes,
   settings,
-  defaultRecipeName,
-  selectedRecipeName,
 }: {
   root: Media;
   selected: Media;
@@ -47,10 +45,9 @@ export function AssetVideoControls({
   upscalerName: string;
   recipes?: ReactNode;
   settings?: ReactNode;
-  defaultRecipeName?: string;
-  selectedRecipeName?: string;
 }) {
   const features = assetVideoFeatures(root, selected);
+  const generateDisabled = disabled || (root.kind === 'image' && !prompt.trim());
   return (
     <div className="asset-video-controls">
       {features.imagePrompt && (
@@ -78,12 +75,12 @@ export function AssetVideoControls({
           value={features.editPrompt ? prompt : root.prompt}
           readOnly={!features.editPrompt}
           maxLength={8000}
-          placeholder="Describe what happens in the video…"
+          placeholder={root.kind === 'image' ? 'Write a custom video prompt…' : 'Describe what happens in the video…'}
           onChange={(event) => onPromptChange(event.target.value)}
           onKeyDown={(event) => {
             if (
               features.editPrompt &&
-              !disabled &&
+              !generateDisabled &&
               event.key === 'Enter' &&
               (event.metaKey || event.ctrlKey) &&
               !event.nativeEvent.isComposing
@@ -93,24 +90,11 @@ export function AssetVideoControls({
             }
           }}
         />
-        {root.kind === 'image' && (
-          <p className="viewer-default-recipe">
-            {defaultRecipeName ? (
-              <>
-                Leave empty to use <strong>{defaultRecipeName}</strong>, your default recipe.
-              </>
-            ) : (
-              <>
-                Enter a video prompt, or <a href="/settings/recipes">choose a default recipe</a>.
-              </>
-            )}
-          </p>
-        )}
         <div className="viewer-generation-footer">
           {recipes && (
             <details className="viewer-mode viewer-recipes">
               <summary>
-                {selectedRecipeName ? `Recipe: ${selectedRecipeName}` : 'Motion recipes'}
+                Generate with recipe
                 <ChevronDown size={13} />
               </summary>
               <div className="viewer-mode-options">{recipes}</div>
@@ -142,7 +126,7 @@ export function AssetVideoControls({
             {features.editPrompt && (
               <button
                 className="viewer-render"
-                disabled={disabled}
+                disabled={generateDisabled}
                 onClick={onGenerate}
                 title="Generate video · ⌘ / Ctrl + Enter"
               >

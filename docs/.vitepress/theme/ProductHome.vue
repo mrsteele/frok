@@ -1,5 +1,6 @@
 <script setup>
 import { useData, withBase } from 'vitepress'
+import { product } from '../../../desktop/product.mjs'
 import WorkflowDemo from './WorkflowDemo.vue'
 const { isDark } = useData()
 const guide = (path) => withBase(path + '.html')
@@ -12,7 +13,7 @@ const guide = (path) => withBase(path + '.html')
         <p class="eyebrow">OPEN SOURCE. ON YOUR MACHINE.</p>
         <h1 id="product-title">A little idea.<br>A whole world<br><em>of possibilities.</em></h1>
         <p class="description">Meet Frok, your <strong class="local-word">local<svg viewBox="0 0 100 14" preserveAspectRatio="none" aria-hidden="true"><path d="M3 8 Q42 1 96 6 M9 12 Q53 6 88 10"/></svg></strong> image and video studio. Make an image, give it movement, and follow the versions you love.</p>
-        <div class="actions"><a class="button primary" :href="guide('/guide/getting-started')">Get started ↗</a><a class="button secondary" href="https://github.com/mrsteele/frok">View on GitHub ↗</a></div>
+        <div class="actions"><a class="button primary" :href="product.releasesUrl">Download Frok ↗</a><a class="button secondary" :href="guide('/guide/getting-started')">Quick setup →</a></div>
         <p class="note">Bring your own runner. Keep your creative workspace local.</p>
       </div>
       <div class="hero-art">
@@ -42,7 +43,7 @@ const guide = (path) => withBase(path + '.html')
       <ol class="steps"><li><span>01</span><h3>Connect a runner.</h3><p>Use your Vpipe or ComfyUI installation. Add Ollama if you want help enriching prompts.</p></li><li><span>02</span><h3>Choose a pipeline.</h3><p>Prepare the models for the kind of creation you want to make. Check for Ready.</p></li><li><span>03</span><h3>Try one small idea.</h3><p>Start with a preview image. Pick a favorite frame and explore a little motion.</p></li></ol>
       <div class="start-footer"><a class="button primary" :href="guide('/tutorials/first-creation')">Make your first creation ↗</a><p>Generation runs through separately installed tools and models.<br>Hardware requirements depend on the pipeline you choose.</p></div>
     </section>
-    <section class="closing"><img :src="withBase(isDark?'/mark-light.svg':'/mark.svg')" alt="" width="48" height="48"/><p class="eyebrow">BUILT IN THE OPEN</p><h2>Your next idea<br>deserves a little space.</h2><p>Frok is an open-source project in early development.<br>Try it, explore the source, and help shape what comes next.</p><div class="actions"><a class="button primary" :href="guide('/guide/getting-started')">Get started ↗</a><a class="text-link" :href="guide('/documentation')">Read the documentation →</a></div></section>
+    <section class="closing"><img :src="withBase(isDark?'/mark-light.svg':'/mark.svg')" alt="" width="48" height="48"/><p class="eyebrow">BUILT IN THE OPEN</p><h2>Your next idea<br>deserves a little space.</h2><p>Frok is an open-source project in early development.<br>Try it, explore the source, and help shape what comes next.</p><div class="actions"><a class="button primary" :href="product.releasesUrl">Download Frok ↗</a><a class="text-link" :href="guide('/documentation')">Read the documentation →</a></div></section>
   </div>
 </template>
 

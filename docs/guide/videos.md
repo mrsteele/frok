@@ -19,9 +19,9 @@ The image prompt is always visible above the generation panel, with scrolling fo
 | Action | Motion direction |
 | --- | --- |
 | Generate video, with text | Your text, combined with the actual image-generation prompt |
-| Generate video, empty | Your default recipe, initially Normal |
+| Generate video, empty | Disabled on the asset page; type a custom prompt or use Generate with recipe |
 | Generate video on an image card | Immediately queues a video using your default recipe; stays on the current page |
-| Motion recipes → A saved recipe | Prepares its direction for review; choose Generate video to start |
+| Generate with recipe → A saved recipe | Immediately queues a video using the image prompt and that recipe; preserves your custom text draft |
 
 For uploaded images without a saved description, the first frame still conditions the video, but the text enhancer has no visual understanding of it. Give useful motion directions instead of assuming Ollama can identify what is in the upload.
 
@@ -29,7 +29,7 @@ Hover over an image card (or focus its controls with the keyboard) to use **Gene
 
 ## How the prompt is built
 
-The actual image prompt is preserved as first-frame context. Frok appends your custom direction or the selected recipe. Set the recipe for empty video prompts with **Make default** in Settings → Recipes. Normal starts as the default and is fully editable. With enhancement enabled, Ollama can add compatible detail to the direction while retaining the original text. Queued jobs keep a snapshot of the recipe and pipeline.
+The actual image prompt is preserved as first-frame context. Frok appends your custom direction or the selected recipe. On an image asset, the video prompt starts blank and is reserved for your custom direction. Use **Generate with recipe** for a quick video. Set the image-card quick action's recipe with **Make default** in Settings → Recipes. Normal starts as the default and is fully editable. With enhancement enabled, Ollama can add compatible detail to the direction while retaining the original text. Queued jobs keep a snapshot of the recipe and pipeline.
 
 **Generation details** follows this order:
 

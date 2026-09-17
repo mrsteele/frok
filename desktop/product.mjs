@@ -1,6 +1,8 @@
 // Project links, shared by the desktop shell, app and public website.
+const githubUrl = 'https://github.com/mrsteele/frok';
 export const product = Object.freeze({
-  githubUrl: 'https://github.com/mrsteele/frok',
+  githubUrl,
+  releasesUrl: `${githubUrl}/releases`,
   supportUrl: 'https://x.com/Matt_R_Steele',
-  websiteUrl: '', // Set when the public site has a permanent address.
+  websiteUrl: 'https://mrsteele.github.io/frok/',
 });

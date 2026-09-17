@@ -10,7 +10,7 @@ A recipe is a named motion instruction you can apply to many starting images. It
 
 > Slowly move the camera in a shallow arc around the main product. Keep its shape, color and branding unchanged. Use soft studio reflections and a calm, deliberate pace. Keep the background stable.
 
-Open an image of a product. Under **Motion recipes**, choose **Showroom**. Its text appears in the video prompt so you can review it. Choose **Generate video** when ready. Selecting a recipe replaces the current draft; editing its text turns it into a custom prompt without changing the saved recipe.
+Open an image of a product. Under **Generate with recipe**, choose **Showroom**. Frok immediately queues a video using the image's prompt and the saved recipe. Any custom text in the video prompt box stays unchanged and is not included in that recipe's generation.
 
 ## How recipes combine with the image
 
@@ -20,9 +20,9 @@ Be explicit about what must remain unchanged. A recipe cannot guarantee perfect 
 
 ## Custom and your default recipe
 
-**Custom** lets you type your own directions. Choose **Generate video** or press **⌘ / Ctrl + Enter** to generate. Plain Enter adds a new line.
+On an image asset, the video prompt starts blank for your custom directions. Type a prompt, then choose **Generate video** or press **⌘ / Ctrl + Enter** to generate. Plain Enter adds a new line. An empty or whitespace-only prompt does not generate a video; use **Generate with recipe** for a quick action.
 
-Generating from an image with an empty video prompt uses your **default recipe**. **Generate video** on an image card immediately queues a video with that default recipe; click the image itself to open the editor. In **Settings → Recipes**, click **Make default** beside any recipe. The selection is saved, marked **Default** in the recipe menus, and applies to future empty prompts and image-card generation. Choosing a recipe in an editor prepares that recipe for the next generation, regardless of which one is the default; it never starts a job on its own.
+**Generate video** on an image card immediately queues a video with your **default recipe**; click the image itself to open the editor. In **Settings → Recipes**, click **Make default** beside any recipe. The selection is saved, marked **Default** in the recipe menus, and applies to future image-card generation. On an asset page, **Generate with recipe** immediately uses the recipe you choose, regardless of which one is the default. The recipe selector in the Create composer configures its next **Generate** request; an empty Custom prompt there uses the default recipe.
 
 New libraries start with **Normal**, **Silly** and **Dance** as editable examples. **Normal** is the first default and asks for simple movement that continues the image's action. It is an ordinary recipe: you can edit its prompt, rename it, replace it or delete it. Dance asks for movement that matches the mood and atmosphere of the image, from relaxed swaying to lively footwork.
 

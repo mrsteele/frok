@@ -26,7 +26,7 @@ import {
 import { promptDetails } from '@/lib/prompt-details';
 import { formatRunnerTime } from '@/lib/runner-time';
 import { generationIssue, promptEnhancementIssue, type SetupTarget } from '@/lib/readiness';
-import { motionChoices, motionChoiceInput, type MotionChoice } from '@/lib/video-presets';
+import { motionChoices, motionChoiceInput } from '@/lib/video-presets';
 import { useVideoPresets } from '@/components/generation/use-video-presets';
 import { VideoPlayer } from './video-player';
 import { captureVideoPlayback, type VideoPlayback } from '@/lib/video-playback';
@@ -76,9 +76,8 @@ export function MediaViewer({
   const [family, setFamily] = useState<MediaFamily>();
   const selected = family ? familySelection(family, renderNumber) : undefined;
   const cursor = selected?.id;
-  const { presets, defaultPreset, error: presetError } = useVideoPresets();
+  const { presets, error: presetError } = useVideoPresets();
   const [prompt, setPrompt] = useState('');
-  const [recipe, setRecipe] = useState<MotionChoice>();
   const [quality, setQuality] = useState<{
     renderId: string;
     version: 'sd' | 'hd';
@@ -209,7 +208,6 @@ export function MediaViewer({
       controls.pipelineId,
     ) || promptEnhancementIssue(health, controls.enhance);
   const choices = motionChoices(presets);
-  const selectedRecipe = recipe || choices[0];
   const missingReferences = referenceRoot && family?.references?.some((ref) => !ref.media);
   const disabled = !family || !!blocked || submitting || sending || !!missingReferences;
   useEffect(() => {
@@ -219,7 +217,6 @@ export function MediaViewer({
         original?.generation?.videoPreset?.prompt ||
         '',
     );
-    setRecipe(undefined);
     setError('');
     if (details.current) details.current.open = false;
   }, [cursor, original?.id]);
@@ -245,8 +242,9 @@ export function MediaViewer({
       ),
     });
   }
-  async function generate(redo = false, choice = selectedRecipe) {
+  async function generate(redo = false, choice = choices[0]) {
     if (disabled || requestLock.current || !family) return;
+    if (!redo && imageRoot && choice.videoStyle === 'custom' && !prompt.trim()) return;
     requestLock.current = true;
     setSending(true);
     setError('');
@@ -530,10 +528,7 @@ export function MediaViewer({
           root={family.root}
           selected={displayed}
           prompt={prompt}
-          onPromptChange={(value) => {
-            setPrompt(value);
-            setRecipe(undefined);
-          }}
+          onPromptChange={setPrompt}
           onGenerate={() => void generate()}
           onRedo={() => void generate(true)}
           onUpscale={() => void upscale()}
@@ -541,8 +536,6 @@ export function MediaViewer({
           busy={sending || submitting}
           upscaleDisabled={enhancedWithSelected || sending || submitting}
           upscalerName={upscalerName}
-          defaultRecipeName={defaultPreset?.name}
-          selectedRecipeName={recipe?.name}
           settings={
             <button
               type="button"
@@ -579,13 +572,14 @@ export function MediaViewer({
                   .map((item) => (
                     <button
                       key={item.value}
+                      type="button"
                       disabled={disabled}
-                      aria-pressed={recipe?.value === item.value}
+                      aria-label={`Generate video using ${item.name}`}
                       onClick={(event) => {
-                        event.currentTarget.closest('details')?.removeAttribute('open');
-                        setRecipe(item);
-                        setPrompt(item.videoPreset?.prompt || '');
-                        document.getElementById('viewer-motion-prompt')?.focus();
+                        const menu = event.currentTarget.closest('details');
+                        menu?.removeAttribute('open');
+                        menu?.querySelector('summary')?.focus();
+                        void generate(false, item);
                       }}
                     >
                       <span>

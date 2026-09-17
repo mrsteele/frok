@@ -87,8 +87,6 @@
 @media (prefers-reduced-motion: reduce) { .video-progress-sweep { animation: none !important; transform: none; } }
 
 /* Reusable motion recipes. */
-.viewer-default-recipe { margin: 0 14px 10px; color: #999; font-size: 12px; line-height: 1.5; }
-.viewer-default-recipe strong, .viewer-default-recipe a { color: #bdd6c6; }
 .viewer-mode-options { max-height: min(370px, 46dvh); overflow-y: auto; overscroll-behavior: contain; }
 .viewer-mode-options button > span { min-width: 0; }
 .viewer-mode-options strong { overflow-wrap: anywhere; }

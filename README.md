@@ -11,6 +11,8 @@ A local creative studio for images and short videos. Generate image batches, ani
 
 Frok connects to your installations of [Vpipe](https://vpipe.ai/), [ComfyUI](https://www.comfy.org/) and, optionally, [Ollama](https://ollama.com/) for prompt enhancement. Your library and queue live on your machine. Generation uses your chosen runners, models and hardware.
 
+**[Documentation](https://mrsteele.github.io/frok/) · [Download Frok](https://github.com/mrsteele/frok/releases) · [Source code](https://github.com/mrsteele/frok)**
+
 ## Download
 
 **[Download Frok from GitHub Releases](https://github.com/mrsteele/frok/releases).** Open a published release and choose your installer under **Assets**:
@@ -19,7 +21,7 @@ Frok connects to your installations of [Vpipe](https://vpipe.ai/), [ComfyUI](htt
 - **Windows (x64):** `.exe` installer.
 - **Linux (x64):** `.AppImage` — make the file executable before opening it.
 
-Install and open Frok, then follow [Quick setup](docs/guide/getting-started.md) to connect your generation tools. For macOS first-launch permissions, see the [installation notes](docs/releasing.md#macos-releases-without-apple-signing).
+Install and open Frok, then follow [Quick setup](https://mrsteele.github.io/frok/guide/getting-started.html) to connect your generation tools. For macOS first-launch permissions, see the [installation notes](https://mrsteele.github.io/frok/releasing.html#macos-releases-without-apple-signing).
 
 If no published release is listed yet, use [Run from source](#run-from-source) below.
 
@@ -41,10 +43,10 @@ On first launch, **Quick setup** helps you connect services and choose optional 
 
 ## Learn the workflow
 
-- [Quick setup](docs/guide/getting-started.md) and [your first creation](docs/tutorials/first-creation.md)
-- [Images](docs/guide/images.md), [videos and references](docs/guide/videos.md), and [upscaling](docs/tutorials/upscaling.md)
-- [Library and asset links](docs/guide/library.md), [queue and logs](docs/guide/queue.md), and [storage and backups](docs/storage.md)
-- [Custom pipelines](docs/pipelines.md) and [troubleshooting](docs/guide/troubleshooting.md)
+- [Quick setup](https://mrsteele.github.io/frok/guide/getting-started.html) and [your first creation](https://mrsteele.github.io/frok/tutorials/first-creation.html)
+- [Images](https://mrsteele.github.io/frok/guide/images.html), [videos and references](https://mrsteele.github.io/frok/guide/videos.html), and [upscaling](https://mrsteele.github.io/frok/tutorials/upscaling.html)
+- [Library and asset links](https://mrsteele.github.io/frok/guide/library.html), [queue and logs](https://mrsteele.github.io/frok/guide/queue.html), and [storage and backups](https://mrsteele.github.io/frok/storage.html)
+- [Custom pipelines](https://mrsteele.github.io/frok/pipelines.html) and [troubleshooting](https://mrsteele.github.io/frok/guide/troubleshooting.html)
 
 The same guides are available through **Documentation** in the app. To work on the documentation site, see [docs development and hosting](docs/hosting.md).
 

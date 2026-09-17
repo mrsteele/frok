@@ -25,11 +25,11 @@ The static site is written to **`docs/.vitepress/dist`**. Preview serves that bu
 
 The site uses `.html` links so it can run on a basic static host without extensionless-route rewrites. Upload the contents of the output directory, including assets, downloadable examples and `404.html`.
 
-## Choose a domain or subdirectory later
+## Public site and offline documentation
 
 The desktop app builds this same source into `.desktop/docs` with a root base path and bundles it in the installer. **Help → Documentation** opens that local copy, including search and examples. Run `npm run build:docs:desktop` from the repository root to refresh it independently. This does not replace the public build in `.vitepress/dist`.
 
-After hosting the public site, set `websiteUrl` in `desktop/product.mjs` and rebuild the desktop app to enable **View online**. Include any public base path. This is release metadata, so users do not need an environment variable. Documentation continues opening locally first.
+The public site is [mrsteele.github.io/frok](https://mrsteele.github.io/frok/). Its URL is configured as `websiteUrl` in `desktop/product.mjs` for **View online**. If the site moves, update that value, including its base path, and rebuild the desktop app. This is release metadata, so users do not need an environment variable. Documentation continues opening locally first.
 
 The default base path is `/`, suitable for a dedicated domain. For a subdirectory such as `/frok/`, set **`DOCS_BASE=/frok/`** in the build environment. It must begin and end with a slash. Rebuild after changing it.
 

@@ -64,6 +64,33 @@ async function inputFor(index:number):Promise<RenderInput>{
   return {request:{mode:'upscale',prompt:'',aspect:'4:3',duration:31*1001/30000,quality:'standard',count:1,enhance:false,referenceIds:[],pipeline:pipelines[index]},prompt:'',seed:42,width:96,height:72,source,output:path.join(folder,'raw.mp4'),directory:folder,references:[],signal:new AbortController().signal,log:()=>{}};
 }
 
+test('native handoff uses Annex B with a starting IDR, preserving every lossless frame',async()=>{
+  const input=await inputFor(1),prepared=await prepareNativeUpscale(input);
+  try {
+    const info=await probe(prepared.input.source!),stream=info.streams.find((s:any)=>s.codec_type==='video');
+    assert.equal(info.format.format_name,'mpegts');assert.equal(stream.codec_name,'h264');
+    assert.equal(stream.width,prepared.input.width);assert.equal(stream.height,prepared.input.height);
+    assert.equal(Number(stream.nb_read_frames),31);
+    const rate=stream.avg_frame_rate.split('/').map(Number);assert.ok(Math.abs(rate[0]/rate[1]-prepared.source.fps)<0.001);
+    let packetJson='';
+    await runProcess(ffprobe(),['-v','error','-select_streams','v:0','-read_intervals','%+#1','-show_entries','packet=data','-show_data','-of','json',prepared.input.source!],{onLog:chunk=>{packetJson+=chunk;}});
+    const first=JSON.parse(packetJson);
+    const hex=first.packets[0].data.trim().split('\n').map((line:string)=>line.split(':')[1].trimStart().split('  ')[0].replaceAll(' ','')).join('');
+    const bytes=Buffer.from(hex,'hex');assert.equal(bytes.subarray(0,4).toString('hex'),'00000001');
+    const nalTypes:number[]=[];
+    for(let i=0;i<bytes.length-4;i++)if(bytes[i]===0&&bytes[i+1]===0){
+      const prefix=bytes[i+2]===1?3:bytes[i+2]===0&&bytes[i+3]===1?4:0;
+      if(prefix)nalTypes.push(bytes[i+prefix]&31);
+    }
+    assert.ok(nalTypes.includes(5),'The first Annex B packet includes an IDR that Vpipe can recognize.');
+    async function hashes(file:string,filters?:string){
+      const output=await runProcess(ffmpeg(),['-v','error','-i',file,'-map','0:v:0',...(filters?['-vf',filters]:[]),'-pix_fmt','yuv420p','-f','framemd5','-']);
+      return output.split('\n').filter(line=>line&&!line.startsWith('#')).map(line=>line.split(',').at(-1)!.trim());
+    }
+    assert.deepEqual(await hashes(prepared.input.source!),await hashes(input.source!,`scale=${input.width}:${input.height}:flags=bicubic,pad=${prepared.input.width}:${prepared.input.height}:0:0`),'The container workaround does not add pixel loss or omit frames.');
+  } finally {await fs.rm(prepared.directory,{recursive:true,force:true});}
+});
+
 test('native render submits aligned private clips and restores frame count, framing, rate and audio',async()=>{
   const header=Buffer.from(JSON.stringify({a:{dtype:'U8',shape:[1],data_offsets:[0,1]}})),length=Buffer.alloc(8);length.writeBigUInt64LE(BigInt(header.length));
   for(const p of pipelines)for(const d of p.metadata.dependencies)for(const name of d.files){const file=path.join(process.env.VPIPE_WORKDIR!,'models',d.reference,name);await fs.mkdir(path.dirname(file),{recursive:true});await fs.writeFile(file,name.endsWith('.safetensors')?Buffer.concat([length,header,Buffer.from([1])]):'synthetic');}

@@ -6,7 +6,7 @@ You are responsible for your inputs, generated content and how you use or share 
 
 ## 1. Start Frok
 
-If you have a packaged desktop build, launch it normally. Startup creates `~/frok` and installs the default pipeline definitions. On Windows, `~` means your user profile directory.
+[Download Frok from GitHub Releases](https://github.com/mrsteele/frok/releases), choose the installer for your system under **Assets**, then install and open it. For macOS first-launch permissions, see the [installation notes](../releasing.md#macos-releases-without-apple-signing). Startup creates `~/frok` and installs the default pipeline definitions. On Windows, `~` means your user profile directory.
 
 For the source build, install the Node.js version pinned in `.node-version`, open a terminal in the repository, and run:
 

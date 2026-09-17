@@ -28,7 +28,7 @@ Open **Help → Documentation** (F1), **Quick Setup**, or **Pipeline Guide** in 
 
 The documentation window is separate from the studio session and cannot access its API, workspace bridge or credentials. HTTPS links to external resources open in your system browser; those destinations still need internet access.
 
-The public website address belongs to release metadata in `desktop/product.mjs`. Once `websiteUrl` is configured and a new desktop build is made, **View online** opens the current guide and section in the system browser. No public address is configured by default; offline help remains the default.
+The public website address belongs to release metadata in `desktop/product.mjs`. **View online** opens the current guide and section on the [public documentation site](https://mrsteele.github.io/frok/) in the system browser. Offline help remains the default.
 
 Desktop development and packaging build the static docs into `.desktop/docs`, independently of the public site output. After editing docs with the desktop app open, run `npm run build:docs:desktop` and reopen Documentation. For rapid docs editing, use the separate `npm --prefix docs run dev` server with live reload. Public hosting builds remain unchanged.
 

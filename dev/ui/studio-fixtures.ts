@@ -39,7 +39,12 @@ export function studioResponse(route: string, method: string, body: unknown, sta
     media: route === 'media' && location.pathname.startsWith('/favorites') ? media.filter(item => item.favorite) : media,
     sections: media.length ? [{ id: 'example-section', prompt: previewRequest.prompt, createdAt: now, jobIds: ['example-completed'], request: previewRequest }] : [],
   });
-  if (route.endsWith('/family')) return Response.json({ root: previewMedia, renders: [] });
+  if (route.endsWith('/family')) return Response.json({ root: previewMedia, renders: state === 'video-take' ? [{ media: {
+    ...previewMedia, id: '33333333-3333-4333-8333-333333333333', assetNumber: 2,
+    kind: 'video', filename: 'synthetic.mp4', sourceId: previewMedia.id, duration: 6,
+    prompt: 'Clouds drift over the lake',
+    generation: { ...previewRequest, mode: 'video', sourceId: previewMedia.id, prompt: 'Clouds drift over the lake', count: 1 },
+  } }] : [] });
   if (route === 'deletion/preview') return Response.json({ token: 'preview', total: 1, images: 1, videos: 0, hdVersions: 0, favorites: 0, protectedCount: 0, jobs: 1 });
   if (route === 'jobs' && method === 'POST') {
     const job: Job = { id: `preview-queued-${jobs.length}`, kind: 'generate', runner: 'vpipe', status: 'queued', request: body as Generation, completed: 0, total: 1, message: 'Synthetic job · no generation runs', createdAt: now, updatedAt: now };

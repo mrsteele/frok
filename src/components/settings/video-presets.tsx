@@ -51,7 +51,7 @@ export function VideoPresets() {
     try {
       await savePreset(draft);
       setDraft(undefined);
-      setNotice('Recipe saved. Choose it from Motion recipes when making a video.');
+      setNotice('Recipe saved. Use Generate with recipe on an asset page to make a video.');
       setFailure('');
     } catch (e) {
       setFailure((e as Error).message);
@@ -143,8 +143,8 @@ export function VideoPresets() {
         </div>
       </div>
       <InlineMessage tone="neutral">
-        Choose a recipe while making a video, then select Generate video when you’re ready.
-        Your default recipe is used when an image’s video prompt is left empty.
+        On an asset page, choose a recipe to generate a video immediately.
+        Your default recipe is used by Generate video on an image card.
       </InlineMessage>
       {ready && !error && (
         <InlineMessage role="status" tone="neutral">

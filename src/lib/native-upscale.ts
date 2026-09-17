@@ -28,11 +28,15 @@ export async function prepareNativeUpscale(input:RenderInput) {
   const geometry=upscaleGeometry(input.width,input.height,source.frames,input.request.pipeline.metadata.upscale);
   if(geometry.width*geometry.height*geometry.frames*3>8*1024**3)throw Error('This clip is too large for the native upscaling workflow. Use a shorter clip or a ComfyUI upscaler.');
   const directory=await fs.mkdtemp(path.join(input.directory,'upscale-'));
-  const prepared=path.join(directory,'input.mp4'),output=path.join(directory,'restored.mp4');
+  // Vpipe 6154c90 sniffs 00 00 01 as Annex B, even when those bytes are
+  // an MP4/AVCC NAL length (our x264 SEI is often 504–505 bytes). It then
+  // misses the first IDR and drops the clip. MPEG-TS supplies real Annex B
+  // framing, preserving lossless H.264 without changing the model workflow.
+  const prepared=path.join(directory,'input.ts'),output=path.join(directory,'restored.mp4');
   input.log(`Preparing ${source.frames} frames at ${source.fps.toFixed(3)} fps for ${input.request.pipeline.metadata.name}…\n`);
   const filters=[`scale=${input.width}:${input.height}:flags=bicubic`,`pad=${geometry.width}:${geometry.height}:0:0`,
     `tpad=stop_mode=clone:stop=${geometry.frames-source.frames}`,`setpts=N/(${source.fps}*TB)`];
-  await runProcess(ffmpeg(),['-hide_banner','-y','-i',input.source,'-map','0:v:0','-an','-vf',filters.join(','),'-frames:v',String(geometry.frames),'-r',String(source.fps),'-c:v','libx264','-preset','ultrafast','-crf','0','-pix_fmt','yuv420p',prepared],{signal:input.signal,onLog:input.log});
+  await runProcess(ffmpeg(),['-hide_banner','-y','-i',input.source,'-map','0:v:0','-an','-vf',filters.join(','),'-frames:v',String(geometry.frames),'-r',String(source.fps),'-c:v','libx264','-preset','ultrafast','-crf','0','-pix_fmt','yuv420p','-f','mpegts',prepared],{signal:input.signal,onLog:input.log});
   return {input:{...input,...geometry,fps:source.fps,source:prepared,output},source,directory};
 }
 
